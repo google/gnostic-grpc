@@ -1,0 +1,91 @@
+openapi: 3.0.0
+info:
+  title: Test API for GSoC project
+  version: "1.0.0"
+  description: |
+    This is a OpenAPI description for testing my GSoC project. The name of the path defines what
+    will be tested and the operation object will be set accordingly.
+    Structure of tests:
+    /testParameter*   --> To test everything related to path/query parameteres
+    /testResponse*    --> To test everything related to respones
+    /testRequestBody* --> To test everything related to request bodies
+    others            --> Other stuff
+paths:
+  /testExternalReference:
+    get:
+      operationId: testExternalReference
+      responses:
+        200:
+          $ref: https://raw.githubusercontent.com/LorenzHW/gnostic-grpc/master/generator/testfiles/responses.yaml#/components/responses/Response
+  /testExternalReference2:
+    get:
+      operationId: testExernalReference2
+      parameters: #TODO: This gets rendered as body parameter, cuz of default position: POSITION_BODY
+        - $ref: https://raw.githubusercontent.com/LorenzHW/gnostic-grpc/master/generator/testfiles/parameters.yaml#/components/parameters/Parameter2
+      responses:
+        200:
+          description: success
+  /testAdditionalProperties:
+    get:
+      operationId: testAdditionalProperties
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: integer
+                  format: int32
+  /testAdditionalPropertiesReference:
+    get:
+      operationId: testAdditionalPropertiesReference
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: '#/components/schemas/Person'
+  /testAdditionalPropertiesArray:
+    get:
+      operationId: testAdditionalPropertiesArray
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: integer
+                    format: int32
+components:
+  schemas:
+    Person:
+      type: object
+      required:
+        - name
+        - photoUrls
+      properties:
+        id:
+          type: integer
+          format: int64
+        age:
+          type: integer
+          format: int64
+        name:
+          type: string
+          example: Peter
+        photoUrls:
+          type: array
+          xml:
+            name: photoUrl
+            wrapped: true
+          items:
+            type: string

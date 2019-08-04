@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package requestbodies;
+
+import "google/api/annotations.proto";
+
+import "google/protobuf/empty.proto";
+
+import "google/protobuf/descriptor.proto";
+
+message Person {
+  int64 id = 1;
+
+  int64 age = 2;
+
+  string name = 3;
+
+  repeated string photourls = 4;
+}
+
+message RequestBody {
+  Person application_json = 1;
+}
+
+message TestRequestBodyRequestBody {
+  Person application_json = 1;
+}
+
+message TestRequestBodyParameters {
+  TestRequestBodyRequestBody request_body = 1;
+}
+
+message TestRequestBodyReferenceParameters {
+  RequestBody request_body = 1;
+}
+
+service Requestbodies {
+  rpc TestRequestBody ( TestRequestBodyParameters ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { get:"/testRequestBody" body:"request_body"  };
+  }
+
+  rpc TestRequestBodyReference ( TestRequestBodyReferenceParameters ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { get:"/testRequestBodyReference" body:"request_body"  };
+  }
+}
+

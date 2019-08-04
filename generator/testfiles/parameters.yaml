@@ -1,0 +1,113 @@
+openapi: 3.0.0
+info:
+  title: Test API for GSoC project
+  version: "1.0.0"
+  description: |
+    This is a OpenAPI description for testing my GSoC project. The name of the path defines what
+    will be tested and the operation object will be set accordingly.
+    Structure of tests:
+    /testParameter*   --> To test everything related to path/query parameteres
+    /testResponse*    --> To test everything related to respones
+    /testRequestBody* --> To test everything related to request bodies
+    others            --> Other stuff
+
+paths:
+  ########################## PARAMETER ##########################
+  /testParameterQuery:
+    get:
+      operationId: testParameterQuery
+      parameters:
+        - name: param1
+          in: query
+          schema:
+            type: integer
+            format: int32
+      responses:
+        200:
+          description: success
+  /testParameterQueryEnum: #TODO: Does not work
+    get:
+      operationId: testParameterQueryEnum
+      parameters:
+        - name: param2
+          in: query
+          explode: true
+          schema:
+            type: array
+            items:
+              type: integer
+              format: int64
+              enum:
+                - 1337
+                - 1338
+                - 1339
+              default: 1338
+      responses:
+        200:
+          description: success
+  /testParameterPath/{param1}:
+    get:
+      operationId: testParameterPath
+      parameters:
+        - name: param3
+          in: path
+          schema:
+            type: string
+      responses:
+        200:
+          description: success
+  /testParameterPathEnum/{param1}: #TODO: Does not work
+    get:
+      operationId: testParameterPathEnum
+      parameters:
+        - name: param4
+          in: path
+          schema:
+            type: integer
+            format: int64
+            enum:
+              - 1337
+              - 1338
+            default: 1338
+      responses:
+        200:
+          description: success
+
+  /testParameterMultiplePath/{param1}/{param2}:
+    get:
+      operationId: testParameterMultiplePath
+      parameters:
+        - name: param5
+          in: path
+          schema:
+            type: string
+        - name: param6
+          in: path
+          schema:
+            type: string
+      responses:
+        200:
+          description: success
+
+  /testParameterReference:
+    get:
+      operationId: testParameterReference
+      parameters:
+        - $ref: '#/components/parameters/Parameter1'
+      responses:
+        200:
+          description: success
+components:
+  parameters:
+    Parameter1:
+      name: param7
+      in: query
+      schema:
+        type: integer
+        format: int64
+    Parameter2:
+      name: param8
+      in: path
+      schema:
+        type: integer
+        format: int64

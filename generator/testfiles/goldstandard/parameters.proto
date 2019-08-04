@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package parameters;
+
+import "google/api/annotations.proto";
+
+import "google/protobuf/empty.proto";
+
+import "google/protobuf/descriptor.proto";
+
+message Parameter1 {
+  int64 param7 = 1;
+}
+
+message Parameter2 {
+  int64 param8 = 1;
+}
+
+message TestParameterQueryParameters {
+  int32 param1 = 1;
+}
+
+message TestParameterQueryEnumParameters {
+  repeated int64 param2 = 1;
+}
+
+message TestParameterPathParameters {
+  string param3 = 1;
+}
+
+message TestParameterPathEnumParameters {
+  int64 param4 = 1;
+}
+
+message TestParameterMultiplePathParameters {
+  string param5 = 1;
+
+  string param6 = 2;
+}
+
+message TestParameterReferenceParameters {
+  Parameter1 parameter1 = 1;
+}
+
+service Parameters {
+  rpc TestParameterQuery ( TestParameterQueryParameters ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { get:"/testParameterQuery"  };
+  }
+
+  rpc TestParameterQueryEnum ( TestParameterQueryEnumParameters ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { get:"/testParameterQueryEnum"  };
+  }
+
+  rpc TestParameterPath ( TestParameterPathParameters ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { get:"/testParameterPath/{param1}"  };
+  }
+
+  rpc TestParameterPathEnum ( TestParameterPathEnumParameters ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { get:"/testParameterPathEnum/{param1}"  };
+  }
+
+  rpc TestParameterMultiplePath ( TestParameterMultiplePathParameters ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { get:"/testParameterMultiplePath/{param1}/{param2}"  };
+  }
+
+  rpc TestParameterReference ( TestParameterReferenceParameters ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { get:"/testParameterReference"  };
+  }
+}
+

@@ -1,0 +1,67 @@
+openapi: 3.0.0
+info:
+  title: Test API for GSoC project
+  version: "1.0.0"
+  description: |
+    This is a OpenAPI description for testing my GSoC project. The name of the path defines what
+    will be tested and the operation object will be set accordingly.
+    Structure of tests:
+    /testParameter*   --> To test everything related to path/query parameteres
+    /testResponse*    --> To test everything related to respones
+    /testRequestBody* --> To test everything related to request bodies
+    others            --> Other stuff
+
+paths:
+  ########################## REQUESTBODY ##########################
+  /testRequestBody:
+    get:
+      operationId: testRequestBody
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Person'
+      responses:
+        200:
+          description: success
+  /testRequestBodyReference:
+    get:
+      operationId: testRequestBodyReference
+      requestBody:
+        $ref: '#/components/requestBodies/RequestBody'
+      responses:
+        200:
+          description: success
+
+components:
+  schemas:
+    Person:
+      type: object
+      required:
+        - name
+        - photoUrls
+      properties:
+        id:
+          type: integer
+          format: int64
+        age:
+          type: integer
+          format: int64
+        name:
+          type: string
+          example: Peter
+        photoUrls:
+          type: array
+          xml:
+            name: photoUrl
+            wrapped: true
+          items:
+            type: string
+  requestBodies:
+    RequestBody:
+      description: A JSON object containing information
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Person'

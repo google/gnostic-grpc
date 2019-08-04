@@ -1,0 +1,277 @@
+syntax = "proto3";
+
+package petstore;
+
+import "google/api/annotations.proto";
+
+import "google/protobuf/empty.proto";
+
+message Order {
+  int64 id = 1;
+
+  int64 petid = 2;
+
+  int32 quantity = 3;
+
+  string shipdate = 4;
+
+  string status = 5;
+
+  bool complete = 6;
+}
+
+message Category {
+  int64 id = 1;
+
+  string name = 2;
+}
+
+message User {
+  int64 id = 1;
+
+  string username = 2;
+
+  string firstname = 3;
+
+  string lastname = 4;
+
+  string email = 5;
+
+  string password = 6;
+
+  string phone = 7;
+
+  int32 userstatus = 8;
+}
+
+message Tag {
+  int64 id = 1;
+
+  string name = 2;
+}
+
+message Pet {
+  int64 id = 1;
+
+  Category category = 2;
+
+  string name = 3;
+
+  repeated string photourls = 4;
+
+  repeated Tag tags = 5;
+
+  string status = 6;
+}
+
+message ApiResponse {
+  int32 code = 1;
+
+  string type = 2;
+
+  string message = 3;
+}
+
+message Pet {
+  Pet pet = 1;
+}
+
+message UserArray {
+  repeated User user = 1;
+}
+
+message UpdatePetParameters {
+  Pet pet = 1;
+}
+
+message AddPetParameters {
+  Pet pet = 1;
+}
+
+message FindPetsByStatusParameters {
+  repeated string status = 1;
+}
+
+message FindPetsByStatusResponses {
+  repeated Pet ok = 1;
+}
+
+message FindPetsByTagsParameters {
+  repeated string tags = 1;
+}
+
+message FindPetsByTagsResponses {
+  repeated Pet ok = 1;
+}
+
+message GetPetByIdParameters {
+  int64 petid = 1;
+}
+
+message GetPetByIdResponses {
+  Pet ok = 1;
+}
+
+message UpdatePetWithFormParameters {
+  int64 petid = 1;
+}
+
+message DeletePetParameters {
+  string api_key = 1;
+
+  int64 petid = 2;
+}
+
+message UploadFileParameters {
+  int64 petid = 1;
+}
+
+message UploadFileResponses {
+  ApiResponse ok = 1;
+}
+
+message GetInventoryResponses {
+}
+
+message PlaceOrderParameters {
+  Order order = 1;
+}
+
+message PlaceOrderResponses {
+  Order ok = 1;
+}
+
+message GetOrderByIdParameters {
+  int64 orderid = 1;
+}
+
+message GetOrderByIdResponses {
+  Order ok = 1;
+}
+
+message DeleteOrderParameters {
+  int64 orderid = 1;
+}
+
+message CreateUserParameters {
+  User user = 1;
+}
+
+message CreateUsersWithArrayInputParameters {
+  UserArray userarray = 1;
+}
+
+message CreateUsersWithListInputParameters {
+  UserArray userarray = 1;
+}
+
+message LoginUserParameters {
+  string username = 1;
+
+  string password = 2;
+}
+
+message LoginUserResponses {
+  string ok = 1;
+}
+
+message GetUserByNameParameters {
+  string username = 1;
+}
+
+message GetUserByNameResponses {
+  User ok = 1;
+}
+
+message UpdateUserParameters {
+  string username = 1;
+
+  User user = 2;
+}
+
+message DeleteUserParameters {
+  string username = 1;
+}
+
+service Petstore {
+  rpc UpdatePet ( UpdatePetParameters ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { put:"/pet" body:"pet"  };
+  }
+
+  rpc AddPet ( AddPetParameters ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { post:"/pet" body:"pet"  };
+  }
+
+  rpc FindPetsByStatus ( FindPetsByStatusParameters ) returns ( FindPetsByStatusResponses ) {
+    option (google.api.http) = { get:"/pet/findByStatus"  };
+  }
+
+  rpc FindPetsByTags ( FindPetsByTagsParameters ) returns ( FindPetsByTagsResponses ) {
+    option (google.api.http) = { get:"/pet/findByTags"  };
+  }
+
+  rpc GetPetById ( GetPetByIdParameters ) returns ( GetPetByIdResponses ) {
+    option (google.api.http) = { get:"/pet/{petId}"  };
+  }
+
+  rpc UpdatePetWithForm ( UpdatePetWithFormParameters ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { post:"/pet/{petId}"  };
+  }
+
+  rpc DeletePet ( DeletePetParameters ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { delete:"/pet/{petId}"  };
+  }
+
+  rpc UploadFile ( UploadFileParameters ) returns ( UploadFileResponses ) {
+    option (google.api.http) = { post:"/pet/{petId}/uploadImage"  };
+  }
+
+  rpc GetInventory ( google.protobuf.Empty ) returns ( GetInventoryResponses ) {
+    option (google.api.http) = { get:"/store/inventory"  };
+  }
+
+  rpc PlaceOrder ( PlaceOrderParameters ) returns ( PlaceOrderResponses ) {
+    option (google.api.http) = { post:"/store/order" body:"order"  };
+  }
+
+  rpc GetOrderById ( GetOrderByIdParameters ) returns ( GetOrderByIdResponses ) {
+    option (google.api.http) = { get:"/store/order/{orderId}"  };
+  }
+
+  rpc DeleteOrder ( DeleteOrderParameters ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { delete:"/store/order/{orderId}"  };
+  }
+
+  rpc CreateUser ( CreateUserParameters ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { post:"/user" body:"user"  };
+  }
+
+  rpc CreateUsersWithArrayInput ( CreateUsersWithArrayInputParameters ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { post:"/user/createWithArray" body:"userarray"  };
+  }
+
+  rpc CreateUsersWithListInput ( CreateUsersWithListInputParameters ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { post:"/user/createWithList" body:"userarray"  };
+  }
+
+  rpc LoginUser ( LoginUserParameters ) returns ( LoginUserResponses ) {
+    option (google.api.http) = { get:"/user/login"  };
+  }
+
+  rpc LogoutUser ( google.protobuf.Empty ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { get:"/user/logout"  };
+  }
+
+  rpc GetUserByName ( GetUserByNameParameters ) returns ( GetUserByNameResponses ) {
+    option (google.api.http) = { get:"/user/{username}"  };
+  }
+
+  rpc UpdateUser ( UpdateUserParameters ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { put:"/user/{username}" body:"user"  };
+  }
+
+  rpc DeleteUser ( DeleteUserParameters ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { delete:"/user/{username}"  };
+  }
+}
+

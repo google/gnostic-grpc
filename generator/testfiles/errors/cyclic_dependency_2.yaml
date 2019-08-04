@@ -1,0 +1,23 @@
+openapi: 3.0.0
+info:
+  title: Test API for GSoC project
+  version: "1.0.0"
+  description: |
+    A cyclic dependency between cyclic_dependency_1.yaml <--> cyclic_dependency_2.yaml. jhumps's protoreflect can't
+    print cyclic dependency files. The method 'CreateFileDescriptorFromSet' inside renderer.go throws an error. As far
+    as I can tell gnostic-grpc is working correctly for cyclic dependencies.
+paths:
+  /someMethod: # Needed, otherwise gnostic gives error
+    get:
+      operationId: someMethod
+      responses:
+        200:
+          description: success
+components:
+  responses:
+    Response:
+      description: success
+      content:
+        application/json:
+          schema:
+            $ref: 'https://raw.githubusercontent.com/LorenzHW/gnostic-grpc/issue-4/generator/testfiles/errors/cyclic_dependency_1.yaml#/components/schemas/Person'
