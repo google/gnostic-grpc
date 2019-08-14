@@ -566,6 +566,19 @@ func getOpenAPITypesToProtoBufTypes() map[string]dpb.FieldDescriptorProto_Type {
 		"boolean": dpb.FieldDescriptorProto_TYPE_BOOL,
 		"object":  dpb.FieldDescriptorProto_TYPE_MESSAGE,
 		// Array not set: could be either scalar or non-scalar value.
+
+		// Additional values according to: https://swagger.io/docs/specification/data-models/data-types/#string
+		"date":      dpb.FieldDescriptorProto_TYPE_STRING,
+		"date-time": dpb.FieldDescriptorProto_TYPE_STRING,
+		"password":  dpb.FieldDescriptorProto_TYPE_STRING,
+		"binary":    dpb.FieldDescriptorProto_TYPE_STRING,
+		"email":     dpb.FieldDescriptorProto_TYPE_STRING,
+		"uuid":      dpb.FieldDescriptorProto_TYPE_STRING,
+		"uri":       dpb.FieldDescriptorProto_TYPE_STRING,
+		"hostname":  dpb.FieldDescriptorProto_TYPE_STRING,
+		"ipv4":      dpb.FieldDescriptorProto_TYPE_STRING,
+		"ipv6":      dpb.FieldDescriptorProto_TYPE_STRING,
+		"byte":      dpb.FieldDescriptorProto_TYPE_BYTES,
 	}
 }
 
@@ -576,6 +589,18 @@ func getOpenAPIScalarTypes() map[string]bool {
 		"integer": true,
 		"number":  true,
 		"boolean": true,
+		// Additional values according to: https://swagger.io/docs/specification/data-models/data-types/#string
+		"date":      true,
+		"date-time": true,
+		"password":  true,
+		"binary":    true,
+		"email":     true,
+		"uuid":      true,
+		"uri":       true,
+		"hostname":  true,
+		"ipv4":      true,
+		"ipv6":      true,
+		"byte":      true,
 	}
 }
 
