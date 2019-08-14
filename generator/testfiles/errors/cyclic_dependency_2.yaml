@@ -20,4 +20,4 @@ components:
       content:
         application/json:
           schema:
-            $ref: 'https://raw.githubusercontent.com/LorenzHW/gnostic-grpc/issue-4/generator/testfiles/errors/cyclic_dependency_1.yaml#/components/schemas/Person'
+            $ref: 'https://raw.githubusercontent.com/googleapis/gnostic-grpc/master/generator/testfiles/errors/cyclic_dependency_1.yaml#/components/schemas/Person'
