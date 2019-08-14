@@ -16,12 +16,12 @@ paths:
       operationId: testExternalReference
       responses:
         200:
-          $ref: https://raw.githubusercontent.com/LorenzHW/gnostic-grpc/master/generator/testfiles/responses.yaml#/components/responses/Response
+          $ref: https://raw.githubusercontent.com/googleapis/gnostic-grpc/master/generator/testfiles/responses.yaml#/components/responses/Response
   /testExternalReference2:
     get:
       operationId: testExernalReference2
       parameters: #TODO: This gets rendered as body parameter, cuz of default position: POSITION_BODY
-        - $ref: https://raw.githubusercontent.com/LorenzHW/gnostic-grpc/master/generator/testfiles/parameters.yaml#/components/parameters/Parameter2
+        - $ref: https://raw.githubusercontent.com/googleapis/gnostic-grpc/master/generator/testfiles/parameters.yaml#/components/parameters/Parameter2
       responses:
         200:
           description: success
