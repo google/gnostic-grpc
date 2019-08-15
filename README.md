@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/googleapis/gnostic-grpc.svg?branch=master)](https://travis-ci.com/googleapis/gnostic-grpc)
+[![Build Status](https://travis-ci.org/googleapis/gnostic-grpc.svg?branch=master)](https://travis-ci.org/googleapis/gnostic-grpc)
 
 # gnostic gRPC plugin
 [GSoC 2019 project](https://summerofcode.withgoogle.com/projects/#5244822191865856)
