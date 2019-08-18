@@ -27,14 +27,14 @@ func TestNewFeatureCheckerParameters(t *testing.T) {
 
 	checker := NewGrpcChecker(documentv3)
 	messages := checker.Run()
-	expectedMessageTexts := []string{
-		"Fields: Explode are not supported for parameter: param2",
-		"Fields: Default are not supported for the schema: Items of param2",
-		"Field: Enum is not generated as enum in .proto for schema: Items of param2",
-		"Fields: Default are not supported for the schema: param4",
-		"Field: Enum is not generated as enum in .proto for schema: param4",
+	expectedMessageKeys := [][]string{
+		{"paths", "/testParameterQueryEnum", "get", "parameters", "explode"},
+		{"paths", "/testParameterQueryEnum", "get", "parameters", "schema", "items", "default"},
+		{"paths", "/testParameterQueryEnum", "get", "parameters", "schema", "items", "enum"},
+		{"paths", "/testParameterPathEnum/{param1}", "get", "parameters", "schema", "default"},
+		{"paths", "/testParameterPathEnum/{param1}", "get", "parameters", "schema", "enum"},
 	}
-	validateMessages(t, expectedMessageTexts, messages)
+	validateKeys(t, expectedMessageKeys, messages)
 }
 
 func TestFeatureCheckerRequestBodies(t *testing.T) {
@@ -43,13 +43,13 @@ func TestFeatureCheckerRequestBodies(t *testing.T) {
 
 	checker := NewGrpcChecker(documentv3)
 	messages := checker.Run()
-	expectedMessageTexts := []string{
-		"Fields: Required are not supported for the schema: Person",
-		"Fields: Example are not supported for the schema: name",
-		"Fields: Xml are not supported for the schema: photoUrls",
-		"Fields: Required are not supported for the request: RequestBody",
+	expectedMessageKeys := [][]string{
+		{"components", "schemas", "Person", "required"},
+		{"components", "schemas", "Person", "properties", "name", "example"},
+		{"components", "schemas", "Person", "properties", "photoUrls", "xml"},
+		{"components", "requestBodies", "RequestBody", "required"},
 	}
-	validateMessages(t, expectedMessageTexts, messages)
+	validateKeys(t, expectedMessageKeys, messages)
 }
 
 func TestFeatureCheckerResponses(t *testing.T) {
@@ -58,13 +58,13 @@ func TestFeatureCheckerResponses(t *testing.T) {
 
 	checker := NewGrpcChecker(documentv3)
 	messages := checker.Run()
-	expectedMessageTexts := []string{
-		"Fields: Required are not supported for the schema: Error",
-		"Fields: Required are not supported for the schema: Person",
-		"Fields: Example are not supported for the schema: name",
-		"Fields: Xml are not supported for the schema: photoUrls",
+	expectedMessageKeys := [][]string{
+		{"components", "schemas", "Error", "required"},
+		{"components", "schemas", "Person", "required"},
+		{"components", "schemas", "Person", "properties", "name", "example"},
+		{"components", "schemas", "Person", "properties", "photoUrls", "xml"},
 	}
-	validateMessages(t, expectedMessageTexts, messages)
+	validateKeys(t, expectedMessageKeys, messages)
 }
 
 func TestFeatureCheckerOther(t *testing.T) {
@@ -73,23 +73,25 @@ func TestFeatureCheckerOther(t *testing.T) {
 
 	checker := NewGrpcChecker(documentv3)
 	messages := checker.Run()
-	expectedMessageTexts := []string{
-		"Fields: Required are not supported for the schema: Person",
-		"Fields: Example are not supported for the schema: name",
-		"Fields: Xml are not supported for the schema: photoUrls",
-		"Field: additionalProperties with type array is generated as empty message inside .proto.",
+	expectedMessageKeys := [][]string{
+		{"components", "schemas", "Person", "required"},
+		{"components", "schemas", "Person", "properties", "name", "example"},
+		{"components", "schemas", "Person", "properties", "photoUrls", "xml"},
+		{"paths", "/testAdditionalPropertiesArray", "get", "responses", "200", "content", "application/json", "schema", "additionalProperties"},
 	}
-	validateMessages(t, expectedMessageTexts, messages)
+	validateKeys(t, expectedMessageKeys, messages)
 }
 
-func validateMessages(t *testing.T, expectedMessageTexts []string, messages []*plugins.Message) {
-	if len(expectedMessageTexts) != len(messages) {
+func validateKeys(t *testing.T, expectedKeys [][]string, messages []*plugins.Message) {
+	if len(expectedKeys) != len(messages) {
 		t.Errorf("Number of messages from GrpcChecker does not match expected number")
 		return
 	}
 	for i, msg := range messages {
-		if msg.Text != expectedMessageTexts[i] {
-			t.Errorf("Message text does not match expected message text: %s != %s", msg.Text, expectedMessageTexts[i])
+		for j, k := range msg.Keys {
+			if k != expectedKeys[i][j] {
+				t.Errorf("Key does not match expected key text: %s != %s", expectedKeys[i], msg.Keys)
+			}
 		}
 	}
 }
