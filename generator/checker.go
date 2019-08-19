@@ -17,7 +17,6 @@ package generator
 import (
 	openapiv3 "github.com/googleapis/gnostic/OpenAPIv3"
 	plugins "github.com/googleapis/gnostic/plugins"
-	"strings"
 )
 
 type GrpcChecker struct {
@@ -41,10 +40,10 @@ func (c *GrpcChecker) Run() []*plugins.Message {
 // Analyzes the root object.
 func (c *GrpcChecker) analyzeOpenAPIDocument() {
 	fields := getNotSupportedOpenAPIDocumentFields(c.document)
-	if len(fields) > 0 {
-		text := "Fields: " + strings.Join(fields, ", ") + " are not supported for Document with title: " + c.document.Info.Title
-		msg := constructMessage("DOCUMENTFIELDS", text, []string{"Document"})
-		c.messages = append(c.messages, msg)
+	for _, f := range fields {
+		text := "Field: '" + f + "' is not supported for the OpenAPI document with title: " + c.document.Info.Title
+		msg := constructMessage("DOCUMENTFIELDS", text, []string{f})
+		c.messages = append(c.messages, &msg)
 	}
 	c.analyzeComponents()
 	c.analyzePaths()
@@ -53,198 +52,228 @@ func (c *GrpcChecker) analyzeOpenAPIDocument() {
 // Analyzes the components of a OpenAPI description.
 func (c *GrpcChecker) analyzeComponents() {
 	components := c.document.Components
+	currentKeys := []string{"components"}
 
 	fields := getNotSupportedComponentsFields(components)
-	if len(fields) > 0 {
-		text := "Fields: " + strings.Join(fields, ", ") + " are not supported for the component"
-		msg := constructMessage("COMPONENTSFIELDS", text, []string{"Component"})
-		c.messages = append(c.messages, msg)
+	for _, f := range fields {
+		text := "Field: '" + f + "' is not supported for the component"
+		msg := constructMessage("COMPONENTSFIELDS", text, append(copyKeys(currentKeys), f))
+		c.messages = append(c.messages, &msg)
 	}
 
 	if schemas := components.GetSchemas(); schemas != nil {
 		for _, pair := range schemas.AdditionalProperties {
-			c.analyzeSchema(pair.Name, pair.Value)
+			parentKeys := append(currentKeys, []string{"schemas", pair.Name}...)
+			c.analyzeSchema(pair.Name, pair.Value, parentKeys)
 		}
 	}
 
 	if responses := components.GetResponses(); responses != nil {
 		for _, pair := range responses.AdditionalProperties {
-			c.analyzeResponse(pair)
+			parentKeys := append(currentKeys, "responses")
+			c.analyzeResponse(pair, parentKeys)
 		}
 	}
 
 	if parameters := components.GetParameters(); parameters != nil {
 		for _, pair := range parameters.AdditionalProperties {
-			c.analyzeParameter(pair.Value)
+			parentKeys := append(currentKeys, "parameters")
+			c.analyzeParameter(pair.Value, parentKeys)
 		}
 	}
 
 	if requestBodies := components.GetRequestBodies(); requestBodies != nil {
 		for _, pair := range requestBodies.AdditionalProperties {
-			c.analyzeRequestBody(pair)
+			parentKeys := append(currentKeys, []string{"requestBodies", pair.Name}...)
+			c.analyzeRequestBody(pair, parentKeys)
 		}
 	}
 }
 
 // Analyzes all paths.
 func (c *GrpcChecker) analyzePaths() {
+	currentKeys := []string{"paths"}
 	for _, pathItem := range c.document.Paths.Path {
-		c.analyzePathItem(pathItem)
+		c.analyzePathItem(pathItem, currentKeys)
 	}
 }
 
 // Analyzes one single path.
-func (c *GrpcChecker) analyzePathItem(pair *openapiv3.NamedPathItem) {
+func (c *GrpcChecker) analyzePathItem(pair *openapiv3.NamedPathItem, parentKeys []string) {
 	pathItem := pair.Value
+	currentKeys := append(parentKeys, pair.Name)
 
 	fields := getNotSupportedPathItemFields(pathItem)
-	if len(fields) > 0 {
-		text := "Fields: " + strings.Join(fields, ", ") + " are not supported for path: " + pair.Name
-		msg := constructMessage("PATHFIELDS", text, []string{"Paths", pair.Name, "Operation"})
-		c.messages = append(c.messages, msg)
+	for _, f := range fields {
+		text := "Field: '" + f + "' is not supported for path: " + pair.Name
+		msg := constructMessage("PATHFIELDS", text, append(copyKeys(currentKeys), f))
+		c.messages = append(c.messages, &msg)
 	}
 
-	operations := getValidOperations(pathItem)
-	for _, op := range operations {
-		c.analyzeOperation(op)
+	operations, operationType := getValidOperations(pathItem)
+	for idx, op := range operations {
+		pKeys := append(currentKeys, operationType[idx])
+		c.analyzeOperation(op, pKeys)
 	}
 }
 
 // Analyzes a single Operation.
-func (c *GrpcChecker) analyzeOperation(operation *openapiv3.Operation) {
+func (c *GrpcChecker) analyzeOperation(operation *openapiv3.Operation, parentKeys []string) {
+	currentKeys := parentKeys
 	fields := getNotSupportedOperationFields(operation)
-	if len(fields) > 0 {
-		text := "Fields:  " + strings.Join(fields, ", ") + " are not supported for operation: " + operation.OperationId
-		msg := constructMessage("OPERATIONFIELDS", text, []string{"Operation", operation.OperationId, "Callbacks"})
-		c.messages = append(c.messages, msg)
+	for _, f := range fields {
+		text := "Field: '" + f + "' is not supported for operation: " + operation.OperationId
+		msg := constructMessage("OPERATIONFIELDS", text, append(copyKeys(currentKeys), f))
+		c.messages = append(c.messages, &msg)
 	}
 
 	for _, param := range operation.Parameters {
-		c.analyzeParameter(param)
+		pKeys := append(currentKeys, "parameters")
+		c.analyzeParameter(param, pKeys)
 	}
 
 	for _, response := range operation.Responses.GetResponseOrReference() {
-		c.analyzeResponse(response)
+		pKeys := append(currentKeys, "responses")
+		c.analyzeResponse(response, pKeys)
 	}
 
 	if defaultResponse := operation.Responses.Default; defaultResponse != nil {
-		wrap := &openapiv3.NamedResponseOrReference{Name: operation.OperationId + " Default response", Value: defaultResponse}
-		c.analyzeResponse(wrap)
+		wrap := &openapiv3.NamedResponseOrReference{Name: "default", Value: defaultResponse}
+		pKeys := append(currentKeys, "responses")
+		c.analyzeResponse(wrap, pKeys)
 	}
 
+	pKeys := append(currentKeys, "requestBody")
 	wrap := &openapiv3.NamedRequestBodyOrReference{Name: operation.OperationId, Value: operation.RequestBody}
-	c.analyzeRequestBody(wrap)
+	c.analyzeRequestBody(wrap, pKeys)
 
 }
 
 // Analyzes the parameter.
-func (c *GrpcChecker) analyzeParameter(paramOrRef *openapiv3.ParameterOrReference) {
+func (c *GrpcChecker) analyzeParameter(paramOrRef *openapiv3.ParameterOrReference, parentKeys []string) {
+	currentKeys := parentKeys
+
 	if parameter := paramOrRef.GetParameter(); parameter != nil {
 		fields := getNotSupportedParameterFields(parameter)
-		if len(fields) > 0 {
-			text := "Fields: " + strings.Join(fields, ", ") + " are not supported for parameter: " + parameter.Name
-			msg := constructMessage("PARAMATERFIELDS", text, []string{"Parameter", parameter.Name})
-			c.messages = append(c.messages, msg)
-		}
-		c.analyzeSchema(parameter.Name, parameter.Schema)
-	}
-}
-
-// Analyzes the schema.
-func (c *GrpcChecker) analyzeSchema(identifier string, schemaOrReference *openapiv3.SchemaOrReference) {
-	if schema := schemaOrReference.GetSchema(); schema != nil {
-		fields := getNotSupportedSchemaFields(schema)
-		if len(fields) > 0 {
-			text := "Fields: " + strings.Join(fields, ", ") + " are not supported for the schema: " + identifier
-			msg := constructMessage("SCHEMAFIELDS", text, []string{identifier, "Schema"})
-			c.messages = append(c.messages, msg)
+		for _, f := range fields {
+			text := "Field: '" + f + "' is not supported for parameter: " + parameter.Name
+			msg := constructMessage("PARAMETERFIELDS", text, append(copyKeys(currentKeys), f))
+			c.messages = append(c.messages, &msg)
 		}
 
-		if enum := schema.Enum; enum != nil {
-			text := "Field: Enum is not generated as enum in .proto for schema: " + identifier
-			msg := constructMessage("SCHEMAFIELDS", text, []string{identifier, "Schema"})
-			c.messages = append(c.messages, msg)
-		}
-
-		// Check for this: https://github.com/LorenzHW/gnostic-grpc/issues/3#issuecomment-509348357
-		if additionalProperties := schema.AdditionalProperties; additionalProperties != nil {
-			if schema := additionalProperties.GetSchemaOrReference().GetSchema(); schema != nil {
-				if schema.Type == "array" {
-					text := "Field: additionalProperties with type array is generated as empty message inside .proto."
-					msg := constructMessage("SCHEMAFIELDS", text, []string{identifier, "Schema"})
-					c.messages = append(c.messages, msg)
-				}
-			}
-		}
-
-		if items := schema.Items; items != nil {
-			for _, schemaOrRef := range items.SchemaOrReference {
-				c.analyzeSchema("Items of "+identifier, schemaOrRef)
-			}
-		}
-
-		if properties := schema.Properties; properties != nil {
-			for _, pair := range properties.AdditionalProperties {
-				c.analyzeSchema(pair.Name, pair.Value)
-			}
-		}
-
-		if additionalProperties := schema.AdditionalProperties; additionalProperties != nil {
-			c.analyzeSchema("AdditionalProperties of "+identifier, additionalProperties.GetSchemaOrReference())
-		}
+		pKeys := append(currentKeys, "schema")
+		c.analyzeSchema(parameter.Name, parameter.Schema, pKeys)
 	}
 }
 
 // Analyzes a response.
-func (c *GrpcChecker) analyzeResponse(pair *openapiv3.NamedResponseOrReference) {
+func (c *GrpcChecker) analyzeResponse(pair *openapiv3.NamedResponseOrReference, parentKeys []string) {
+	currentKeys := append(parentKeys, pair.Name)
+
 	if response := pair.Value.GetResponse(); response != nil {
 		fields := getNotSupportedResponseFields(response)
-		if len(fields) > 0 {
-			text := "Fields:" + strings.Join(fields, ", ") + " are not supported for response: " + pair.Name
-			msg := constructMessage("RESPONSEFIELDS", text, []string{"Response", pair.Name})
-			c.messages = append(c.messages, msg)
+		for _, f := range fields {
+			text := "Field: '" + f + "' is not supported for response: " + pair.Name
+			msg := constructMessage("RESPONSEFIELDS", text, append(copyKeys(currentKeys), f))
+			c.messages = append(c.messages, &msg)
 		}
 		if content := response.Content; content != nil {
 			for _, pair := range content.AdditionalProperties {
-				c.analyzeContent(pair)
+				pKeys := append(currentKeys, []string{"content", pair.Name}...)
+				c.analyzeContent(pair, pKeys)
 			}
 		}
 	}
 }
 
 // Analyzes a request body.
-func (c *GrpcChecker) analyzeRequestBody(pair *openapiv3.NamedRequestBodyOrReference) {
+func (c *GrpcChecker) analyzeRequestBody(pair *openapiv3.NamedRequestBodyOrReference, parentKeys []string) {
+	currentKeys := parentKeys
+
 	if requestBody := pair.Value.GetRequestBody(); requestBody != nil {
 		if requestBody.Required {
-			text := "Fields: Required are not supported for the request: " + pair.Name
-			msg := constructMessage("REQUESTBODYFIELDS", text, []string{"RequestBody", pair.Name})
-			c.messages = append(c.messages, msg)
+			text := "Field: 'required' is not supported for the request: " + pair.Name
+			msg := constructMessage("REQUESTBODYFIELDS", text, append(copyKeys(currentKeys), "required"))
+			c.messages = append(c.messages, &msg)
 		}
 		for _, pair := range requestBody.Content.AdditionalProperties {
-			c.analyzeContent(pair)
+			pKeys := append(currentKeys, []string{"content", pair.Name}...)
+			c.analyzeContent(pair, pKeys)
 		}
 	}
 }
 
 // Analyzes the content of a response.
-func (c *GrpcChecker) analyzeContent(pair *openapiv3.NamedMediaType) {
+func (c *GrpcChecker) analyzeContent(pair *openapiv3.NamedMediaType, parentKeys []string) {
+	currentKeys := parentKeys
 	mediaType := pair.Value
 
 	fields := getNotSupportedMediaTypeFields(mediaType)
-	if len(fields) > 0 {
-		text := "Fields:" + strings.Join(fields, ", ") + " are not supported for the mediatype: " + pair.Name
-		msg := constructMessage("MEDIATYPEFIELDS", text, []string{"MediaType", pair.Name})
-		c.messages = append(c.messages, msg)
+	for _, f := range fields {
+		text := "Field: '" + f + "' is not supported for the mediatype: " + pair.Name
+		msg := constructMessage("MEDIATYPEFIELDS", text, append(copyKeys(currentKeys), f))
+		c.messages = append(c.messages, &msg)
 	}
 
 	if mediaType.Schema != nil {
-		c.analyzeSchema(pair.Name, mediaType.Schema)
+		pKeys := append(currentKeys, "schema")
+		c.analyzeSchema(pair.Name, mediaType.Schema, pKeys)
+	}
+}
+
+// Analyzes the schema.
+func (c *GrpcChecker) analyzeSchema(identifier string, schemaOrReference *openapiv3.SchemaOrReference, parentKeys []string) {
+	currentKeys := parentKeys
+
+	if schema := schemaOrReference.GetSchema(); schema != nil {
+		fields := getNotSupportedSchemaFields(schema)
+		for _, f := range fields {
+			text := "Field: '" + f + "' is not supported for the schema: " + identifier
+			msg := constructMessage("SCHEMAFIELDS", text, append(copyKeys(currentKeys), f))
+			c.messages = append(c.messages, &msg)
+		}
+
+		if enum := schema.Enum; enum != nil {
+			text := "Field: 'enum' is not generated as enum in .proto for the schema: " + identifier
+			msg2 := constructMessage("SCHEMAFIELDS", text, append(copyKeys(currentKeys), "enum"))
+			c.messages = append(c.messages, &msg2)
+		}
+
+		// Check for this: https://github.com/LorenzHW/gnostic-grpc-deprecated/issues/3#issuecomment-509348357
+		if additionalProperties := schema.AdditionalProperties; additionalProperties != nil {
+			if schema := additionalProperties.GetSchemaOrReference().GetSchema(); schema != nil {
+				if schema.Type == "array" {
+					text := "Field: 'additionalProperties' with type array is generated as empty message inside .proto."
+					msg := constructMessage("SCHEMAFIELDS", text, append(copyKeys(currentKeys), "additionalProperties"))
+					c.messages = append(c.messages, &msg)
+				}
+			}
+		}
+
+		if items := schema.Items; items != nil {
+			for _, schemaOrRef := range items.SchemaOrReference {
+				pKeys := append(currentKeys, "items")
+				c.analyzeSchema("Items of "+identifier, schemaOrRef, pKeys)
+			}
+		}
+
+		if properties := schema.Properties; properties != nil {
+			for _, pair := range properties.AdditionalProperties {
+				pKeys := append(currentKeys, []string{"properties", pair.Name}...)
+				c.analyzeSchema(pair.Name, pair.Value, pKeys)
+			}
+		}
+
+		if additionalProperties := schema.AdditionalProperties; additionalProperties != nil {
+			pKeys := append(currentKeys, "additionalProperties")
+			c.analyzeSchema("AdditionalProperties of "+identifier, additionalProperties.GetSchemaOrReference(), pKeys)
+		}
 	}
 }
 
 // Constructs a message which the end user will see on the console.
-func constructMessage(code string, text string, keys []string) *plugins.Message {
-	return &plugins.Message{
+func constructMessage(code string, text string, keys []string) plugins.Message {
+	return plugins.Message{
 		Code:  code,
 		Level: plugins.Message_WARNING,
 		Text:  text,
@@ -253,28 +282,34 @@ func constructMessage(code string, text string, keys []string) *plugins.Message 
 }
 
 // Returns all valid operations that will be transcoded by the plugin.
-func getValidOperations(pathItem *openapiv3.PathItem) []*openapiv3.Operation {
-	operations := make([]*openapiv3.Operation, 0)
+func getValidOperations(pathItem *openapiv3.PathItem) (operations []*openapiv3.Operation, operationTypes []string) {
+	operations = make([]*openapiv3.Operation, 0)
+	operationTypes = make([]string, 0)
 	if pathItem == nil {
-		return operations
+		return operations, operationTypes
 	}
 
 	if pathItem.Get != nil {
 		operations = append(operations, pathItem.Get)
+		operationTypes = append(operationTypes, "get")
 	}
 	if pathItem.Put != nil {
 		operations = append(operations, pathItem.Put)
+		operationTypes = append(operationTypes, "put")
 	}
 	if pathItem.Post != nil {
 		operations = append(operations, pathItem.Post)
+		operationTypes = append(operationTypes, "post")
 	}
 	if pathItem.Delete != nil {
 		operations = append(operations, pathItem.Delete)
+		operationTypes = append(operationTypes, "delete")
 	}
 	if pathItem.Patch != nil {
 		operations = append(operations, pathItem.Patch)
+		operationTypes = append(operationTypes, "patch")
 	}
-	return operations
+	return operations, operationTypes
 }
 
 // Returns fields that the won't be considered by the plugin for document.
@@ -285,16 +320,16 @@ func getNotSupportedOpenAPIDocumentFields(document *openapiv3.Document) []string
 	}
 
 	if document.Servers != nil {
-		fields = append(fields, "Servers")
+		fields = append(fields, "servers")
 	}
 	if document.Security != nil {
-		fields = append(fields, "Security")
+		fields = append(fields, "security")
 	}
 	if document.Tags != nil {
-		fields = append(fields, "Tags")
+		fields = append(fields, "tags")
 	}
 	if document.ExternalDocs != nil {
-		fields = append(fields, "ExternalDocs")
+		fields = append(fields, "externalDocs")
 	}
 	return fields
 }
@@ -306,31 +341,31 @@ func getNotSupportedParameterFields(parameter *openapiv3.Parameter) []string {
 		return fields
 	}
 	if parameter.Required {
-		fields = append(fields, "Required")
+		fields = append(fields, "required")
 	}
 	if parameter.Deprecated {
-		fields = append(fields, "Deprecated")
+		fields = append(fields, "deprecated")
 	}
 	if parameter.AllowEmptyValue {
-		fields = append(fields, "AllowEmptyValue")
+		fields = append(fields, "allowEmptyValue")
 	}
 	if parameter.Style != "" {
-		fields = append(fields, "Style")
+		fields = append(fields, "style")
 	}
 	if parameter.Explode {
-		fields = append(fields, "Explode")
+		fields = append(fields, "explode")
 	}
 	if parameter.AllowReserved {
-		fields = append(fields, "AllowReserved")
+		fields = append(fields, "allowReserved")
 	}
 	if parameter.Example != nil {
-		fields = append(fields, "Example")
+		fields = append(fields, "example")
 	}
 	if parameter.Examples != nil {
-		fields = append(fields, "Examples")
+		fields = append(fields, "examples")
 	}
 	if parameter.Content != nil {
-		fields = append(fields, "Content")
+		fields = append(fields, "content")
 	}
 
 	return fields
@@ -343,89 +378,89 @@ func getNotSupportedSchemaFields(schema *openapiv3.Schema) []string {
 		return fields
 	}
 	if schema.Nullable {
-		fields = append(fields, "Nullable")
+		fields = append(fields, "nullable")
 	}
 	if schema.Discriminator != nil {
-		fields = append(fields, "Discriminator")
+		fields = append(fields, "discriminator")
 	}
 	if schema.ReadOnly {
-		fields = append(fields, "ReadOnly")
+		fields = append(fields, "readOnly")
 	}
 	if schema.WriteOnly {
-		fields = append(fields, "WriteOnly")
+		fields = append(fields, "writeOnly")
 	}
 	if schema.Xml != nil {
-		fields = append(fields, "Xml")
+		fields = append(fields, "xml")
 	}
 	if schema.ExternalDocs != nil {
-		fields = append(fields, "ExternalDocs")
+		fields = append(fields, "externalDocs")
 	}
 	if schema.Example != nil {
-		fields = append(fields, "Example")
+		fields = append(fields, "example")
 	}
 	if schema.Deprecated {
-		fields = append(fields, "Deprecated")
+		fields = append(fields, "deprecated")
 	}
 	if schema.Title != "" {
-		fields = append(fields, "Title")
+		fields = append(fields, "title")
 	}
 	if schema.MultipleOf != 0 {
-		fields = append(fields, "MultipleOf")
+		fields = append(fields, "multipleOf")
 	}
 	if schema.Maximum != 0 {
-		fields = append(fields, "Maximum")
+		fields = append(fields, "maximum")
 	}
 	if schema.ExclusiveMaximum {
-		fields = append(fields, "ExclusiveMaximum")
+		fields = append(fields, "exclusiveMaximum")
 	}
 	if schema.Minimum != 0 {
-		fields = append(fields, "Minimum")
+		fields = append(fields, "minimum")
 	}
 	if schema.ExclusiveMinimum {
-		fields = append(fields, "ExclusiveMinimum")
+		fields = append(fields, "exclusiveMinimum")
 	}
 	if schema.MaxLength != 0 {
-		fields = append(fields, "MaxLength")
+		fields = append(fields, "maxLength")
 	}
 	if schema.MinLength != 0 {
-		fields = append(fields, "MinLength")
+		fields = append(fields, "minLength")
 	}
 	if schema.Pattern != "" {
-		fields = append(fields, "Pattern")
+		fields = append(fields, "pattern")
 	}
 	if schema.MaxItems != 0 {
-		fields = append(fields, "MaxItems")
+		fields = append(fields, "maxItems")
 	}
 	if schema.MinItems != 0 {
-		fields = append(fields, "MinItems")
+		fields = append(fields, "minItems")
 	}
 	if schema.UniqueItems {
-		fields = append(fields, "UniqueItems")
+		fields = append(fields, "uniqueItems")
 	}
 	if schema.MaxProperties != 0 {
-		fields = append(fields, "MaxProperties")
+		fields = append(fields, "maxProperties")
 	}
 	if schema.MinProperties != 0 {
-		fields = append(fields, "MinProperties")
+		fields = append(fields, "minProperties")
 	}
 	if schema.Required != nil {
-		fields = append(fields, "Required")
+		fields = append(fields, "required")
 	}
 	if schema.AllOf != nil {
-		fields = append(fields, "AllOf")
+		fields = append(fields, "allOf")
 	}
 	if schema.OneOf != nil {
-		fields = append(fields, "OneOf")
+		fields = append(fields, "oneOf")
 	}
 
 	if schema.AnyOf != nil {
-		fields = append(fields, "AnyOf")
+		fields = append(fields, "anyOf")
 	}
 	if schema.Not != nil {
-		fields = append(fields, "Not")
+		fields = append(fields, "not")
 	}
 	if schema.Default != nil {
-		fields = append(fields, "Default")
+		fields = append(fields, "default")
 	}
 	return fields
 }
@@ -437,13 +472,13 @@ func getNotSupportedMediaTypeFields(mediaType *openapiv3.MediaType) []string {
 		return fields
 	}
 	if mediaType.Examples != nil {
-		fields = append(fields, "Examples")
+		fields = append(fields, "examples")
 	}
 	if mediaType.Example != nil {
-		fields = append(fields, "Example")
+		fields = append(fields, "example")
 	}
 	if mediaType.Encoding != nil {
-		fields = append(fields, "Encoding")
+		fields = append(fields, "encoding")
 	}
 	return fields
 }
@@ -455,22 +490,22 @@ func getNotSupportedOperationFields(operation *openapiv3.Operation) []string {
 		return fields
 	}
 	if operation.Tags != nil {
-		fields = append(fields, "Tags")
+		fields = append(fields, "tags")
 	}
 	if operation.ExternalDocs != nil {
-		fields = append(fields, "ExternalDocs")
+		fields = append(fields, "externalDocs")
 	}
 	if operation.Callbacks != nil {
-		fields = append(fields, "Callbacks")
+		fields = append(fields, "callbacks")
 	}
 	if operation.Deprecated {
-		fields = append(fields, "Deprecated")
+		fields = append(fields, "deprecated")
 	}
 	if operation.Security != nil {
-		fields = append(fields, "Security")
+		fields = append(fields, "security")
 	}
 	if operation.Servers != nil {
-		fields = append(fields, "Servers")
+		fields = append(fields, "servers")
 	}
 	return fields
 }
@@ -482,10 +517,10 @@ func getNotSupportedResponseFields(response *openapiv3.Response) []string {
 		return nil
 	}
 	if response.Links != nil {
-		fields = append(fields, "Links")
+		fields = append(fields, "links")
 	}
 	if response.Headers != nil {
-		fields = append(fields, "Headers")
+		fields = append(fields, "headers")
 	}
 	return fields
 }
@@ -497,19 +532,19 @@ func getNotSupportedPathItemFields(pathItem *openapiv3.PathItem) []string {
 		return fields
 	}
 	if pathItem.Head != nil {
-		fields = append(fields, "Head")
+		fields = append(fields, "head")
 	}
 	if pathItem.Options != nil {
-		fields = append(fields, "Options")
+		fields = append(fields, "options")
 	}
 	if pathItem.Trace != nil {
-		fields = append(fields, "Trace")
+		fields = append(fields, "trace")
 	}
 	if pathItem.Servers != nil {
-		fields = append(fields, "Servers")
+		fields = append(fields, "servers")
 	}
 	if pathItem.Parameters != nil {
-		fields = append(fields, "Parameters")
+		fields = append(fields, "parameters")
 	}
 	return fields
 }
@@ -522,19 +557,26 @@ func getNotSupportedComponentsFields(components *openapiv3.Components) []string 
 	}
 
 	if components.Examples != nil {
-		fields = append(fields, "Examples")
+		fields = append(fields, "examples")
 	}
 	if components.Headers != nil {
-		fields = append(fields, "Headers")
+		fields = append(fields, "headers")
 	}
 	if components.SecuritySchemes != nil {
-		fields = append(fields, "SecuritySchemes")
+		fields = append(fields, "securitySchemes")
 	}
 	if components.Links != nil {
-		fields = append(fields, "Links")
+		fields = append(fields, "links")
 	}
 	if components.Callbacks != nil {
-		fields = append(fields, "Callbacks")
+		fields = append(fields, "callbacks")
 	}
 	return fields
+}
+
+// Returns a copy of arr.
+func copyKeys(arr []string) []string {
+	cpy := make([]string, len(arr))
+	copy(cpy, arr)
+	return cpy
 }
