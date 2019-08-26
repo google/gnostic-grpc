@@ -6,6 +6,8 @@ import "google/api/annotations.proto";
 
 import "google/protobuf/empty.proto";
 
+import "google/protobuf/descriptor.proto";
+
 message Book {
   string author = 1;
 
@@ -34,26 +36,46 @@ message Error {
   string message = 2;
 }
 
+message ListShelvesOK {
+  ListShelvesResponse application_json = 1;
+}
+
 message ListShelvesResponses {
-  ListShelvesResponse ok = 1;
+  ListShelvesOK ok = 1;
+}
+
+message CreateShelfRequestBody {
+  Shelf application_json = 1;
 }
 
 message CreateShelfParameters {
-  Shelf shelf = 1;
+  CreateShelfRequestBody request_body = 1;
+}
+
+message CreateShelfOK {
+  Shelf application_json = 1;
 }
 
 message CreateShelfResponses {
-  Shelf ok = 1;
+  CreateShelfOK ok = 1;
 }
 
 message GetShelfParameters {
   int64 shelf = 1;
 }
 
-message GetShelfResponses {
-  Shelf ok = 1;
+message GetShelfOK {
+  Shelf application_json = 1;
+}
 
-  Error default = 2;
+message GetShelfDefault {
+  Error application_json = 1;
+}
+
+message GetShelfResponses {
+  GetShelfOK ok = 1;
+
+  GetShelfDefault default = 2;
 }
 
 message DeleteShelfParameters {
@@ -64,22 +86,42 @@ message ListBooksParameters {
   int64 shelf = 1;
 }
 
-message ListBooksResponses {
-  ListBooksResponse ok = 1;
+message ListBooksOK {
+  ListBooksResponse application_json = 1;
+}
 
-  Error default = 2;
+message ListBooksDefault {
+  Error application_json = 1;
+}
+
+message ListBooksResponses {
+  ListBooksOK ok = 1;
+
+  ListBooksDefault default = 2;
+}
+
+message CreateBookRequestBody {
+  Book application_json = 1;
 }
 
 message CreateBookParameters {
   int64 shelf = 1;
 
-  Book book = 2;
+  CreateBookRequestBody request_body = 2;
+}
+
+message CreateBookOK {
+  Book application_json = 1;
+}
+
+message CreateBookDefault {
+  Error application_json = 1;
 }
 
 message CreateBookResponses {
-  Book ok = 1;
+  CreateBookOK ok = 1;
 
-  Error default = 2;
+  CreateBookDefault default = 2;
 }
 
 message GetBookParameters {
@@ -88,10 +130,18 @@ message GetBookParameters {
   int64 book = 2;
 }
 
-message GetBookResponses {
-  Book ok = 1;
+message GetBookOK {
+  Book application_json = 1;
+}
 
-  Error default = 2;
+message GetBookDefault {
+  Error application_json = 1;
+}
+
+message GetBookResponses {
+  GetBookOK ok = 1;
+
+  GetBookDefault default = 2;
 }
 
 message DeleteBookParameters {
@@ -106,7 +156,7 @@ service Bookstore {
   }
 
   rpc CreateShelf ( CreateShelfParameters ) returns ( CreateShelfResponses ) {
-    option (google.api.http) = { post:"/shelves" body:"shelf"  };
+    option (google.api.http) = { post:"/shelves" body:"request_body"  };
   }
 
   rpc DeleteShelves ( google.protobuf.Empty ) returns ( google.protobuf.Empty ) {
@@ -126,7 +176,7 @@ service Bookstore {
   }
 
   rpc CreateBook ( CreateBookParameters ) returns ( CreateBookResponses ) {
-    option (google.api.http) = { post:"/shelves/{shelf}/books" body:"book"  };
+    option (google.api.http) = { post:"/shelves/{shelf}/books" body:"request_body"  };
   }
 
   rpc GetBook ( GetBookParameters ) returns ( GetBookResponses ) {

@@ -54,10 +54,12 @@ func (s *server) ListShelves(context.Context, *empty.Empty) (*ListShelvesRespons
 	for _, shelf := range s.Shelves {
 		shelves = append(shelves, shelf)
 	}
-	response := &ListShelvesResponse{}
-	response.Shelves = shelves
 	responses := &ListShelvesResponses{
-		Ok: response,
+		Ok: &ListShelvesOK{
+			ApplicationJson: &ListShelvesResponse{
+				Shelves: shelves,
+			},
+		},
 	}
 	return responses, nil
 }
@@ -66,13 +68,15 @@ func (s *server) CreateShelf(ctx context.Context, parameters *CreateShelfParamet
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 	// assign an id and name to a shelf and add it to the Shelves map.
-	shelf := parameters.Shelf
+	shelf := parameters.RequestBody.ApplicationJson
 	s.LastShelfID++
 	sid := s.LastShelfID
 	s.Shelves[sid] = shelf
 
 	responses := &CreateShelfResponses{
-		Ok: shelf,
+		Ok: &CreateShelfOK{
+			ApplicationJson: shelf,
+		},
 	}
 	return responses, nil
 
@@ -96,10 +100,13 @@ func (s *server) GetShelf(ctx context.Context, parameters *GetShelfParameters) (
 	shelf, err := s.getShelf(parameters.Shelf)
 	responses := &GetShelfResponses{}
 	if err != nil {
-		responses.Default = &Error{Code: int32(http.StatusNotFound), Message: err.Error()}
+
+		responses.Default = &GetShelfDefault{
+			ApplicationJson: &Error{Code: int32(http.StatusNotFound), Message: err.Error()},
+		}
 		return responses, err
 	}
-	responses.Ok = shelf
+	responses.Ok = &GetShelfOK{ApplicationJson: shelf}
 	return responses, nil
 }
 
@@ -119,7 +126,9 @@ func (s *server) ListBooks(ctx context.Context, parameters *ListBooksParameters)
 	_, err = s.getShelf(parameters.Shelf)
 	responses = &ListBooksResponses{}
 	if err != nil {
-		responses.Default = &Error{Code: int32(http.StatusNotFound), Message: err.Error()}
+		responses.Default = &ListBooksDefault{
+			ApplicationJson: &Error{Code: int32(http.StatusNotFound), Message: err.Error()},
+		}
 		return responses, err
 	}
 
@@ -128,9 +137,11 @@ func (s *server) ListBooks(ctx context.Context, parameters *ListBooksParameters)
 	for _, book := range shelfBooks {
 		books = append(books, book)
 	}
-	response := &ListBooksResponse{}
-	response.Books = books
-	responses.Ok = response
+	responses.Ok = &ListBooksOK{
+		ApplicationJson: &ListBooksResponse{
+			Books: books,
+		},
+	}
 	return responses, nil
 }
 
@@ -141,18 +152,22 @@ func (s *server) CreateBook(ctx context.Context, parameters *CreateBookParameter
 	_, err := s.getShelf(parameters.Shelf)
 	responses := &CreateBookResponses{}
 	if err != nil {
-		responses.Default = &Error{Code: int32(http.StatusNotFound), Message: err.Error()}
+		responses.Default = &CreateBookDefault{
+			ApplicationJson: &Error{Code: int32(http.StatusNotFound), Message: err.Error()},
+		}
 		return responses, err
 	}
 	// assign an id and name to a book and add it to the Books map.
 	s.LastBookID++
 	bid := s.LastBookID
-	book := parameters.Book
+	book := parameters.RequestBody.ApplicationJson
 	if s.Books[parameters.Shelf] == nil {
 		s.Books[parameters.Shelf] = make(map[int64]*Book)
 	}
 	s.Books[parameters.Shelf][bid] = book
-	responses.Ok = book
+	responses.Ok = &CreateBookOK{
+		ApplicationJson: book,
+	}
 	return responses, nil
 }
 
@@ -163,10 +178,14 @@ func (s *server) GetBook(ctx context.Context, parameters *GetBookParameters) (*G
 	book, err := s.getBook(parameters.Shelf, parameters.Book)
 	responses := &GetBookResponses{}
 	if err != nil {
-		responses.Default = &Error{Code: int32(http.StatusNotFound), Message: err.Error()}
+		responses.Default = &GetBookDefault{
+			ApplicationJson: &Error{Code: int32(http.StatusNotFound), Message: err.Error()},
+		}
 		return responses, err
 	}
-	responses.Ok = book
+	responses.Ok = &GetBookOK{
+		ApplicationJson: book,
+	}
 	return responses, nil
 }
 
