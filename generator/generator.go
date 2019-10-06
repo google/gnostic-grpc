@@ -256,6 +256,7 @@ func buildServiceFromMethods(descr *dpb.FileDescriptorProto, renderer *Renderer)
 			return err
 		}
 
+		method.Name = cleanName(method.Name)
 		method.ParametersTypeName = cleanTypeName(method.ParametersTypeName)
 		method.ResponsesTypeName = cleanTypeName(method.ResponsesTypeName)
 		method.ParametersTypeName = strings.Title(method.ParametersTypeName)
@@ -613,6 +614,7 @@ func setMessageDescriptorName(messageDescriptorProto *dpb.DescriptorProto, name 
 // Removes characters which are not allowed for message names or field names inside .proto files.
 func cleanName(name string) string {
 	name = convertStatusCodes(name)
+	name = strings.Replace(name, ".", "_", -1)
 	name = strings.Replace(name, "-", "_", -1)
 	name = strings.Replace(name, " ", "", -1)
 	name = strings.Replace(name, "(", "", -1)
