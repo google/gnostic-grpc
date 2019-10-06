@@ -78,7 +78,7 @@ func RunProtoGenerator() {
 // error if path can't be resolved or resolves to an invalid package name.
 func resolvePackageName(p string) (string, error) {
 	p, err := filepath.Abs(p)
-	p = strings.ReplaceAll(p, "-", "_")
+	p = strings.Replace(p, "-", "_", -1)
 	if err == nil {
 		p = filepath.Base(p)
 		_, err = format.Source([]byte("package " + p))
