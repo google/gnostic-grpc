@@ -222,7 +222,7 @@ func buildMessagesFromTypes(descr *dpb.FileDescriptorProto, renderer *Renderer) 
 			// Maps are represented as nested types inside of the descriptor.
 			if f.Kind == surface_v1.FieldKind_MAP {
 				if strings.Contains(f.Type, "map[string][]") {
-					// Not supported for now: https://github.com/LorenzHW/gnostic-grpc/issues/3#issuecomment-509348357
+					// Not supported for now: https://github.com/LorenzHW/gnostic-grpc-deprecated/issues/3#issuecomment-509348357
 					continue
 				}
 				mapDescriptorProto := buildMapDescriptorProto(f)
