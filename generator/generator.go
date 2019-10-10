@@ -241,7 +241,7 @@ func buildMessagesFromTypes(descr *dpb.FileDescriptorProto, renderer *Renderer) 
 // have to be set.
 func buildServiceFromMethods(descr *dpb.FileDescriptorProto, renderer *Renderer) (err error) {
 	methods := renderer.Model.Methods
-	serviceName := strings.Title(renderer.Package)
+	serviceName := findValidServiceName(descr.MessageType, strings.Title(renderer.Package))
 
 	service := &dpb.ServiceDescriptorProto{
 		Name: &serviceName,
@@ -648,4 +648,27 @@ func convertStatusCodes(name string) string {
 		name = strings.Replace(statusText, " ", "_", -1)
 	}
 	return name
+}
+
+// Finds a valid service name for the gRPC service. A valid service name is not already taken by a message
+// Reference: https://github.com/googleapis/gnostic-grpc/issues/7
+func findValidServiceName(messages []*dpb.DescriptorProto, serviceName string) string {
+	messageNames := make(map[string]bool)
+
+	for _, m := range messages {
+		messageNames[*m.Name] = true
+	}
+
+	validServiceName := serviceName
+	ctr := 0
+	for {
+		if nameIsAlreadyTaken, _ := messageNames[validServiceName]; !nameIsAlreadyTaken {
+			return validServiceName
+		}
+		validServiceName = serviceName + "Service"
+		if ctr > 0 {
+			validServiceName += strconv.Itoa(ctr)
+		}
+		ctr += 1
+	}
 }
