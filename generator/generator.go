@@ -41,6 +41,8 @@ var generatedSymbolicReferences = make(map[string]bool, 0)
 // Gathers all messages that have been generated from symbolic references in recursive calls.
 var generatedMessages = make(map[string]string, 0)
 
+var shouldRenderEmptyImport = false
+
 // Uses the output of gnostic to return a dpb.FileDescriptorSet (in bytes). 'renderer' contains
 // the 'model' (surface model) which has all the relevant data to create the dpb.FileDescriptorSet.
 // There are four main steps:
@@ -70,8 +72,6 @@ func (renderer *Renderer) runFileDescriptorSetGenerator() (fdSet *dpb.FileDescri
 		return nil, err
 	}
 
-	addDependencies(fdSet)
-
 	err = buildMessagesFromTypes(mainProto, renderer)
 	if err != nil {
 		return nil, err
@@ -82,16 +82,24 @@ func (renderer *Renderer) runFileDescriptorSetGenerator() (fdSet *dpb.FileDescri
 		return nil, err
 	}
 
+	addDependencies(fdSet)
+
 	return fdSet, err
 }
 
-// Adds the dependencies to the FileDescriptor we want to render. This essentially makes the 'import' statements
-// inside the .proto definition.
+// Adds the dependencies to the FileDescriptorProto we want to render (the last one). This essentially makes the 'import'
+// statements inside the .proto definition.
 func addDependencies(fdSet *dpb.FileDescriptorSet) {
 	// At last, we need to add the dependencies to the FileDescriptorProto in order to get them rendered.
 	lastFdProto := getLast(fdSet.File)
 	for _, fd := range fdSet.File {
 		if fd != lastFdProto {
+			if *fd.Name == "google/protobuf/empty.proto" { // Reference: https://github.com/googleapis/gnostic-grpc/issues/8
+				if shouldRenderEmptyImport {
+					lastFdProto.Dependency = append(lastFdProto.Dependency, *fd.Name)
+				}
+				continue
+			}
 			lastFdProto.Dependency = append(lastFdProto.Dependency, *fd.Name)
 		}
 	}
@@ -264,9 +272,11 @@ func buildServiceFromMethods(descr *dpb.FileDescriptorProto, renderer *Renderer)
 
 		if method.ParametersTypeName == "" {
 			method.ParametersTypeName = "google.protobuf.Empty"
+			shouldRenderEmptyImport = true
 		}
 		if method.ResponsesTypeName == "" {
 			method.ResponsesTypeName = "google.protobuf.Empty"
+			shouldRenderEmptyImport = true
 		}
 
 		mDescr := &dpb.MethodDescriptorProto{
