@@ -19,6 +19,7 @@ import (
 	"errors"
 	"go/format"
 	"path/filepath"
+	"strings"
 
 	"github.com/golang/protobuf/proto"
 	openapiv3 "github.com/googleapis/gnostic/OpenAPIv3"
@@ -32,8 +33,13 @@ func RunProtoGenerator() {
 	env.RespondAndExitIfError(err)
 
 	fileName := env.Request.SourceName
-	extension := filepath.Ext(fileName)
-	fileName = fileName[0 : len(fileName)-len(extension)]
+	for {
+		extension := filepath.Ext(fileName)
+		if extension == "" {
+			break
+		}
+		fileName = fileName[0 : len(fileName)-len(extension)]
+	}
 
 	packageName, err := resolvePackageName(fileName)
 	env.RespondAndExitIfError(err)
@@ -72,6 +78,7 @@ func RunProtoGenerator() {
 // error if path can't be resolved or resolves to an invalid package name.
 func resolvePackageName(p string) (string, error) {
 	p, err := filepath.Abs(p)
+	p = strings.Replace(p, "-", "_", -1)
 	if err == nil {
 		p = filepath.Base(p)
 		_, err = format.Source([]byte("package " + p))
