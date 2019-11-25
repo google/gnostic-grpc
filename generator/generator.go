@@ -41,6 +41,8 @@ var generatedSymbolicReferences = make(map[string]bool, 0)
 // Gathers all messages that have been generated from symbolic references in recursive calls.
 var generatedMessages = make(map[string]string, 0)
 
+var shouldRenderEmptyImport = false
+
 // Uses the output of gnostic to return a dpb.FileDescriptorSet (in bytes). 'renderer' contains
 // the 'model' (surface model) which has all the relevant data to create the dpb.FileDescriptorSet.
 // There are four main steps:
@@ -70,8 +72,6 @@ func (renderer *Renderer) runFileDescriptorSetGenerator() (fdSet *dpb.FileDescri
 		return nil, err
 	}
 
-	addDependencies(fdSet)
-
 	err = buildMessagesFromTypes(mainProto, renderer)
 	if err != nil {
 		return nil, err
@@ -82,16 +82,24 @@ func (renderer *Renderer) runFileDescriptorSetGenerator() (fdSet *dpb.FileDescri
 		return nil, err
 	}
 
+	addDependencies(fdSet)
+
 	return fdSet, err
 }
 
-// Adds the dependencies to the FileDescriptor we want to render. This essentially makes the 'import' statements
-// inside the .proto definition.
+// Adds the dependencies to the FileDescriptorProto we want to render (the last one). This essentially makes the 'import'
+// statements inside the .proto definition.
 func addDependencies(fdSet *dpb.FileDescriptorSet) {
 	// At last, we need to add the dependencies to the FileDescriptorProto in order to get them rendered.
 	lastFdProto := getLast(fdSet.File)
 	for _, fd := range fdSet.File {
 		if fd != lastFdProto {
+			if *fd.Name == "google/protobuf/empty.proto" { // Reference: https://github.com/googleapis/gnostic-grpc/issues/8
+				if shouldRenderEmptyImport {
+					lastFdProto.Dependency = append(lastFdProto.Dependency, *fd.Name)
+				}
+				continue
+			}
 			lastFdProto.Dependency = append(lastFdProto.Dependency, *fd.Name)
 		}
 	}
@@ -222,7 +230,7 @@ func buildMessagesFromTypes(descr *dpb.FileDescriptorProto, renderer *Renderer) 
 			// Maps are represented as nested types inside of the descriptor.
 			if f.Kind == surface_v1.FieldKind_MAP {
 				if strings.Contains(f.Type, "map[string][]") {
-					// Not supported for now: https://github.com/LorenzHW/gnostic-grpc/issues/3#issuecomment-509348357
+					// Not supported for now: https://github.com/LorenzHW/gnostic-grpc-deprecated/issues/3#issuecomment-509348357
 					continue
 				}
 				mapDescriptorProto := buildMapDescriptorProto(f)
@@ -241,7 +249,7 @@ func buildMessagesFromTypes(descr *dpb.FileDescriptorProto, renderer *Renderer) 
 // have to be set.
 func buildServiceFromMethods(descr *dpb.FileDescriptorProto, renderer *Renderer) (err error) {
 	methods := renderer.Model.Methods
-	serviceName := strings.Title(renderer.Package)
+	serviceName := findValidServiceName(descr.MessageType, strings.Title(renderer.Package))
 
 	service := &dpb.ServiceDescriptorProto{
 		Name: &serviceName,
@@ -264,9 +272,11 @@ func buildServiceFromMethods(descr *dpb.FileDescriptorProto, renderer *Renderer)
 
 		if method.ParametersTypeName == "" {
 			method.ParametersTypeName = "google.protobuf.Empty"
+			shouldRenderEmptyImport = true
 		}
 		if method.ResponsesTypeName == "" {
 			method.ResponsesTypeName = "google.protobuf.Empty"
+			shouldRenderEmptyImport = true
 		}
 
 		mDescr := &dpb.MethodDescriptorProto{
@@ -648,4 +658,27 @@ func convertStatusCodes(name string) string {
 		name = strings.Replace(statusText, " ", "_", -1)
 	}
 	return name
+}
+
+// Finds a valid service name for the gRPC service. A valid service name is not already taken by a message
+// Reference: https://github.com/googleapis/gnostic-grpc/issues/7
+func findValidServiceName(messages []*dpb.DescriptorProto, serviceName string) string {
+	messageNames := make(map[string]bool)
+
+	for _, m := range messages {
+		messageNames[*m.Name] = true
+	}
+
+	validServiceName := serviceName
+	ctr := 0
+	for {
+		if nameIsAlreadyTaken, _ := messageNames[validServiceName]; !nameIsAlreadyTaken {
+			return validServiceName
+		}
+		validServiceName = serviceName + "Service"
+		if ctr > 0 {
+			validServiceName += strconv.Itoa(ctr)
+		}
+		ctr += 1
+	}
 }
