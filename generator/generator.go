@@ -27,6 +27,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -205,6 +206,7 @@ func buildDependencies(fdSet *dpb.FileDescriptorSet) {
 // the fields have to follow certain rules, and therefore have to be validated.
 func buildMessagesFromTypes(descr *dpb.FileDescriptorProto, renderer *Renderer) (err error) {
 	types := renderer.Model.Types
+	adjustSurfaceModelTypes(types)
 
 	for _, t := range types {
 		message := &dpb.DescriptorProto{}
@@ -243,6 +245,23 @@ func buildMessagesFromTypes(descr *dpb.FileDescriptorProto, renderer *Renderer) 
 		generatedMessages[*message.Name] = renderer.Package + "." + *message.Name
 	}
 	return nil
+}
+
+// adjustSurfaceModelTypes prettifies the names of types and fields from the surface model in order to get a better
+// looking output file. We are working with the assumption that gnostic-grpc works with an OpenAPI description that
+// is based on REST/JSON.
+// Related to: https://github.com/googleapis/gnostic-grpc/issues/11
+func adjustSurfaceModelTypes(types []*surface_v1.Type) {
+	for _, t := range types {
+		t.Name = strings.Replace(t.Name, "application/json", "", -1)
+		for _, f := range t.Fields {
+			f.Name = strings.Replace(f.Name, "application/json", "", -1)
+			f.Type = strings.Replace(f.Type, "application/json", "", -1)
+			if len(f.Name) == 0 {
+				f.Name = f.Type
+			}
+		}
+	}
 }
 
 // Builds a protobuf RPC service. For every method the corresponding gRPC-HTTP transcoding options (https://github.com/googleapis/googleapis/blob/master/google/api/http.proto)
@@ -381,11 +400,11 @@ func setFieldDescriptorType(fd *dpb.FieldDescriptorProto, f *surface_v1.Field) {
 
 }
 
-// Sets the Name of 'fd'. The convention inside .proto is, that all field names are
-// lowercase and all messages and types are capitalized if they are not scalar types (int64, string, ...).
+// setFieldDescriptorName sets the Name of 'fd' according to the protocol buffer style guide for field names
+// https://developers.google.com/protocol-buffers/docs/style#message-and-field-names
 func setFieldDescriptorName(fd *dpb.FieldDescriptorProto, f *surface_v1.Field) {
 	name := cleanName(f.Name)
-	name = strings.ToLower(name)
+	name = toSnakeCase(name)
 	fd.Name = &name
 }
 
@@ -398,9 +417,9 @@ func setFieldDescriptorLabel(fd *dpb.FieldDescriptorProto, f *surface_v1.Field) 
 	fd.Label = &label
 }
 
-// Sets the TypeName of 'fd'. A TypeName has to be set if the field is a reference to another message. Otherwise it is nil.
-// The convention inside .proto is, that all field names are lowercase and all messages and types are capitalized if
-// they are not scalar types (int64, string, ...).
+// setFieldDescriptorTypeName sets the TypeName of 'fd'. A TypeName has to be set if the field is a reference to another
+// message. Otherwise it is nil. Names are set according to the protocol buffer style guide for message names:
+// https://developers.google.com/protocol-buffers/docs/style#message-and-field-names
 func setFieldDescriptorTypeName(fd *dpb.FieldDescriptorProto, f *surface_v1.Field, packageName string) {
 	// A field with a type of Message always has a typeName associated with it (the name of the Message).
 	if *fd.Type == dpb.FieldDescriptorProto_TYPE_MESSAGE {
@@ -655,7 +674,7 @@ func convertStatusCodes(name string) string {
 			log.Println("It seems like you have an status code that is currently not known to net.http.StatusText. This might cause the plugin to fail.")
 			statusText = "unknownStatusCode"
 		}
-		name = strings.Replace(statusText, " ", "_", -1)
+		name = statusText
 	}
 	return name
 }
@@ -681,4 +700,14 @@ func findValidServiceName(messages []*dpb.DescriptorProto, serviceName string) s
 		}
 		ctr += 1
 	}
+}
+
+// toSnakeCase converts str to snake_case
+func toSnakeCase(str string) string {
+	var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
+	var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
+
+	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
+	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
+	return strings.ToLower(snake)
 }
