@@ -46,7 +46,7 @@ func main() {
 	res, err := client.ListShelves(ctx, &empty.Empty{})
 	if res != nil {
 		fmt.Println("The themes of your shelves:")
-		for _, shelf := range res.Ok.ApplicationJson.Shelves {
+		for _, shelf := range res.Ok.ListShelvesResponse.Shelves {
 			fmt.Println(shelf.Theme)
 		}
 	}

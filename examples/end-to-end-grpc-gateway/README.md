@@ -81,7 +81,7 @@ Let's create a shelf first:
       http://localhost:8081/shelves \
       -H 'Content-Type: application/json' \
       -d '{
-      "application_json": {
+      "shelf": {
         "name": "Books I need to read",
         "theme": "Non-fiction"
         }
@@ -97,7 +97,7 @@ Create a book for the shelve with the id `1`:
       http://localhost:8081/shelves/1/books \
       -H 'Content-Type: application/json' \
       -d '{
-      "application_json": {
+      "book": {
         "author": "Hans Rosling",
         "name": "Factfulness",
         "title": "Factfulness: Ten Reasons We'\''re wrong about the world - and Why Things Are Better Than You Think"

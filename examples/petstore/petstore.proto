@@ -11,11 +11,11 @@ import "google/protobuf/descriptor.proto";
 message Order {
   int64 id = 1;
 
-  int64 petid = 2;
+  int64 pet_id = 2;
 
   int32 quantity = 3;
 
-  string shipdate = 4;
+  string ship_date = 4;
 
   string status = 5;
 
@@ -33,9 +33,9 @@ message User {
 
   string username = 2;
 
-  string firstname = 3;
+  string first_name = 3;
 
-  string lastname = 4;
+  string last_name = 4;
 
   string email = 5;
 
@@ -43,7 +43,7 @@ message User {
 
   string phone = 7;
 
-  int32 userstatus = 8;
+  int32 user_status = 8;
 }
 
 message Tag {
@@ -59,7 +59,7 @@ message Pet {
 
   string name = 3;
 
-  repeated string photourls = 4;
+  repeated string photo_urls = 4;
 
   repeated Tag tags = 5;
 
@@ -75,13 +75,13 @@ message ApiResponse {
 }
 
 message Pet {
-  Pet application_json = 1;
+  Pet pet = 1;
 
   Pet application_xml = 2;
 }
 
 message UserArray {
-  repeated User application_json = 1;
+  repeated User user = 1;
 }
 
 message UpdatePetParameters {
@@ -97,7 +97,7 @@ message FindPetsByStatusParameters {
 }
 
 message FindPetsByStatusOK {
-  repeated Pet application_json = 1;
+  repeated Pet pet = 1;
 
   repeated Pet application_xml = 2;
 }
@@ -111,7 +111,7 @@ message FindPetsByTagsParameters {
 }
 
 message FindPetsByTagsOK {
-  repeated Pet application_json = 1;
+  repeated Pet pet = 1;
 
   repeated Pet application_xml = 2;
 }
@@ -121,11 +121,11 @@ message FindPetsByTagsResponses {
 }
 
 message GetPetByIdParameters {
-  int64 petid = 1;
+  int64 pet_id = 1;
 }
 
 message GetPetByIdOK {
-  Pet application_json = 1;
+  Pet pet = 1;
 
   Pet application_xml = 2;
 }
@@ -145,7 +145,7 @@ message UpdatePetWithFormRequestBody {
 }
 
 message UpdatePetWithFormParameters {
-  int64 petid = 1;
+  int64 pet_id = 1;
 
   UpdatePetWithFormRequestBody request_body = 2;
 }
@@ -153,7 +153,7 @@ message UpdatePetWithFormParameters {
 message DeletePetParameters {
   string api_key = 1;
 
-  int64 petid = 2;
+  int64 pet_id = 2;
 }
 
 message UploadFileRequestBody {
@@ -161,25 +161,25 @@ message UploadFileRequestBody {
 }
 
 message UploadFileParameters {
-  int64 petid = 1;
+  int64 pet_id = 1;
 
   UploadFileRequestBody request_body = 2;
 }
 
 message UploadFileOK {
-  ApiResponse application_json = 1;
+  ApiResponse api_response = 1;
 }
 
 message UploadFileResponses {
   UploadFileOK ok = 1;
 }
 
-message GetInventoryOKapplicationJson {
+message GetInventoryOK {
   map<string, int32> additional_properties = 1;
 }
 
 message GetInventoryOK {
-  GetInventoryOKapplicationJson application_json = 1;
+  GetInventoryOK get_inventory_ok = 1;
 }
 
 message GetInventoryResponses {
@@ -187,7 +187,7 @@ message GetInventoryResponses {
 }
 
 message PlaceOrderRequestBody {
-  Order application_json = 1;
+  Order order = 1;
 }
 
 message PlaceOrderParameters {
@@ -195,7 +195,7 @@ message PlaceOrderParameters {
 }
 
 message PlaceOrderOK {
-  Order application_json = 1;
+  Order order = 1;
 
   Order application_xml = 2;
 }
@@ -205,11 +205,11 @@ message PlaceOrderResponses {
 }
 
 message GetOrderByIdParameters {
-  int64 orderid = 1;
+  int64 order_id = 1;
 }
 
 message GetOrderByIdOK {
-  Order application_json = 1;
+  Order order = 1;
 
   Order application_xml = 2;
 }
@@ -219,11 +219,11 @@ message GetOrderByIdResponses {
 }
 
 message DeleteOrderParameters {
-  int64 orderid = 1;
+  int64 order_id = 1;
 }
 
 message CreateUserRequestBody {
-  User application_json = 1;
+  User user = 1;
 }
 
 message CreateUserParameters {
@@ -245,7 +245,7 @@ message LoginUserParameters {
 }
 
 message LoginUserOK {
-  string application_json = 1;
+  string string = 1;
 
   string application_xml = 2;
 }
@@ -259,7 +259,7 @@ message GetUserByNameParameters {
 }
 
 message GetUserByNameOK {
-  User application_json = 1;
+  User user = 1;
 
   User application_xml = 2;
 }
@@ -269,7 +269,7 @@ message GetUserByNameResponses {
 }
 
 message UpdateUserRequestBody {
-  User application_json = 1;
+  User user = 1;
 }
 
 message UpdateUserParameters {
