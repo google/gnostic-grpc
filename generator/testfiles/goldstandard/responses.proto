@@ -21,15 +21,15 @@ message Person {
 
   string name = 3;
 
-  repeated string photourls = 4;
+  repeated string photo_urls = 4;
 }
 
 message Response {
-  Person application_json = 1;
+  Person person = 1;
 }
 
 message TestResponseNativeOK {
-  string application_json = 1;
+  string string = 1;
 }
 
 message TestResponseNativeResponses {
@@ -37,7 +37,7 @@ message TestResponseNativeResponses {
 }
 
 message TestResponseReferenceOK {
-  Person application_json = 1;
+  Person person = 1;
 }
 
 message TestResponseReferenceResponses {
@@ -45,7 +45,7 @@ message TestResponseReferenceResponses {
 }
 
 message TestResponseMultipleContentOK {
-  Person application_json = 1;
+  Person person = 1;
 
   Person application_xml = 2;
 }
@@ -55,7 +55,7 @@ message TestResponseMultipleContentResponses {
 }
 
 message TestResponse400StatusCodeBadRequest {
-  Error application_json = 1;
+  Error error = 1;
 }
 
 message TestResponse400StatusCodeResponses {
