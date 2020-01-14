@@ -73,6 +73,8 @@ func (renderer *Renderer) runFileDescriptorSetGenerator() (fdSet *dpb.FileDescri
 		return nil, err
 	}
 
+	adjustMethodsAndTypes(renderer)
+
 	err = buildMessagesFromTypes(mainProto, renderer)
 	if err != nil {
 		return nil, err
@@ -205,10 +207,7 @@ func buildDependencies(fdSet *dpb.FileDescriptorSet) {
 // Builds protobuf messages from the surface model types. If the type is a RPC request parameter
 // the fields have to follow certain rules, and therefore have to be validated.
 func buildMessagesFromTypes(descr *dpb.FileDescriptorProto, renderer *Renderer) (err error) {
-	types := renderer.Model.Types
-	adjustSurfaceModelTypes(types)
-
-	for _, t := range types {
+	for _, t := range renderer.Model.Types {
 		message := &dpb.DescriptorProto{}
 		setMessageDescriptorName(message, t.Name)
 
@@ -247,21 +246,92 @@ func buildMessagesFromTypes(descr *dpb.FileDescriptorProto, renderer *Renderer) 
 	return nil
 }
 
-// adjustSurfaceModelTypes prettifies the names of types and fields from the surface model in order to get a better
-// looking output file. We are working with the assumption that gnostic-grpc works with an OpenAPI description that
-// is based on REST/JSON.
+// adjustMethodsAndTypes simplifies and prettifies the types and fields of the surface model in order to get a better
+// looking output file.
 // Related to: https://github.com/googleapis/gnostic-grpc/issues/11
-func adjustSurfaceModelTypes(types []*surface_v1.Type) {
-	for _, t := range types {
-		t.Name = strings.Replace(t.Name, "application/json", "", -1)
+func adjustMethodsAndTypes(renderer *Renderer) {
+	filteredTypes := make([]*surface_v1.Type, 0)
+	nameToType := make(map[string]*surface_v1.Type)
+	typesToDelete := make(map[*surface_v1.Type]bool)
+
+	// Clean all type names and every field name
+	for _, t := range renderer.Model.Types {
+		t.Name = cleanName(t.Name)
 		for _, f := range t.Fields {
-			f.Name = strings.Replace(f.Name, "application/json", "", -1)
-			f.Type = strings.Replace(f.Type, "application/json", "", -1)
+			f.Name = cleanName(f.Name)
+			f.Type = cleanName(f.Type)
 			if len(f.Name) == 0 {
-				f.Name = f.Type
+				f.Name = strings.ToLower(f.Type)
 			}
 		}
 	}
+
+	for _, t := range renderer.Model.Types {
+		nameToType[t.Name] = t
+	}
+
+	for _, t := range renderer.Model.Types {
+		typesToDelete[t] = false
+	}
+
+	for _, m := range renderer.Model.Methods {
+		if len(m.ParametersTypeName) > 0 {
+			if parameters, ok := nameToType[m.ParametersTypeName]; ok {
+				// For requestBodies we remove the intermediate type.
+				for _, f := range parameters.Fields {
+					if f.Name == "request_body" {
+						reqBody := f
+						if intermediateType, ok := nameToType[reqBody.Type]; ok {
+							reqBody.Name = intermediateType.Fields[0].Name
+							reqBody.Type = intermediateType.Fields[0].Type
+							typesToDelete[intermediateType] = true
+						}
+					}
+				}
+			}
+		}
+
+		// We only renderer messages and types for the response with the lowest status code.
+		if len(m.ResponsesTypeName) > 0 {
+			if responses, ok := nameToType[m.ResponsesTypeName]; ok {
+				if lowestStatusCodeResponse, ok := nameToType[responses.Fields[0].Type]; ok {
+					typesToDelete[nameToType[m.ResponsesTypeName]] = true
+
+					for _, f := range responses.Fields {
+						typesToDelete[nameToType[f.Type]] = true
+					}
+
+					lowestStatusCode, err := strconv.Atoi(responses.Fields[0].Name)
+					if err == nil {
+						for _, f := range responses.Fields {
+							statusCode, err := strconv.Atoi(f.Name)
+							if err == nil && statusCode < lowestStatusCode {
+								lowestStatusCodeResponse = nameToType[f.Type]
+								lowestStatusCode = statusCode
+							}
+						}
+					}
+					m.ResponsesTypeName = ""
+					if lowestStatusCodeResponse.Fields[0].Kind != surface_v1.FieldKind_SCALAR {
+						m.ResponsesTypeName = lowestStatusCodeResponse.Fields[0].Type
+					}
+				} else {
+					// This might happen for symbolic references. Let's not render anything for now.
+					m.ResponsesTypeName = ""
+					typesToDelete[responses] = true
+				}
+			}
+		}
+	}
+
+	// Remove types that we don't want to render
+	for _, t := range renderer.Model.Types {
+		if shouldDelete, ok := typesToDelete[t]; ok && !shouldDelete {
+			filteredTypes = append(filteredTypes, t)
+		}
+	}
+
+	renderer.Model.Types = filteredTypes
 }
 
 // Builds a protobuf RPC service. For every method the corresponding gRPC-HTTP transcoding options (https://github.com/googleapis/googleapis/blob/master/google/api/http.proto)
@@ -643,6 +713,7 @@ func setMessageDescriptorName(messageDescriptorProto *dpb.DescriptorProto, name 
 // Removes characters which are not allowed for message names or field names inside .proto files.
 func cleanName(name string) string {
 	name = convertStatusCodes(name)
+	name = strings.Replace(name, "application/json", "", -1)
 	name = strings.Replace(name, ".", "_", -1)
 	name = strings.Replace(name, "-", "_", -1)
 	name = strings.Replace(name, " ", "", -1)
