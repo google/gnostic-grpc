@@ -18,29 +18,21 @@ message Person {
   repeated string photo_urls = 4;
 }
 
-message RequestBody {
-  Person person = 1;
-}
-
-message TestRequestBodyRequestBody {
-  Person person = 1;
-}
-
 message TestRequestBodyParameters {
-  TestRequestBodyRequestBody request_body = 1;
+  Person person = 1;
 }
 
 message TestRequestBodyReferenceParameters {
-  RequestBody request_body = 1;
+  Person person = 1;
 }
 
 service Requestbodies {
   rpc TestRequestBody ( TestRequestBodyParameters ) returns ( google.protobuf.Empty ) {
-    option (google.api.http) = { get:"/testRequestBody" body:"request_body"  };
+    option (google.api.http) = { get:"/testRequestBody" body:"person"  };
   }
 
   rpc TestRequestBodyReference ( TestRequestBodyReferenceParameters ) returns ( google.protobuf.Empty ) {
-    option (google.api.http) = { get:"/testRequestBodyReference" body:"request_body"  };
+    option (google.api.http) = { get:"/testRequestBodyReference" body:"person"  };
   }
 }
 
