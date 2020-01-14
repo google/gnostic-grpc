@@ -44,12 +44,8 @@ message ListShelvesResponses {
   ListShelvesOK ok = 1;
 }
 
-message CreateShelfRequestBody {
-  Shelf shelf = 1;
-}
-
 message CreateShelfParameters {
-  CreateShelfRequestBody request_body = 1;
+  Shelf shelf = 1;
 }
 
 message CreateShelfOK {
@@ -100,14 +96,10 @@ message ListBooksResponses {
   ListBooksDefault default = 2;
 }
 
-message CreateBookRequestBody {
-  Book book = 1;
-}
-
 message CreateBookParameters {
   int64 shelf = 1;
 
-  CreateBookRequestBody request_body = 2;
+  Book book = 2;
 }
 
 message CreateBookOK {
@@ -156,7 +148,7 @@ service Bookstore {
   }
 
   rpc CreateShelf ( CreateShelfParameters ) returns ( CreateShelfResponses ) {
-    option (google.api.http) = { post:"/shelves" body:"request_body"  };
+    option (google.api.http) = { post:"/shelves" body:"shelf"  };
   }
 
   rpc DeleteShelves ( google.protobuf.Empty ) returns ( google.protobuf.Empty ) {
@@ -176,7 +168,7 @@ service Bookstore {
   }
 
   rpc CreateBook ( CreateBookParameters ) returns ( CreateBookResponses ) {
-    option (google.api.http) = { post:"/shelves/{shelf}/books" body:"request_body"  };
+    option (google.api.http) = { post:"/shelves/{shelf}/books" body:"book"  };
   }
 
   rpc GetBook ( GetBookParameters ) returns ( GetBookResponses ) {

@@ -68,7 +68,7 @@ func (s *server) CreateShelf(ctx context.Context, parameters *CreateShelfParamet
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 	// assign an id and name to a shelf and add it to the Shelves map.
-	shelf := parameters.RequestBody.Shelf
+	shelf := parameters.Shelf
 	s.LastShelfID++
 	sid := s.LastShelfID
 	s.Shelves[sid] = shelf
@@ -160,7 +160,7 @@ func (s *server) CreateBook(ctx context.Context, parameters *CreateBookParameter
 	// assign an id and name to a book and add it to the Books map.
 	s.LastBookID++
 	bid := s.LastBookID
-	book := parameters.RequestBody.Book
+	book := parameters.Book
 	if s.Books[parameters.Shelf] == nil {
 		s.Books[parameters.Shelf] = make(map[int64]*Book)
 	}

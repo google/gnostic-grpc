@@ -74,22 +74,12 @@ message ApiResponse {
   string message = 3;
 }
 
-message Pet {
-  Pet pet = 1;
-
-  Pet application_xml = 2;
-}
-
-message UserArray {
-  repeated User user = 1;
-}
-
 message UpdatePetParameters {
-  Pet request_body = 1;
+  Pet pet = 1;
 }
 
 message AddPetParameters {
-  Pet request_body = 1;
+  Pet pet = 1;
 }
 
 message FindPetsByStatusParameters {
@@ -140,14 +130,10 @@ message UpdatePetWithFormRequestBodyapplicationXWwwFormUrlencoded {
   string status = 2;
 }
 
-message UpdatePetWithFormRequestBody {
-  UpdatePetWithFormRequestBodyapplicationXWwwFormUrlencoded application_x_www_form_urlencoded = 1;
-}
-
 message UpdatePetWithFormParameters {
   int64 pet_id = 1;
 
-  UpdatePetWithFormRequestBody request_body = 2;
+  UpdatePetWithFormRequestBodyapplicationXWwwFormUrlencoded application_x_www_form_urlencoded = 2;
 }
 
 message DeletePetParameters {
@@ -156,14 +142,10 @@ message DeletePetParameters {
   int64 pet_id = 2;
 }
 
-message UploadFileRequestBody {
-  string application_octet_stream = 1;
-}
-
 message UploadFileParameters {
   int64 pet_id = 1;
 
-  UploadFileRequestBody request_body = 2;
+  string application_octet_stream = 2;
 }
 
 message UploadFileOK {
@@ -186,12 +168,8 @@ message GetInventoryResponses {
   GetInventoryOK ok = 1;
 }
 
-message PlaceOrderRequestBody {
-  Order order = 1;
-}
-
 message PlaceOrderParameters {
-  PlaceOrderRequestBody request_body = 1;
+  Order order = 1;
 }
 
 message PlaceOrderOK {
@@ -222,20 +200,16 @@ message DeleteOrderParameters {
   int64 order_id = 1;
 }
 
-message CreateUserRequestBody {
+message CreateUserParameters {
   User user = 1;
 }
 
-message CreateUserParameters {
-  CreateUserRequestBody request_body = 1;
-}
-
 message CreateUsersWithArrayInputParameters {
-  UserArray request_body = 1;
+  User user = 1;
 }
 
 message CreateUsersWithListInputParameters {
-  UserArray request_body = 1;
+  User user = 1;
 }
 
 message LoginUserParameters {
@@ -268,14 +242,10 @@ message GetUserByNameResponses {
   GetUserByNameOK ok = 1;
 }
 
-message UpdateUserRequestBody {
-  User user = 1;
-}
-
 message UpdateUserParameters {
   string username = 1;
 
-  UpdateUserRequestBody request_body = 2;
+  User user = 2;
 }
 
 message DeleteUserParameters {
@@ -284,11 +254,11 @@ message DeleteUserParameters {
 
 service Petstore {
   rpc UpdatePet ( UpdatePetParameters ) returns ( google.protobuf.Empty ) {
-    option (google.api.http) = { put:"/pet" body:"request_body"  };
+    option (google.api.http) = { put:"/pet" body:"Pet"  };
   }
 
   rpc AddPet ( AddPetParameters ) returns ( google.protobuf.Empty ) {
-    option (google.api.http) = { post:"/pet" body:"request_body"  };
+    option (google.api.http) = { post:"/pet" body:"Pet"  };
   }
 
   rpc FindPetsByStatus ( FindPetsByStatusParameters ) returns ( FindPetsByStatusResponses ) {
@@ -304,7 +274,7 @@ service Petstore {
   }
 
   rpc UpdatePetWithForm ( UpdatePetWithFormParameters ) returns ( google.protobuf.Empty ) {
-    option (google.api.http) = { post:"/pet/{petId}" body:"request_body"  };
+    option (google.api.http) = { post:"/pet/{petId}" body:"application/x-www-form-urlencoded"  };
   }
 
   rpc DeletePet ( DeletePetParameters ) returns ( google.protobuf.Empty ) {
@@ -312,7 +282,7 @@ service Petstore {
   }
 
   rpc UploadFile ( UploadFileParameters ) returns ( UploadFileResponses ) {
-    option (google.api.http) = { post:"/pet/{petId}/uploadImage" body:"request_body"  };
+    option (google.api.http) = { post:"/pet/{petId}/uploadImage" body:"application/octet-stream"  };
   }
 
   rpc GetInventory ( google.protobuf.Empty ) returns ( GetInventoryResponses ) {
@@ -320,7 +290,7 @@ service Petstore {
   }
 
   rpc PlaceOrder ( PlaceOrderParameters ) returns ( PlaceOrderResponses ) {
-    option (google.api.http) = { post:"/store/order" body:"request_body"  };
+    option (google.api.http) = { post:"/store/order" body:"Order"  };
   }
 
   rpc GetOrderById ( GetOrderByIdParameters ) returns ( GetOrderByIdResponses ) {
@@ -332,15 +302,15 @@ service Petstore {
   }
 
   rpc CreateUser ( CreateUserParameters ) returns ( google.protobuf.Empty ) {
-    option (google.api.http) = { post:"/user" body:"request_body"  };
+    option (google.api.http) = { post:"/user" body:"User"  };
   }
 
   rpc CreateUsersWithArrayInput ( CreateUsersWithArrayInputParameters ) returns ( google.protobuf.Empty ) {
-    option (google.api.http) = { post:"/user/createWithArray" body:"request_body"  };
+    option (google.api.http) = { post:"/user/createWithArray" body:"User"  };
   }
 
   rpc CreateUsersWithListInput ( CreateUsersWithListInputParameters ) returns ( google.protobuf.Empty ) {
-    option (google.api.http) = { post:"/user/createWithList" body:"request_body"  };
+    option (google.api.http) = { post:"/user/createWithList" body:"User"  };
   }
 
   rpc LoginUser ( LoginUserParameters ) returns ( LoginUserResponses ) {
@@ -356,7 +326,7 @@ service Petstore {
   }
 
   rpc UpdateUser ( UpdateUserParameters ) returns ( google.protobuf.Empty ) {
-    option (google.api.http) = { put:"/user/{username}" body:"request_body"  };
+    option (google.api.http) = { put:"/user/{username}" body:"User"  };
   }
 
   rpc DeleteUser ( DeleteUserParameters ) returns ( google.protobuf.Empty ) {
