@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/googleapis/gnostic-grpc.svg?branch=master)](https://travis-ci.org/googleapis/gnostic-grpc)
 
 # gnostic gRPC plugin
-[GSoC 2019 project](https://summerofcode.withgoogle.com/projects/#5244822191865856)
+[GSoC 2019 project](https://summerofcode.withgoogle.com/archive/2019/projects/5019228334194688/)
 
 This tool converts an OpenAPI v3.0 API description into a description of a gRPC
 service that can be used to implement that API using [gRPC-JSON Transcoding](https://www.envoyproxy.io/docs/envoy/latest/configuration/http_filters/grpc_json_transcoder_filter). gRPC services are described using the [Protocol Buffers](https://developers.google.com/protocol-buffers/) language.
@@ -11,7 +11,7 @@ OpenAPI descriptions are read and processed with
 gnostic plugin.
 
 ## High level overview:
-![alt text](https://doc-04-2g-docs.googleusercontent.com/docs/securesc/ha0ro937gcuc7l7deffksulhg5h7mbp1/kbrd4780o3ek96ukd6vlpitlf5n4o247/1578477600000/13640720988749663950/*/1tqDvZLiXK40ISK_LgINQGsno9-MymRQP?e=view "High Level Overview")
+![alt text](https://drive.google.com/uc?export=view&id=1tqDvZLiXK40ISK_LgINQGsno9-MymRQP "High Level Overview")
 
 Under the hood the plugin first creates a FileDescriptorSet (`bookststore.descr`) from the input
 data. Then [protoreflect](https://github.com/jhump/protoreflect/) is used to print the output file. 
