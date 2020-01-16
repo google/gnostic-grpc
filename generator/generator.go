@@ -291,16 +291,19 @@ func adjustMethodsAndTypes(renderer *Renderer) {
 			}
 		}
 
-		// We only renderer messages and types for the response with the lowest status code.
+		// We only render messages and types for the response with the lowest status code.
 		if len(m.ResponsesTypeName) > 0 {
 			if responses, ok := nameToType[m.ResponsesTypeName]; ok {
 				if lowestStatusCodeResponse, ok := nameToType[responses.Fields[0].Type]; ok {
+					// We remove the current response type which holds the responses for all status codes
 					typesToDelete[nameToType[m.ResponsesTypeName]] = true
 
+					// We remove all status codes as well
 					for _, f := range responses.Fields {
 						typesToDelete[nameToType[f.Type]] = true
 					}
 
+					// We search for the lowest status code
 					lowestStatusCode, err := strconv.Atoi(responses.Fields[0].Name)
 					if err == nil {
 						for _, f := range responses.Fields {
@@ -311,12 +314,16 @@ func adjustMethodsAndTypes(renderer *Renderer) {
 							}
 						}
 					}
+
+					// We set the response with the lowest status code as response
 					m.ResponsesTypeName = ""
 					if lowestStatusCodeResponse.Fields[0].Kind != surface_v1.FieldKind_SCALAR {
 						m.ResponsesTypeName = lowestStatusCodeResponse.Fields[0].Type
 					}
 				} else {
-					// This might happen for symbolic references. Let's not render anything for now.
+					// The nameToType hash map does not contain values from symbolic references. So if the OpenAPI
+					// description we want to generate, references a response parameter inside another OpenAPI description
+					// we end up here. Let's not render anything for now.
 					m.ResponsesTypeName = ""
 					typesToDelete[responses] = true
 				}

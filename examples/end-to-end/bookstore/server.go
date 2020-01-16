@@ -68,8 +68,7 @@ func (s *server) CreateShelf(ctx context.Context, parameters *CreateShelfParamet
 	sid := s.LastShelfID
 	s.Shelves[sid] = shelf
 
-	response := shelf
-	return response, nil
+	return shelf, nil
 
 }
 
@@ -93,8 +92,7 @@ func (s *server) GetShelf(ctx context.Context, parameters *GetShelfParameters) (
 		return nil, err
 	}
 
-	response := shelf
-	return response, nil
+	return shelf, nil
 }
 
 func (s *server) DeleteShelf(ctx context.Context, parameters *DeleteShelfParameters) (*empty.Empty, error) {
@@ -142,8 +140,7 @@ func (s *server) CreateBook(ctx context.Context, parameters *CreateBookParameter
 	}
 	s.Books[parameters.Shelf][bid] = book
 
-	response := book
-	return response, nil
+	return book, nil
 }
 
 func (s *server) GetBook(ctx context.Context, parameters *GetBookParameters) (*Book, error) {
@@ -154,8 +151,8 @@ func (s *server) GetBook(ctx context.Context, parameters *GetBookParameters) (*B
 	if err != nil {
 		return nil, err
 	}
-	response := book
-	return response, nil
+
+	return book, nil
 }
 
 func (s *server) DeleteBook(ctx context.Context, parameters *DeleteBookParameters) (*empty.Empty, error) {
