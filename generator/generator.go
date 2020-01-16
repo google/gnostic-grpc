@@ -27,6 +27,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -71,6 +72,8 @@ func (renderer *Renderer) runFileDescriptorSetGenerator() (fdSet *dpb.FileDescri
 	if err != nil {
 		return nil, err
 	}
+
+	adjustMethodsAndTypes(renderer)
 
 	err = buildMessagesFromTypes(mainProto, renderer)
 	if err != nil {
@@ -204,9 +207,7 @@ func buildDependencies(fdSet *dpb.FileDescriptorSet) {
 // Builds protobuf messages from the surface model types. If the type is a RPC request parameter
 // the fields have to follow certain rules, and therefore have to be validated.
 func buildMessagesFromTypes(descr *dpb.FileDescriptorProto, renderer *Renderer) (err error) {
-	types := renderer.Model.Types
-
-	for _, t := range types {
+	for _, t := range renderer.Model.Types {
 		message := &dpb.DescriptorProto{}
 		setMessageDescriptorName(message, t.Name)
 
@@ -243,6 +244,101 @@ func buildMessagesFromTypes(descr *dpb.FileDescriptorProto, renderer *Renderer) 
 		generatedMessages[*message.Name] = renderer.Package + "." + *message.Name
 	}
 	return nil
+}
+
+// adjustMethodsAndTypes simplifies and prettifies the types and fields of the surface model in order to get a better
+// looking output file.
+// Related to: https://github.com/googleapis/gnostic-grpc/issues/11
+func adjustMethodsAndTypes(renderer *Renderer) {
+	filteredTypes := make([]*surface_v1.Type, 0)
+	nameToType := make(map[string]*surface_v1.Type)
+	typesToDelete := make(map[*surface_v1.Type]bool)
+
+	// Clean all type names and every field name
+	for _, t := range renderer.Model.Types {
+		t.Name = cleanName(t.Name)
+		for _, f := range t.Fields {
+			f.Name = cleanName(f.Name)
+			f.Type = cleanName(f.Type)
+			if len(f.Name) == 0 {
+				f.Name = strings.ToLower(f.Type)
+			}
+		}
+	}
+
+	for _, t := range renderer.Model.Types {
+		nameToType[t.Name] = t
+	}
+
+	for _, t := range renderer.Model.Types {
+		typesToDelete[t] = false
+	}
+
+	for _, m := range renderer.Model.Methods {
+		if len(m.ParametersTypeName) > 0 {
+			if parameters, ok := nameToType[m.ParametersTypeName]; ok {
+				// For requestBodies we remove the intermediate type.
+				for _, f := range parameters.Fields {
+					if f.Name == "request_body" {
+						reqBody := f
+						if intermediateType, ok := nameToType[reqBody.Type]; ok {
+							reqBody.Name = intermediateType.Fields[0].Name
+							reqBody.Type = intermediateType.Fields[0].Type
+							typesToDelete[intermediateType] = true
+						}
+					}
+				}
+			}
+		}
+
+		// We only render messages and types for the response with the lowest status code.
+		if len(m.ResponsesTypeName) > 0 {
+			if responses, ok := nameToType[m.ResponsesTypeName]; ok {
+				if lowestStatusCodeResponse, ok := nameToType[responses.Fields[0].Type]; ok {
+					// We remove the current response type which holds the responses for all status codes
+					typesToDelete[nameToType[m.ResponsesTypeName]] = true
+
+					// We remove all status codes as well
+					for _, f := range responses.Fields {
+						typesToDelete[nameToType[f.Type]] = true
+					}
+
+					// We search for the lowest status code
+					lowestStatusCode, err := strconv.Atoi(responses.Fields[0].Name)
+					if err == nil {
+						for _, f := range responses.Fields {
+							statusCode, err := strconv.Atoi(f.Name)
+							if err == nil && statusCode < lowestStatusCode {
+								lowestStatusCodeResponse = nameToType[f.Type]
+								lowestStatusCode = statusCode
+							}
+						}
+					}
+
+					// We set the response with the lowest status code as response
+					m.ResponsesTypeName = ""
+					if lowestStatusCodeResponse.Fields[0].Kind != surface_v1.FieldKind_SCALAR {
+						m.ResponsesTypeName = lowestStatusCodeResponse.Fields[0].Type
+					}
+				} else {
+					// The nameToType hash map does not contain values from symbolic references. So if the OpenAPI
+					// description we want to generate, references a response parameter inside another OpenAPI description
+					// we end up here. Let's not render anything for now.
+					m.ResponsesTypeName = ""
+					typesToDelete[responses] = true
+				}
+			}
+		}
+	}
+
+	// Remove types that we don't want to render
+	for _, t := range renderer.Model.Types {
+		if shouldDelete, ok := typesToDelete[t]; ok && !shouldDelete {
+			filteredTypes = append(filteredTypes, t)
+		}
+	}
+
+	renderer.Model.Types = filteredTypes
 }
 
 // Builds a protobuf RPC service. For every method the corresponding gRPC-HTTP transcoding options (https://github.com/googleapis/googleapis/blob/master/google/api/http.proto)
@@ -381,11 +477,11 @@ func setFieldDescriptorType(fd *dpb.FieldDescriptorProto, f *surface_v1.Field) {
 
 }
 
-// Sets the Name of 'fd'. The convention inside .proto is, that all field names are
-// lowercase and all messages and types are capitalized if they are not scalar types (int64, string, ...).
+// setFieldDescriptorName sets the Name of 'fd' according to the protocol buffer style guide for field names
+// https://developers.google.com/protocol-buffers/docs/style#message-and-field-names
 func setFieldDescriptorName(fd *dpb.FieldDescriptorProto, f *surface_v1.Field) {
 	name := cleanName(f.Name)
-	name = strings.ToLower(name)
+	name = toSnakeCase(name)
 	fd.Name = &name
 }
 
@@ -398,9 +494,9 @@ func setFieldDescriptorLabel(fd *dpb.FieldDescriptorProto, f *surface_v1.Field) 
 	fd.Label = &label
 }
 
-// Sets the TypeName of 'fd'. A TypeName has to be set if the field is a reference to another message. Otherwise it is nil.
-// The convention inside .proto is, that all field names are lowercase and all messages and types are capitalized if
-// they are not scalar types (int64, string, ...).
+// setFieldDescriptorTypeName sets the TypeName of 'fd'. A TypeName has to be set if the field is a reference to another
+// message. Otherwise it is nil. Names are set according to the protocol buffer style guide for message names:
+// https://developers.google.com/protocol-buffers/docs/style#message-and-field-names
 func setFieldDescriptorTypeName(fd *dpb.FieldDescriptorProto, f *surface_v1.Field, packageName string) {
 	// A field with a type of Message always has a typeName associated with it (the name of the Message).
 	if *fd.Type == dpb.FieldDescriptorProto_TYPE_MESSAGE {
@@ -624,6 +720,7 @@ func setMessageDescriptorName(messageDescriptorProto *dpb.DescriptorProto, name 
 // Removes characters which are not allowed for message names or field names inside .proto files.
 func cleanName(name string) string {
 	name = convertStatusCodes(name)
+	name = strings.Replace(name, "application/json", "", -1)
 	name = strings.Replace(name, ".", "_", -1)
 	name = strings.Replace(name, "-", "_", -1)
 	name = strings.Replace(name, " ", "", -1)
@@ -655,7 +752,7 @@ func convertStatusCodes(name string) string {
 			log.Println("It seems like you have an status code that is currently not known to net.http.StatusText. This might cause the plugin to fail.")
 			statusText = "unknownStatusCode"
 		}
-		name = strings.Replace(statusText, " ", "_", -1)
+		name = statusText
 	}
 	return name
 }
@@ -681,4 +778,14 @@ func findValidServiceName(messages []*dpb.DescriptorProto, serviceName string) s
 		}
 		ctr += 1
 	}
+}
+
+// toSnakeCase converts str to snake_case
+func toSnakeCase(str string) string {
+	var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
+	var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
+
+	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
+	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
+	return strings.ToLower(snake)
 }

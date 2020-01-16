@@ -19,70 +19,42 @@ message Person {
 
   string name = 3;
 
-  repeated string photourls = 4;
-}
-
-message TestExternalReferenceResponses {
-  responses.Response ok = 1;
+  repeated string photo_urls = 4;
 }
 
 message TestExernalReference2Parameters {
-  parameters.Parameter2  = 1;
-}
-
-message TestAdditionalPropertiesOKapplicationJson {
-  map<string, int32> additional_properties = 1;
+  parameters.Parameter2 parameter2 = 1;
 }
 
 message TestAdditionalPropertiesOK {
-  TestAdditionalPropertiesOKapplicationJson application_json = 1;
-}
-
-message TestAdditionalPropertiesResponses {
-  TestAdditionalPropertiesOK ok = 1;
-}
-
-message TestAdditionalPropertiesReferenceOKapplicationJson {
-  map<string, Person> additional_properties = 1;
+  map<string, int32> additional_properties = 1;
 }
 
 message TestAdditionalPropertiesReferenceOK {
-  TestAdditionalPropertiesReferenceOKapplicationJson application_json = 1;
-}
-
-message TestAdditionalPropertiesReferenceResponses {
-  TestAdditionalPropertiesReferenceOK ok = 1;
-}
-
-message TestAdditionalPropertiesArrayOKapplicationJson {
+  map<string, Person> additional_properties = 1;
 }
 
 message TestAdditionalPropertiesArrayOK {
-  TestAdditionalPropertiesArrayOKapplicationJson application_json = 1;
-}
-
-message TestAdditionalPropertiesArrayResponses {
-  TestAdditionalPropertiesArrayOK ok = 1;
 }
 
 service Other {
-  rpc TestExternalReference ( google.protobuf.Empty ) returns ( TestExternalReferenceResponses ) {
+  rpc TestExternalReference ( google.protobuf.Empty ) returns ( google.protobuf.Empty ) {
     option (google.api.http) = { get:"/testExternalReference"  };
   }
 
   rpc TestExernalReference2 ( TestExernalReference2Parameters ) returns ( google.protobuf.Empty ) {
-    option (google.api.http) = { get:"/testExternalReference2"  };
+    option (google.api.http) = { get:"/testExternalReference2" body:"parameter2"  };
   }
 
-  rpc TestAdditionalProperties ( google.protobuf.Empty ) returns ( TestAdditionalPropertiesResponses ) {
+  rpc TestAdditionalProperties ( google.protobuf.Empty ) returns ( TestAdditionalPropertiesOK ) {
     option (google.api.http) = { get:"/testAdditionalProperties"  };
   }
 
-  rpc TestAdditionalPropertiesReference ( google.protobuf.Empty ) returns ( TestAdditionalPropertiesReferenceResponses ) {
+  rpc TestAdditionalPropertiesReference ( google.protobuf.Empty ) returns ( TestAdditionalPropertiesReferenceOK ) {
     option (google.api.http) = { get:"/testAdditionalPropertiesReference"  };
   }
 
-  rpc TestAdditionalPropertiesArray ( google.protobuf.Empty ) returns ( TestAdditionalPropertiesArrayResponses ) {
+  rpc TestAdditionalPropertiesArray ( google.protobuf.Empty ) returns ( TestAdditionalPropertiesArrayOK ) {
     option (google.api.http) = { get:"/testAdditionalPropertiesArray"  };
   }
 }

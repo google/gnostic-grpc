@@ -21,69 +21,27 @@ message Person {
 
   string name = 3;
 
-  repeated string photourls = 4;
-}
-
-message Response {
-  Person application_json = 1;
-}
-
-message TestResponseNativeOK {
-  string application_json = 1;
-}
-
-message TestResponseNativeResponses {
-  TestResponseNativeOK ok = 1;
-}
-
-message TestResponseReferenceOK {
-  Person application_json = 1;
-}
-
-message TestResponseReferenceResponses {
-  TestResponseReferenceOK ok = 1;
-}
-
-message TestResponseMultipleContentOK {
-  Person application_json = 1;
-
-  Person application_xml = 2;
-}
-
-message TestResponseMultipleContentResponses {
-  TestResponseMultipleContentOK ok = 1;
-}
-
-message TestResponse400StatusCodeBadRequest {
-  Error application_json = 1;
-}
-
-message TestResponse400StatusCodeResponses {
-  TestResponse400StatusCodeBadRequest bad_request = 1;
-}
-
-message TestResponseComponentReferenceResponses {
-  Response ok = 1;
+  repeated string photo_urls = 4;
 }
 
 service Responses {
-  rpc TestResponseNative ( google.protobuf.Empty ) returns ( TestResponseNativeResponses ) {
+  rpc TestResponseNative ( google.protobuf.Empty ) returns ( google.protobuf.Empty ) {
     option (google.api.http) = { get:"/testResponseNative"  };
   }
 
-  rpc TestResponseReference ( google.protobuf.Empty ) returns ( TestResponseReferenceResponses ) {
+  rpc TestResponseReference ( google.protobuf.Empty ) returns ( Person ) {
     option (google.api.http) = { get:"/testResponseReference"  };
   }
 
-  rpc TestResponseMultipleContent ( google.protobuf.Empty ) returns ( TestResponseMultipleContentResponses ) {
+  rpc TestResponseMultipleContent ( google.protobuf.Empty ) returns ( Person ) {
     option (google.api.http) = { get:"/testResponseMultipleContent"  };
   }
 
-  rpc TestResponse400StatusCode ( google.protobuf.Empty ) returns ( TestResponse400StatusCodeResponses ) {
+  rpc TestResponse400StatusCode ( google.protobuf.Empty ) returns ( Error ) {
     option (google.api.http) = { get:"/testResponse400StatusCode"  };
   }
 
-  rpc TestResponseComponentReference ( google.protobuf.Empty ) returns ( TestResponseComponentReferenceResponses ) {
+  rpc TestResponseComponentReference ( google.protobuf.Empty ) returns ( Person ) {
     option (google.api.http) = { get:"/testResponseComponentReference"  };
   }
 }

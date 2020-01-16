@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/googleapis/gnostic-grpc.svg?branch=master)](https://travis-ci.org/googleapis/gnostic-grpc)
 
 # gnostic gRPC plugin
-[GSoC 2019 project](https://summerofcode.withgoogle.com/projects/#5244822191865856)
+[GSoC 2019 project](https://summerofcode.withgoogle.com/archive/2019/projects/5019228334194688/)
 
 This tool converts an OpenAPI v3.0 API description into a description of a gRPC
 service that can be used to implement that API using [gRPC-JSON Transcoding](https://www.envoyproxy.io/docs/envoy/latest/configuration/http_filters/grpc_json_transcoder_filter). gRPC services are described using the [Protocol Buffers](https://developers.google.com/protocol-buffers/) language.
