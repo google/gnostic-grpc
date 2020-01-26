@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/googleapis/gnostic-grpc.svg?branch=master)](https://travis-ci.org/googleapis/gnostic-grpc)
+[![Go Report Card](https://goreportcard.com/badge/github.com/googleapis/gnostic-grpc)](https://goreportcard.com/report/github.com/googleapis/gnostic-grpc)
 
 # gnostic gRPC plugin
 [GSoC 2019 project](https://summerofcode.withgoogle.com/archive/2019/projects/5019228334194688/)
