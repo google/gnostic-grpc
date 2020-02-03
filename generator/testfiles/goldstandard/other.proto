@@ -2,15 +2,15 @@ syntax = "proto3";
 
 package other;
 
-import "responses.proto";
-
-import "parameters.proto";
-
 import "google/api/annotations.proto";
+
+import "google/protobuf/descriptor.proto";
 
 import "google/protobuf/empty.proto";
 
-import "google/protobuf/descriptor.proto";
+import "parameters.proto";
+
+import "responses.proto";
 
 message Person {
   int64 id = 1;

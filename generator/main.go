@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/proto"
-	openapiv3 "github.com/googleapis/gnostic/OpenAPIv3"
+	openapiv3 "github.com/googleapis/gnostic/openapiv3"
 	plugins "github.com/googleapis/gnostic/plugins"
 	surface "github.com/googleapis/gnostic/surface"
 )
