@@ -9,4 +9,7 @@ language: go
 
 script:
   - go get github.com/googleapis/gnostic
-  - go test -v ./...
+  - go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)

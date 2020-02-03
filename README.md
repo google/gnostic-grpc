@@ -1,4 +1,6 @@
 [![Build Status](https://travis-ci.org/googleapis/gnostic-grpc.svg?branch=master)](https://travis-ci.org/googleapis/gnostic-grpc)
+[![Go Report Card](https://goreportcard.com/badge/github.com/googleapis/gnostic-grpc)](https://goreportcard.com/report/github.com/googleapis/gnostic-grpc)
+[![Test Coverage](https://codecov.io/gh/googleapis/gnostic-grpc/branch/master/graph/badge.svg)](https://codecov.io/gh/googleapis)
 
 # gnostic gRPC plugin
 [GSoC 2019 project](https://summerofcode.withgoogle.com/archive/2019/projects/5019228334194688/)
@@ -11,7 +13,7 @@ OpenAPI descriptions are read and processed with
 gnostic plugin.
 
 ## High level overview:
-![alt text](https://drive.google.com/uc?export=view&id=1tqDvZLiXK40ISK_LgINQGsno9-MymRQP "High Level Overview")
+![High Level Overview](https://raw.githubusercontent.com/googleapis/gnostic-grpc/master/high_level_overview.png "High Level Overview")
 
 Under the hood the plugin first creates a FileDescriptorSet (`bookststore.descr`) from the input
 data. Then [protoreflect](https://github.com/jhump/protoreflect/) is used to print the output file. 

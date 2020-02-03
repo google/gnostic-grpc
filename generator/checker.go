@@ -42,7 +42,7 @@ func (c *GrpcChecker) analyzeOpenAPIDocument() {
 	fields := getNotSupportedOpenAPIDocumentFields(c.document)
 	for _, f := range fields {
 		text := "Field: '" + f + "' is not supported for the OpenAPI document with title: " + c.document.Info.Title
-		msg := constructMessage("DOCUMENTFIELDS", text, []string{f})
+		msg := constructInfoMessage("DOCUMENTFIELDS", text, []string{f})
 		c.messages = append(c.messages, &msg)
 	}
 	c.analyzeComponents()
@@ -57,7 +57,7 @@ func (c *GrpcChecker) analyzeComponents() {
 	fields := getNotSupportedComponentsFields(components)
 	for _, f := range fields {
 		text := "Field: '" + f + "' is not supported for the component"
-		msg := constructMessage("COMPONENTSFIELDS", text, append(copyKeys(currentKeys), f))
+		msg := constructInfoMessage("COMPONENTSFIELDS", text, append(copyKeys(currentKeys), f))
 		c.messages = append(c.messages, &msg)
 	}
 
@@ -106,7 +106,7 @@ func (c *GrpcChecker) analyzePathItem(pair *openapiv3.NamedPathItem, parentKeys 
 	fields := getNotSupportedPathItemFields(pathItem)
 	for _, f := range fields {
 		text := "Field: '" + f + "' is not supported for path: " + pair.Name
-		msg := constructMessage("PATHFIELDS", text, append(copyKeys(currentKeys), f))
+		msg := constructInfoMessage("PATHFIELDS", text, append(copyKeys(currentKeys), f))
 		c.messages = append(c.messages, &msg)
 	}
 
@@ -121,9 +121,16 @@ func (c *GrpcChecker) analyzePathItem(pair *openapiv3.NamedPathItem, parentKeys 
 func (c *GrpcChecker) analyzeOperation(operation *openapiv3.Operation, parentKeys []string) {
 	currentKeys := parentKeys
 	fields := getNotSupportedOperationFields(operation)
+
+	if len(operation.OperationId) == 0 {
+		text := "One of your operations does not have an 'operationId'. gnostic-grpc might produce an incorrect output file."
+		msg := constructWarningMessage("OPERATION", text, currentKeys)
+		c.messages = append(c.messages, &msg)
+	}
+
 	for _, f := range fields {
 		text := "Field: '" + f + "' is not supported for operation: " + operation.OperationId
-		msg := constructMessage("OPERATIONFIELDS", text, append(copyKeys(currentKeys), f))
+		msg := constructInfoMessage("OPERATIONFIELDS", text, append(copyKeys(currentKeys), f))
 		c.messages = append(c.messages, &msg)
 	}
 
@@ -157,7 +164,7 @@ func (c *GrpcChecker) analyzeParameter(paramOrRef *openapiv3.ParameterOrReferenc
 		fields := getNotSupportedParameterFields(parameter)
 		for _, f := range fields {
 			text := "Field: '" + f + "' is not supported for parameter: " + parameter.Name
-			msg := constructMessage("PARAMETERFIELDS", text, append(copyKeys(currentKeys), f))
+			msg := constructInfoMessage("PARAMETERFIELDS", text, append(copyKeys(currentKeys), f))
 			c.messages = append(c.messages, &msg)
 		}
 
@@ -174,7 +181,7 @@ func (c *GrpcChecker) analyzeResponse(pair *openapiv3.NamedResponseOrReference, 
 		fields := getNotSupportedResponseFields(response)
 		for _, f := range fields {
 			text := "Field: '" + f + "' is not supported for response: " + pair.Name
-			msg := constructMessage("RESPONSEFIELDS", text, append(copyKeys(currentKeys), f))
+			msg := constructInfoMessage("RESPONSEFIELDS", text, append(copyKeys(currentKeys), f))
 			c.messages = append(c.messages, &msg)
 		}
 		if content := response.Content; content != nil {
@@ -193,7 +200,7 @@ func (c *GrpcChecker) analyzeRequestBody(pair *openapiv3.NamedRequestBodyOrRefer
 	if requestBody := pair.Value.GetRequestBody(); requestBody != nil {
 		if requestBody.Required {
 			text := "Field: 'required' is not supported for the request: " + pair.Name
-			msg := constructMessage("REQUESTBODYFIELDS", text, append(copyKeys(currentKeys), "required"))
+			msg := constructInfoMessage("REQUESTBODYFIELDS", text, append(copyKeys(currentKeys), "required"))
 			c.messages = append(c.messages, &msg)
 		}
 		for _, pair := range requestBody.Content.AdditionalProperties {
@@ -211,7 +218,7 @@ func (c *GrpcChecker) analyzeContent(pair *openapiv3.NamedMediaType, parentKeys 
 	fields := getNotSupportedMediaTypeFields(mediaType)
 	for _, f := range fields {
 		text := "Field: '" + f + "' is not supported for the mediatype: " + pair.Name
-		msg := constructMessage("MEDIATYPEFIELDS", text, append(copyKeys(currentKeys), f))
+		msg := constructInfoMessage("MEDIATYPEFIELDS", text, append(copyKeys(currentKeys), f))
 		c.messages = append(c.messages, &msg)
 	}
 
@@ -229,13 +236,13 @@ func (c *GrpcChecker) analyzeSchema(identifier string, schemaOrReference *openap
 		fields := getNotSupportedSchemaFields(schema)
 		for _, f := range fields {
 			text := "Field: '" + f + "' is not supported for the schema: " + identifier
-			msg := constructMessage("SCHEMAFIELDS", text, append(copyKeys(currentKeys), f))
+			msg := constructInfoMessage("SCHEMAFIELDS", text, append(copyKeys(currentKeys), f))
 			c.messages = append(c.messages, &msg)
 		}
 
 		if enum := schema.Enum; enum != nil {
 			text := "Field: 'enum' is not generated as enum in .proto for the schema: " + identifier
-			msg2 := constructMessage("SCHEMAFIELDS", text, append(copyKeys(currentKeys), "enum"))
+			msg2 := constructInfoMessage("SCHEMAFIELDS", text, append(copyKeys(currentKeys), "enum"))
 			c.messages = append(c.messages, &msg2)
 		}
 
@@ -244,7 +251,7 @@ func (c *GrpcChecker) analyzeSchema(identifier string, schemaOrReference *openap
 			if schema := additionalProperties.GetSchemaOrReference().GetSchema(); schema != nil {
 				if schema.Type == "array" {
 					text := "Field: 'additionalProperties' with type array is generated as empty message inside .proto."
-					msg := constructMessage("SCHEMAFIELDS", text, append(copyKeys(currentKeys), "additionalProperties"))
+					msg := constructInfoMessage("SCHEMAFIELDS", text, append(copyKeys(currentKeys), "additionalProperties"))
 					c.messages = append(c.messages, &msg)
 				}
 			}
@@ -271,8 +278,18 @@ func (c *GrpcChecker) analyzeSchema(identifier string, schemaOrReference *openap
 	}
 }
 
-// Constructs a message which the end user will see on the console.
-func constructMessage(code string, text string, keys []string) plugins.Message {
+// constructInfoMessage Constructs a info message which will be displayed to the user on the console
+func constructInfoMessage(code string, text string, keys []string) plugins.Message {
+	return plugins.Message{
+		Code:  code,
+		Level: plugins.Message_INFO,
+		Text:  text,
+		Keys:  keys,
+	}
+}
+
+// constructWarningMessage constructs a warning message which will be displayed to the user on the console
+func constructWarningMessage(code string, text string, keys []string) plugins.Message {
 	return plugins.Message{
 		Code:  code,
 		Level: plugins.Message_WARNING,
