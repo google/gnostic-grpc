@@ -15,7 +15,7 @@
 package generator
 
 import (
-	openapiv3 "github.com/googleapis/gnostic/OpenAPIv3"
+	openapiv3 "github.com/googleapis/gnostic/openapiv3"
 	plugins "github.com/googleapis/gnostic/plugins"
 )
 

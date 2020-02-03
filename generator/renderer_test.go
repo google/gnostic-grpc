@@ -68,8 +68,6 @@ func TestFileDescriptorGeneratorResponses(t *testing.T) {
 }
 
 func TestFileDescriptorGeneratorOther(t *testing.T) {
-	// It could happen that this tests fails, because the imports get rendered in a different order.
-	// Just execute it again.
 	input := "testfiles/other.yaml"
 
 	protoData, err := runGeneratorWithoutEnvironment(input, "other")

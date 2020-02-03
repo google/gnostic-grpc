@@ -4,9 +4,9 @@ package parameters;
 
 import "google/api/annotations.proto";
 
-import "google/protobuf/empty.proto";
-
 import "google/protobuf/descriptor.proto";
+
+import "google/protobuf/empty.proto";
 
 message Parameter1 {
   int64 param7 = 1;

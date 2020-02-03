@@ -15,21 +15,23 @@
 package generator
 
 import (
-	"github.com/golang/protobuf/descriptor"
-	"github.com/golang/protobuf/proto"
-	dpb "github.com/golang/protobuf/protoc-gen-go/descriptor"
-	"github.com/golang/protobuf/ptypes/empty"
-	openapiv3 "github.com/googleapis/gnostic/OpenAPIv3"
-	surface_v1 "github.com/googleapis/gnostic/surface"
-	"google.golang.org/genproto/googleapis/api/annotations"
 	"log"
 	nethttp "net/http"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/golang/protobuf/descriptor"
+	"github.com/golang/protobuf/proto"
+	dpb "github.com/golang/protobuf/protoc-gen-go/descriptor"
+	"github.com/golang/protobuf/ptypes/empty"
+	openapiv3 "github.com/googleapis/gnostic/openapiv3"
+	surface_v1 "github.com/googleapis/gnostic/surface"
+	"google.golang.org/genproto/googleapis/api/annotations"
 )
 
 var protoBufScalarTypes = getProtobufTypes()
@@ -106,6 +108,8 @@ func addDependencies(fdSet *dpb.FileDescriptorSet) {
 			lastFdProto.Dependency = append(lastFdProto.Dependency, *fd.Name)
 		}
 	}
+	// Sort imports so they will be rendered in a consistent order.
+	sort.Strings(lastFdProto.Dependency)
 }
 
 // buildSymbolicReferences recursively generates all .proto definitions to external OpenAPI descriptions (URLs to other
