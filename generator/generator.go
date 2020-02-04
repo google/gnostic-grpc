@@ -16,11 +16,9 @@ package generator
 
 import (
 	"log"
-	nethttp "net/http"
 	"os/exec"
 	"path"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -35,8 +33,6 @@ import (
 )
 
 var protoBufScalarTypes = getProtobufTypes()
-var openAPITypesToProtoBuf = getOpenAPITypesToProtoBufTypes()
-var openAPIScalarTypes = getOpenAPIScalarTypes()
 
 // Gathers all symbolic references we generated in recursive calls.
 var generatedSymbolicReferences = make(map[string]bool, 0)
@@ -75,8 +71,6 @@ func (renderer *Renderer) runFileDescriptorSetGenerator() (fdSet *dpb.FileDescri
 		return nil, err
 	}
 
-	adjustMethodsAndTypes(renderer)
-
 	err = buildMessagesFromTypes(mainProto, renderer)
 	if err != nil {
 		return nil, err
@@ -92,8 +86,8 @@ func (renderer *Renderer) runFileDescriptorSetGenerator() (fdSet *dpb.FileDescri
 	return fdSet, err
 }
 
-// Adds the dependencies to the FileDescriptorProto we want to render (the last one). This essentially makes the 'import'
-// statements inside the .proto definition.
+// addDependencies adds the dependencies to the FileDescriptorProto we want to render (the last one). This essentially
+// makes the 'import'  statements inside the .proto definition.
 func addDependencies(fdSet *dpb.FileDescriptorSet) {
 	// At last, we need to add the dependencies to the FileDescriptorProto in order to get them rendered.
 	lastFdProto := getLast(fdSet.File)
@@ -141,6 +135,13 @@ func buildSymbolicReferences(fdSet *dpb.FileDescriptorSet, renderer *Renderer) (
 			if err != nil {
 				return err
 			}
+
+			// Prepare surface model for recursive call. TODO: Keep discovery documents in mind.
+			inputDocumentType := "openapi.v3.Document"
+			if document.Openapi == "2.0.0" {
+				inputDocumentType = "openapi.v2.Document"
+			}
+			NewProtoLanguageModel().Prepare(surfaceModel, inputDocumentType)
 
 			// Recursively call the generator.
 			recursiveRenderer := NewRenderer(surfaceModel)
@@ -208,12 +209,12 @@ func buildDependencies(fdSet *dpb.FileDescriptorSet) {
 	fdSet.File = append(dependencies, fdSet.File...)
 }
 
-// Builds protobuf messages from the surface model types. If the type is a RPC request parameter
+// buildMessagesFromTypes builds protobuf messages from the surface model types. If the type is a RPC request parameter
 // the fields have to follow certain rules, and therefore have to be validated.
 func buildMessagesFromTypes(descr *dpb.FileDescriptorProto, renderer *Renderer) (err error) {
 	for _, t := range renderer.Model.Types {
 		message := &dpb.DescriptorProto{}
-		setMessageDescriptorName(message, t.Name)
+		message.Name = &t.TypeName
 
 		for i, f := range t.Fields {
 			if isRequestParameter(t) {
@@ -227,14 +228,14 @@ func buildMessagesFromTypes(descr *dpb.FileDescriptorProto, renderer *Renderer) 
 			}
 			ctr := int32(i + 1)
 			fieldDescriptor := &dpb.FieldDescriptorProto{Number: &ctr}
+			fieldDescriptor.Name = &f.ParameterName
+			fieldDescriptor.Type = getFieldDescriptorType(f.NativeType)
 			setFieldDescriptorLabel(fieldDescriptor, f)
-			setFieldDescriptorName(fieldDescriptor, f)
-			setFieldDescriptorType(fieldDescriptor, f)
 			setFieldDescriptorTypeName(fieldDescriptor, f, renderer.Package)
 
 			// Maps are represented as nested types inside of the descriptor.
 			if f.Kind == surface_v1.FieldKind_MAP {
-				if strings.Contains(f.Type, "map[string][]") {
+				if strings.Contains(f.NativeType, "map[string][]") {
 					// Not supported for now: https://github.com/LorenzHW/gnostic-grpc-deprecated/issues/3#issuecomment-509348357
 					continue
 				}
@@ -250,102 +251,7 @@ func buildMessagesFromTypes(descr *dpb.FileDescriptorProto, renderer *Renderer) 
 	return nil
 }
 
-// adjustMethodsAndTypes simplifies and prettifies the types and fields of the surface model in order to get a better
-// looking output file.
-// Related to: https://github.com/googleapis/gnostic-grpc/issues/11
-func adjustMethodsAndTypes(renderer *Renderer) {
-	filteredTypes := make([]*surface_v1.Type, 0)
-	nameToType := make(map[string]*surface_v1.Type)
-	typesToDelete := make(map[*surface_v1.Type]bool)
-
-	// Clean all type names and every field name
-	for _, t := range renderer.Model.Types {
-		t.Name = cleanName(t.Name)
-		for _, f := range t.Fields {
-			f.Name = cleanName(f.Name)
-			f.Type = cleanName(f.Type)
-			if len(f.Name) == 0 {
-				f.Name = strings.ToLower(f.Type)
-			}
-		}
-	}
-
-	for _, t := range renderer.Model.Types {
-		nameToType[t.Name] = t
-	}
-
-	for _, t := range renderer.Model.Types {
-		typesToDelete[t] = false
-	}
-
-	for _, m := range renderer.Model.Methods {
-		if len(m.ParametersTypeName) > 0 {
-			if parameters, ok := nameToType[m.ParametersTypeName]; ok {
-				// For requestBodies we remove the intermediate type.
-				for _, f := range parameters.Fields {
-					if f.Name == "request_body" {
-						reqBody := f
-						if intermediateType, ok := nameToType[reqBody.Type]; ok {
-							reqBody.Name = intermediateType.Fields[0].Name
-							reqBody.Type = intermediateType.Fields[0].Type
-							typesToDelete[intermediateType] = true
-						}
-					}
-				}
-			}
-		}
-
-		// We only render messages and types for the response with the lowest status code.
-		if len(m.ResponsesTypeName) > 0 {
-			if responses, ok := nameToType[m.ResponsesTypeName]; ok {
-				if lowestStatusCodeResponse, ok := nameToType[responses.Fields[0].Type]; ok {
-					// We remove the current response type which holds the responses for all status codes
-					typesToDelete[nameToType[m.ResponsesTypeName]] = true
-
-					// We remove all status codes as well
-					for _, f := range responses.Fields {
-						typesToDelete[nameToType[f.Type]] = true
-					}
-
-					// We search for the lowest status code
-					lowestStatusCode, err := strconv.Atoi(responses.Fields[0].Name)
-					if err == nil {
-						for _, f := range responses.Fields {
-							statusCode, err := strconv.Atoi(f.Name)
-							if err == nil && statusCode < lowestStatusCode {
-								lowestStatusCodeResponse = nameToType[f.Type]
-								lowestStatusCode = statusCode
-							}
-						}
-					}
-
-					// We set the response with the lowest status code as response
-					m.ResponsesTypeName = ""
-					if lowestStatusCodeResponse.Fields[0].Kind != surface_v1.FieldKind_SCALAR {
-						m.ResponsesTypeName = lowestStatusCodeResponse.Fields[0].Type
-					}
-				} else {
-					// The nameToType hash map does not contain values from symbolic references. So if the OpenAPI
-					// description we want to generate, references a response parameter inside another OpenAPI description
-					// we end up here. Let's not render anything for now.
-					m.ResponsesTypeName = ""
-					typesToDelete[responses] = true
-				}
-			}
-		}
-	}
-
-	// Remove types that we don't want to render
-	for _, t := range renderer.Model.Types {
-		if shouldDelete, ok := typesToDelete[t]; ok && !shouldDelete {
-			filteredTypes = append(filteredTypes, t)
-		}
-	}
-
-	renderer.Model.Types = filteredTypes
-}
-
-// Builds a protobuf RPC service. For every method the corresponding gRPC-HTTP transcoding options (https://github.com/googleapis/googleapis/blob/master/google/api/http.proto)
+// buildServiceFromMethods builds a protobuf RPC service. For every method the corresponding gRPC-HTTP transcoding options (https://github.com/googleapis/googleapis/blob/master/google/api/http.proto)
 // have to be set.
 func buildServiceFromMethods(descr *dpb.FileDescriptorProto, renderer *Renderer) (err error) {
 	methods := renderer.Model.Methods
@@ -364,12 +270,6 @@ func buildServiceFromMethods(descr *dpb.FileDescriptorProto, renderer *Renderer)
 			return err
 		}
 
-		method.Name = cleanName(method.Name)
-		method.ParametersTypeName = cleanTypeName(method.ParametersTypeName)
-		method.ResponsesTypeName = cleanTypeName(method.ResponsesTypeName)
-		method.ParametersTypeName = strings.Title(method.ParametersTypeName)
-		method.ResponsesTypeName = strings.Title(method.ResponsesTypeName)
-
 		if method.ParametersTypeName == "" {
 			method.ParametersTypeName = "google.protobuf.Empty"
 			shouldRenderEmptyImport = true
@@ -380,7 +280,7 @@ func buildServiceFromMethods(descr *dpb.FileDescriptorProto, renderer *Renderer)
 		}
 
 		mDescr := &dpb.MethodDescriptorProto{
-			Name:       &method.Name,
+			Name:       &method.HandlerName,
 			InputType:  &method.ParametersTypeName,
 			OutputType: &method.ResponsesTypeName,
 			Options:    mOptionsDescr,
@@ -391,11 +291,11 @@ func buildServiceFromMethods(descr *dpb.FileDescriptorProto, renderer *Renderer)
 	return nil
 }
 
-// Builds the necessary descriptor to render a map. (https://developers.google.com/protocol-buffers/docs/proto3#maps)
+// buildMapDescriptorProto builds the necessary descriptor to render a map. (https://developers.google.com/protocol-buffers/docs/proto3#maps)
 // A map is represented as nested message with two fields: 'key', 'value' and the Options set accordingly.
 func buildMapDescriptorProto(field *surface_v1.Field) *dpb.DescriptorProto {
 	isMapEntry := true
-	n := field.Name + "Entry"
+	n := field.ParameterName + "Entry"
 
 	mapDP := &dpb.DescriptorProto{
 		Name:    &n,
@@ -405,7 +305,7 @@ func buildMapDescriptorProto(field *surface_v1.Field) *dpb.DescriptorProto {
 	return mapDP
 }
 
-// Builds the necessary 'key', 'value' fields for the map descriptor.
+// buildKeyValueFields builds the necessary 'key', 'value' fields for the map descriptor.
 func buildKeyValueFields(field *surface_v1.Field) []*dpb.FieldDescriptorProto {
 	k, v := "key", "value"
 	var n1, n2 int32 = 1, 2
@@ -418,18 +318,18 @@ func buildKeyValueFields(field *surface_v1.Field) []*dpb.FieldDescriptorProto {
 		Type:   &t,
 	}
 
-	valueType := field.Type[11:] // This transforms a string like 'map[string]int32' to 'int32'. In other words: the type of the value from the map.
+	valueType := field.NativeType[11:] // This transforms a string like 'map[string]int32' to 'int32'. In other words: the type of the value from the map.
 	valueField := &dpb.FieldDescriptorProto{
 		Name:     &v,
 		Number:   &n2,
 		Label:    &l,
-		Type:     getProtoTypeForMapValueType(valueType),
+		Type:     getFieldDescriptorType(valueType),
 		TypeName: getTypeNameForMapValueType(valueType),
 	}
 	return []*dpb.FieldDescriptorProto{keyField, valueField}
 }
 
-// Validates if the path parameter has the requested structure.
+// validatePathParameter validates if the path parameter has the requested structure.
 // This is necessary according to: https://github.com/googleapis/googleapis/blob/master/google/api/http.proto#L62
 func validatePathParameter(field *surface_v1.Field) {
 	if field.Kind != surface_v1.FieldKind_SCALAR {
@@ -440,11 +340,12 @@ func validatePathParameter(field *surface_v1.Field) {
 	}
 }
 
-// Validates if the query parameter has the requested structure.
+// validateQueryParameter validates if the query parameter has the requested structure.
 // This is necessary according to: https://github.com/googleapis/googleapis/blob/master/google/api/http.proto#L118
 func validateQueryParameter(field *surface_v1.Field) {
+	_, isScalar := protoBufScalarTypes[field.NativeType]
 	if !(field.Kind == surface_v1.FieldKind_SCALAR ||
-		(field.Kind == surface_v1.FieldKind_ARRAY && openAPIScalarTypes[field.Type]) ||
+		(field.Kind == surface_v1.FieldKind_ARRAY && isScalar) ||
 		(field.Kind == surface_v1.FieldKind_REFERENCE)) {
 		log.Println("The query parameter with the Name " + field.Name + " is invalid. " +
 			"Note that fields which are mapped to URL query parameters must have a primitive type or" +
@@ -454,7 +355,7 @@ func validateQueryParameter(field *surface_v1.Field) {
 
 }
 
-// Checks whether 't' is a type that will be used as a request parameter for a RPC method.
+// isRequestParameter checks whether 't' is a type that will be used as a request parameter for a RPC method.
 func isRequestParameter(t *surface_v1.Type) bool {
 	if strings.Contains(t.Description, t.GetName()+" holds parameters to") {
 		return true
@@ -462,37 +363,10 @@ func isRequestParameter(t *surface_v1.Type) bool {
 	return false
 }
 
-// Sets the Type of 'fd' according to the information from the surface field 'f'.
-func setFieldDescriptorType(fd *dpb.FieldDescriptorProto, f *surface_v1.Field) {
-	var protoType dpb.FieldDescriptorProto_Type
-	if t, ok := protoBufScalarTypes[f.Format]; ok { // Let's see if we can get the type from f.format
-		protoType = t
-	} else if t, ok := protoBufScalarTypes[f.Type]; ok { // Maybe this works.
-		protoType = t
-	} else if t, ok := openAPITypesToProtoBuf[f.Type]; ok { // Safety check
-		protoType = t
-	} else {
-		// TODO: What about Enums?
-		// Ok, is it either a reference or an array of non scalar-types or a map. All of those get represented as message
-		// inside the descriptor.
-		protoType = dpb.FieldDescriptorProto_TYPE_MESSAGE
-	}
-	fd.Type = &protoType
-
-}
-
-// setFieldDescriptorName sets the Name of 'fd' according to the protocol buffer style guide for field names
-// https://developers.google.com/protocol-buffers/docs/style#message-and-field-names
-func setFieldDescriptorName(fd *dpb.FieldDescriptorProto, f *surface_v1.Field) {
-	name := cleanName(f.Name)
-	name = toSnakeCase(name)
-	fd.Name = &name
-}
-
-// Sets a Label for 'fd'. If it is an array we need the 'repeated' label.
+// setFieldDescriptorLabel sets a label for 'fd'. If it is an array we need the 'repeated' label.
 func setFieldDescriptorLabel(fd *dpb.FieldDescriptorProto, f *surface_v1.Field) {
 	label := dpb.FieldDescriptorProto_LABEL_OPTIONAL
-	if f.Kind == surface_v1.FieldKind_ARRAY || strings.Contains(f.Type, "map") {
+	if f.Kind == surface_v1.FieldKind_ARRAY || strings.Contains(f.NativeType, "map") {
 		label = dpb.FieldDescriptorProto_LABEL_REPEATED
 	}
 	fd.Label = &label
@@ -504,18 +378,18 @@ func setFieldDescriptorLabel(fd *dpb.FieldDescriptorProto, f *surface_v1.Field) 
 func setFieldDescriptorTypeName(fd *dpb.FieldDescriptorProto, f *surface_v1.Field, packageName string) {
 	// A field with a type of Message always has a typeName associated with it (the name of the Message).
 	if *fd.Type == dpb.FieldDescriptorProto_TYPE_MESSAGE {
-		typeName := packageName + "." + cleanTypeName(f.Type)
+		typeName := packageName + "." + f.NativeType
 
 		// Check whether we generated this message already inside of another dependency. If so we will use that name instead.
-		if n, ok := generatedMessages[f.Type]; ok {
+		if n, ok := generatedMessages[f.NativeType]; ok {
 			typeName = n
 		}
 		fd.TypeName = &typeName
 	}
 }
 
-// Finds the corresponding surface model type for 'name' and returns the name of the field
-// that is a request body. If no such field is found it returns nil.
+// getRequestBodyForRequestParameters finds the corresponding surface model type for 'name' and returns the name of the
+// field that is a request body. If no such field is found it returns nil.
 func getRequestBodyForRequestParameters(name string, types []*surface_v1.Type) *string {
 	requestParameterType := &surface_v1.Type{}
 
@@ -527,13 +401,13 @@ func getRequestBodyForRequestParameters(name string, types []*surface_v1.Type) *
 
 	for _, f := range requestParameterType.Fields {
 		if f.Position == surface_v1.Position_BODY {
-			return &f.Name
+			return &f.ParameterName
 		}
 	}
 	return nil
 }
 
-// Constructs a HttpRule from google/api/http.proto. Enables gRPC-HTTP transcoding on 'method'.
+// getHttpRuleForMethod constructs a HttpRule from google/api/http.proto. Enables gRPC-HTTP transcoding on 'method'.
 // If not nil, body is also set.
 func getHttpRuleForMethod(method *surface_v1.Method, body *string) annotations.HttpRule {
 	var httpRule annotations.HttpRule
@@ -577,35 +451,27 @@ func getHttpRuleForMethod(method *surface_v1.Method, body *string) annotations.H
 	return httpRule
 }
 
-// Returns the type name for the given 'valueType'. A type name for a field is only set if it is some kind of
-// reference (non-scalar values) otherwise it is nil.
+// getTypeNameForMapValueType returns the type name for the given 'valueType'.
+// A type name for a field is only set if it is some kind of reference (non-scalar values) otherwise it is nil.
 func getTypeNameForMapValueType(valueType string) *string {
 	if _, ok := protoBufScalarTypes[valueType]; ok {
 		return nil // Ok it is a scalar. For scalar values we don't set the TypeName of the field.
 	}
-	if _, ok := openAPIScalarTypes[valueType]; ok {
-		return nil // Ok it is a scalar. For scalar values we don't set the TypeName of the field.
-	}
-	typeName := cleanTypeName(valueType)
+	typeName := valueType
 	return &typeName
 }
 
-// Returns the 'protoType' for the given 'valueType'. If we don't have a scalar 'protoType', we have some kind of
-// reference to another object and therefore return the 'Message' type. d
-func getProtoTypeForMapValueType(valueType string) *dpb.FieldDescriptorProto_Type {
+// getFieldDescriptorType returns a field descriptor type for the given 'nativeType'. If it is not a scalar type
+// then we have a reference to another type which will get rendered as a message.
+func getFieldDescriptorType(nativeType string) *dpb.FieldDescriptorProto_Type {
 	protoType := dpb.FieldDescriptorProto_TYPE_MESSAGE
-	if protoType, ok := protoBufScalarTypes[valueType]; ok {
+	if protoType, ok := protoBufScalarTypes[nativeType]; ok {
 		return &protoType
-	}
-	if _, ok := openAPIScalarTypes[valueType]; ok {
-		if protoType, ok := openAPITypesToProtoBuf[valueType]; ok {
-			return &protoType
-		}
 	}
 	return &protoType
 }
 
-// Uses the 'binaryInput' from gnostic to create a OpenAPI document.
+// createOpenAPIDocFromGnosticOutput uses the 'binaryInput' from gnostic to create a OpenAPI document.
 func createOpenAPIDocFromGnosticOutput(binaryInput []byte) (*openapiv3.Document, error) {
 	document := &openapiv3.Document{}
 	err := proto.Unmarshal(binaryInput, document)
@@ -618,7 +484,7 @@ func createOpenAPIDocFromGnosticOutput(binaryInput []byte) (*openapiv3.Document,
 	return document, nil
 }
 
-// 'url' is a list of URLs to other OpenAPI descriptions. We need the base of all URLs and no duplicates.
+// trimAndRemoveDuplicates returns a list of URLs that are not duplicates (considering only the part until the first '#')
 func trimAndRemoveDuplicates(urls []string) []string {
 	result := make([]string, 0)
 	for _, url := range urls {
@@ -630,7 +496,7 @@ func trimAndRemoveDuplicates(urls []string) []string {
 	return result
 }
 
-// Returns true if 's' is inside 'ss'.
+// isDuplicate returns true if 's' is inside 'ss'.
 func isDuplicate(ss []string, s string) bool {
 	for _, s2 := range ss {
 		if s == s2 {
@@ -640,12 +506,13 @@ func isDuplicate(ss []string, s string) bool {
 	return false
 }
 
-// returns the last FileDescriptorProto of the array 'protos'.
+// getLast returns the last FileDescriptorProto of the array 'protos'.
 func getLast(protos []*dpb.FileDescriptorProto) *dpb.FileDescriptorProto {
 	return protos[len(protos)-1]
 }
 
-// A map for this: https://developers.google.com/protocol-buffers/docs/proto3#scalar
+// getProtobufTypes maps the .proto Type (given as string) (https://developers.google.com/protocol-buffers/docs/proto3#scalar)
+// to the corresponding descriptor proto type.
 func getProtobufTypes() map[string]dpb.FieldDescriptorProto_Type {
 	typeMapping := make(map[string]dpb.FieldDescriptorProto_Type)
 	typeMapping["double"] = dpb.FieldDescriptorProto_TYPE_DOUBLE
@@ -667,102 +534,8 @@ func getProtobufTypes() map[string]dpb.FieldDescriptorProto_Type {
 	return typeMapping
 }
 
-// Maps OpenAPI data types (https://swagger.io/docs/specification/data-models/data-types/)
-// to protobuf data types.
-func getOpenAPITypesToProtoBufTypes() map[string]dpb.FieldDescriptorProto_Type {
-	return map[string]dpb.FieldDescriptorProto_Type{
-		"string":  dpb.FieldDescriptorProto_TYPE_STRING,
-		"integer": dpb.FieldDescriptorProto_TYPE_INT32,
-		"number":  dpb.FieldDescriptorProto_TYPE_FLOAT,
-		"boolean": dpb.FieldDescriptorProto_TYPE_BOOL,
-		"object":  dpb.FieldDescriptorProto_TYPE_MESSAGE,
-		// Array not set: could be either scalar or non-scalar value.
-
-		// Additional values according to: https://swagger.io/docs/specification/data-models/data-types/#string
-		"date":      dpb.FieldDescriptorProto_TYPE_STRING,
-		"date-time": dpb.FieldDescriptorProto_TYPE_STRING,
-		"password":  dpb.FieldDescriptorProto_TYPE_STRING,
-		"binary":    dpb.FieldDescriptorProto_TYPE_STRING,
-		"email":     dpb.FieldDescriptorProto_TYPE_STRING,
-		"uuid":      dpb.FieldDescriptorProto_TYPE_STRING,
-		"uri":       dpb.FieldDescriptorProto_TYPE_STRING,
-		"hostname":  dpb.FieldDescriptorProto_TYPE_STRING,
-		"ipv4":      dpb.FieldDescriptorProto_TYPE_STRING,
-		"ipv6":      dpb.FieldDescriptorProto_TYPE_STRING,
-		"byte":      dpb.FieldDescriptorProto_TYPE_BYTES,
-	}
-}
-
-// All scalar types from OpenAPI.
-func getOpenAPIScalarTypes() map[string]bool {
-	return map[string]bool{
-		"string":  true,
-		"integer": true,
-		"number":  true,
-		"boolean": true,
-		// Additional values according to: https://swagger.io/docs/specification/data-models/data-types/#string
-		"date":      true,
-		"date-time": true,
-		"password":  true,
-		"binary":    true,
-		"email":     true,
-		"uuid":      true,
-		"uri":       true,
-		"hostname":  true,
-		"ipv4":      true,
-		"ipv6":      true,
-		"byte":      true,
-	}
-}
-
-// Sets the name of the 'messageDescriptorProto'
-func setMessageDescriptorName(messageDescriptorProto *dpb.DescriptorProto, name string) {
-	name = cleanTypeName(name)
-	messageDescriptorProto.Name = &name
-}
-
-// Removes characters which are not allowed for message names or field names inside .proto files.
-func cleanName(name string) string {
-	name = convertStatusCodes(name)
-	name = strings.Replace(name, "application/json", "", -1)
-	name = strings.Replace(name, ".", "_", -1)
-	name = strings.Replace(name, "-", "_", -1)
-	name = strings.Replace(name, " ", "", -1)
-	name = strings.Replace(name, "(", "", -1)
-	name = strings.Replace(name, ")", "", -1)
-	name = strings.Replace(name, "{", "", -1)
-	name = strings.Replace(name, "}", "", -1)
-	name = strings.Replace(name, "/", "_", -1)
-	name = strings.Replace(name, "$", "", -1)
-	return name
-}
-
-// Since our convention is that all messages inside .proto are capitalized, we set the typeName accordingly.
-func cleanTypeName(name string) string {
-	name = cleanName(name)
-	// Make camelCase
-	name = strings.Replace(name, "_", " ", -1)
-	name = strings.Title(name)
-	name = strings.Replace(name, " ", "", -1)
-	return name
-}
-
-// Converts a string status code like: "504" into the corresponding text ("Gateway Timeout")
-func convertStatusCodes(name string) string {
-	code, err := strconv.Atoi(name)
-	if err == nil {
-		statusText := nethttp.StatusText(code)
-		if statusText == "" {
-			log.Println("It seems like you have an status code that is currently not known to net.http.StatusText. This might cause the plugin to fail.")
-			statusText = "unknownStatusCode"
-		}
-		name = statusText
-	}
-	return name
-}
-
-// Finds a valid service name for the gRPC service. A valid service name is not already taken by a message
-// Reference: https://github.com/googleapis/gnostic-grpc/issues/7
+// findValidServiceName finds a valid service name for the gRPC service. A valid service name is not already taken by a
+// message. Reference: https://github.com/googleapis/gnostic-grpc/issues/7
 func findValidServiceName(messages []*dpb.DescriptorProto, serviceName string) string {
 	messageNames := make(map[string]bool)
 
@@ -782,14 +555,4 @@ func findValidServiceName(messages []*dpb.DescriptorProto, serviceName string) s
 		}
 		ctr += 1
 	}
-}
-
-// toSnakeCase converts str to snake_case
-func toSnakeCase(str string) string {
-	var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
-	var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
-
-	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
-	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
-	return strings.ToLower(snake)
 }

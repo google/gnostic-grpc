@@ -44,6 +44,7 @@ func RunProtoGenerator() {
 	packageName, err := resolvePackageName(fileName)
 	env.RespondAndExitIfError(err)
 
+	inputDocumentType := env.Request.Models[0].TypeUrl
 	for _, model := range env.Request.Models {
 		switch model.TypeUrl {
 		case "openapi.v3.Document":
@@ -58,6 +59,9 @@ func RunProtoGenerator() {
 			surfaceModel := &surface.Model{}
 			err = proto.Unmarshal(model.Value, surfaceModel)
 			if err == nil {
+				// Customizes the surface model for a .proto output file
+				NewProtoLanguageModel().Prepare(surfaceModel, inputDocumentType)
+
 				// Create the renderer.
 				renderer := NewRenderer(surfaceModel)
 				renderer.Package = packageName
