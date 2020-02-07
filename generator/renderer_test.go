@@ -95,6 +95,7 @@ func runGeneratorWithoutEnvironment(input string, packageName string) ([]byte, e
 	if err != nil {
 		return nil, err
 	}
+	NewProtoLanguageModel().Prepare(surfaceModel, "openapi.v3.Document")
 	r := NewRenderer(surfaceModel)
 	r.Package = packageName
 
