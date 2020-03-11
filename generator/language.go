@@ -33,7 +33,7 @@ func (language *ProtoLanguageModel) Prepare(model *surface_v1.Model, inputDocume
 		t.TypeName = protoTypeName(t.Name)
 
 		for _, f := range t.Fields {
-			f.ParameterName = protoParameterName(f.Name, f.Type)
+			f.FieldName = protoFieldName(f.Name, f.Type)
 			f.NativeType = findNativeType(f.Type, f.Format)
 		}
 	}
@@ -136,7 +136,7 @@ func adjustV3Model(model *surface_v1.Model) {
 					if f.Name == "request_body" {
 						reqBody := f
 						if intermediateType, ok := nameToType[reqBody.NativeType]; ok {
-							reqBody.ParameterName = intermediateType.Fields[0].ParameterName
+							reqBody.FieldName = intermediateType.Fields[0].FieldName
 							reqBody.NativeType = intermediateType.Fields[0].NativeType
 							typesToDelete[intermediateType] = true
 						}
@@ -197,7 +197,7 @@ func adjustV2Model(model *surface_v1.Model) {
 				m.ResponsesTypeName = ""
 				if lowestStatusCodeResponse != nil {
 					// We set the response with the lowest status code as response.
-					m.ResponsesTypeName = lowestStatusCodeResponse.Name
+					m.ResponsesTypeName = lowestStatusCodeResponse.TypeName
 				} else {
 					// The nameToType hash map does not contain values from symbolic references. So if the OpenAPI
 					// description we want to generate, references a response parameter inside another OpenAPI description
@@ -222,10 +222,10 @@ func adjustV2Model(model *surface_v1.Model) {
 // findLowestStatusCode returns a surface Type that represents the lowest status code for the given 'responses' type.
 func findLowestStatusCode(responses *surface_v1.Type, nameToType map[string]*surface_v1.Type) *surface_v1.Type {
 	if lowestStatusCodeResponse, ok := nameToType[responses.Fields[0].NativeType]; ok {
-		lowestStatusCode, err := strconv.Atoi(responses.Fields[0].ParameterName)
+		lowestStatusCode, err := strconv.Atoi(responses.Fields[0].FieldName)
 		if err == nil {
 			for _, f := range responses.Fields {
-				statusCode, err := strconv.Atoi(f.ParameterName)
+				statusCode, err := strconv.Atoi(f.FieldName)
 				if err == nil && statusCode < lowestStatusCode {
 					lowestStatusCodeResponse = nameToType[f.NativeType]
 					lowestStatusCode = statusCode
@@ -252,12 +252,12 @@ func initHashTables(model *surface_v1.Model) (map[string]*surface_v1.Type, map[*
 	return nameToType, typesToDelete
 }
 
-// protoParameterName returns the field names of proto messages according to
+// protoFieldName returns the field names of proto messages according to
 // https://developers.google.com/protocol-buffers/docs/style#message-and-field-names
-func protoParameterName(originalName string, t string) string {
-	name := cleanName(originalName)
+func protoFieldName(originalName string, t string) string {
+	name := CleanName(originalName)
 	if len(name) == 0 {
-		name = cleanName(t)
+		name = CleanName(t)
 	}
 	name = toSnakeCase(name)
 	return name
@@ -266,13 +266,13 @@ func protoParameterName(originalName string, t string) string {
 // protoTypeName returns the name of the proto message according to
 // https://developers.google.com/protocol-buffers/docs/style#message-and-field-names
 func protoTypeName(originalName string) (name string) {
-	name = cleanName(originalName)
+	name = CleanName(originalName)
 	name = toCamelCase(name)
 	return name
 }
 
 // Removes characters which are not allowed for message names or field names inside .proto files.
-func cleanName(name string) string {
+func CleanName(name string) string {
 	name = strings.Replace(name, "application/json", "", -1)
 	name = strings.Replace(name, ".", "_", -1)
 	name = strings.Replace(name, "-", "_", -1)
