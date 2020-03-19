@@ -228,7 +228,7 @@ func buildMessagesFromTypes(descr *dpb.FileDescriptorProto, renderer *Renderer) 
 			}
 			ctr := int32(i + 1)
 			fieldDescriptor := &dpb.FieldDescriptorProto{Number: &ctr}
-			fieldDescriptor.Name = &f.ParameterName
+			fieldDescriptor.Name = &f.FieldName
 			fieldDescriptor.Type = getFieldDescriptorType(f.NativeType)
 			setFieldDescriptorLabel(fieldDescriptor, f)
 			setFieldDescriptorTypeName(fieldDescriptor, f, renderer.Package)
@@ -295,7 +295,7 @@ func buildServiceFromMethods(descr *dpb.FileDescriptorProto, renderer *Renderer)
 // A map is represented as nested message with two fields: 'key', 'value' and the Options set accordingly.
 func buildMapDescriptorProto(field *surface_v1.Field) *dpb.DescriptorProto {
 	isMapEntry := true
-	n := field.ParameterName + "Entry"
+	n := field.FieldName + "Entry"
 
 	mapDP := &dpb.DescriptorProto{
 		Name:    &n,
@@ -401,7 +401,7 @@ func getRequestBodyForRequestParameters(name string, types []*surface_v1.Type) *
 
 	for _, f := range requestParameterType.Fields {
 		if f.Position == surface_v1.Position_BODY {
-			return &f.ParameterName
+			return &f.FieldName
 		}
 	}
 	return nil
