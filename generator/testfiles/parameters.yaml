@@ -25,7 +25,7 @@ paths:
       responses:
         200:
           description: success
-  /testParameterQueryEnum: #TODO: Does not work
+  /testParameterQueryEnum: #TODO: Generates invalid proto for integer enums
     get:
       operationId: testParameterQueryEnum
       parameters:
@@ -35,13 +35,12 @@ paths:
           schema:
             type: array
             items:
-              type: integer
-              format: int64
+              type: string
               enum:
-                - 1337
-                - 1338
-                - 1339
-              default: 1338
+                - Dingo
+                - Husky
+                - Retriever
+              default: Husky
       responses:
         200:
           description: success
@@ -56,19 +55,18 @@ paths:
       responses:
         200:
           description: success
-  /testParameterPathEnum/{param1}: #TODO: Does not work
+  /testParameterPathEnum/{param1}: #TODO: Generates invalid proto for integer enums
     get:
       operationId: testParameterPathEnum
       parameters:
         - name: param4
           in: path
           schema:
-            type: integer
-            format: int64
+            type: string
             enum:
-              - 1337
-              - 1338
-            default: 1338
+              - Dingo
+              - Husky
+            default: Dingo
       responses:
         200:
           description: success

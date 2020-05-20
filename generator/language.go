@@ -35,6 +35,10 @@ func (language *ProtoLanguageModel) Prepare(model *surface_v1.Model, inputDocume
 		for _, f := range t.Fields {
 			f.FieldName = protoFieldName(f.Name, f.Type)
 			f.NativeType = findNativeType(f.Type, f.Format)
+
+			if f.EnumValues != nil {
+				f.NativeType = strings.Title(f.Name)
+			}
 		}
 	}
 
