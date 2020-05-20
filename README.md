@@ -13,7 +13,7 @@ OpenAPI descriptions are read and processed with
 gnostic plugin.
 
 ## High level overview:
-![High Level Overview](https://raw.githubusercontent.com/googleapis/gnostic-grpc/master/high_level_overview.png "High Level Overview")
+![High Level Overview](https://raw.githubusercontent.com/googleapis/gnostic-grpc/master/examples/images/high-level-overview.png "High Level Overview")
 
 Under the hood the plugin first creates a FileDescriptorSet (`bookststore.descr`) from the input
 data. Then [protoreflect](https://github.com/jhump/protoreflect/) is used to print the output file. 
