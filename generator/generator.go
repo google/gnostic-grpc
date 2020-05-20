@@ -175,7 +175,7 @@ func buildDependencies(fdSet *dpb.FileDescriptorSet) {
 	// 2. Problem: 	The name is set wrong.
 	// 3. Problem: 	google/api/annotations.proto has a dependency to google/protobuf/descriptor.proto.
 	http := annotations.Http{}
-	fd, _ := descriptor.ForMessage(&http)
+	fd, _ := descriptor.MessageDescriptorProto(&http)
 
 	extensionName := "http"
 	n := "google/api/annotations.proto"
@@ -200,8 +200,8 @@ func buildDependencies(fdSet *dpb.FileDescriptorSet) {
 	// Build other required dependencies
 	e := empty.Empty{}
 	fdp := dpb.DescriptorProto{}
-	fd2, _ := descriptor.ForMessage(&e)
-	fd3, _ := descriptor.ForMessage(&fdp)
+	fd2, _ := descriptor.MessageDescriptorProto(&e)
+	fd3, _ := descriptor.MessageDescriptorProto(&fdp)
 	dependencies := []*dpb.FileDescriptorProto{fd, fd2, fd3}
 
 	// According to the documentation of protoReflect.CreateFileDescriptorFromSet the file I want to print
