@@ -175,7 +175,7 @@ func buildDependencies(fdSet *dpb.FileDescriptorSet) {
 	// 2. Problem: 	The name is set wrong.
 	// 3. Problem: 	google/api/annotations.proto has a dependency to google/protobuf/descriptor.proto.
 	http := annotations.Http{}
-	fd, _ := descriptor.ForMessage(&http)
+	fd, _ := descriptor.MessageDescriptorProto(&http)
 
 	extensionName := "http"
 	n := "google/api/annotations.proto"
@@ -200,8 +200,8 @@ func buildDependencies(fdSet *dpb.FileDescriptorSet) {
 	// Build other required dependencies
 	e := empty.Empty{}
 	fdp := dpb.DescriptorProto{}
-	fd2, _ := descriptor.ForMessage(&e)
-	fd3, _ := descriptor.ForMessage(&fdp)
+	fd2, _ := descriptor.MessageDescriptorProto(&e)
+	fd3, _ := descriptor.MessageDescriptorProto(&fdp)
 	dependencies := []*dpb.FileDescriptorProto{fd, fd2, fd3}
 
 	// According to the documentation of protoReflect.CreateFileDescriptorFromSet the file I want to print
@@ -226,10 +226,14 @@ func buildMessagesFromTypes(descr *dpb.FileDescriptorProto, renderer *Renderer) 
 					validateQueryParameter(f)
 				}
 			}
+			if f.EnumValues != nil {
+				message.EnumType = append(message.EnumType, buildEnumDescriptorProto(f))
+			}
+
 			ctr := int32(i + 1)
 			fieldDescriptor := &dpb.FieldDescriptorProto{Number: &ctr}
 			fieldDescriptor.Name = &f.FieldName
-			fieldDescriptor.Type = getFieldDescriptorType(f.NativeType)
+			fieldDescriptor.Type = getFieldDescriptorType(f.NativeType, f.EnumValues)
 			setFieldDescriptorLabel(fieldDescriptor, f)
 			setFieldDescriptorTypeName(fieldDescriptor, f, renderer.Package)
 
@@ -291,6 +295,21 @@ func buildServiceFromMethods(descr *dpb.FileDescriptorProto, renderer *Renderer)
 	return nil
 }
 
+// buildEnumDescriptorProto builds the necessary descriptor to render a enum. (https://developers.google.com/protocol-buffers/docs/proto3#enum)
+func buildEnumDescriptorProto(f *surface_v1.Field) *dpb.EnumDescriptorProto {
+	enumDescriptor := &dpb.EnumDescriptorProto{Name: &f.NativeType}
+	for enumCtr, value := range f.EnumValues {
+		num := int32(enumCtr)
+		name := strings.ToUpper(value)
+		valueDescriptor := &dpb.EnumValueDescriptorProto{
+			Name:   &name,
+			Number: &num,
+		}
+		enumDescriptor.Value = append(enumDescriptor.Value, valueDescriptor)
+	}
+	return enumDescriptor
+}
+
 // buildMapDescriptorProto builds the necessary descriptor to render a map. (https://developers.google.com/protocol-buffers/docs/proto3#maps)
 // A map is represented as nested message with two fields: 'key', 'value' and the Options set accordingly.
 func buildMapDescriptorProto(field *surface_v1.Field) *dpb.DescriptorProto {
@@ -323,7 +342,7 @@ func buildKeyValueFields(field *surface_v1.Field) []*dpb.FieldDescriptorProto {
 		Name:     &v,
 		Number:   &n2,
 		Label:    &l,
-		Type:     getFieldDescriptorType(valueType),
+		Type:     getFieldDescriptorType(valueType, field.EnumValues),
 		TypeName: getTypeNameForMapValueType(valueType),
 	}
 	return []*dpb.FieldDescriptorProto{keyField, valueField}
@@ -385,6 +404,9 @@ func setFieldDescriptorTypeName(fd *dpb.FieldDescriptorProto, f *surface_v1.Fiel
 			typeName = n
 		}
 		fd.TypeName = &typeName
+	}
+	if *fd.Type == dpb.FieldDescriptorProto_TYPE_ENUM {
+		fd.TypeName = &f.NativeType
 	}
 }
 
@@ -463,9 +485,13 @@ func getTypeNameForMapValueType(valueType string) *string {
 
 // getFieldDescriptorType returns a field descriptor type for the given 'nativeType'. If it is not a scalar type
 // then we have a reference to another type which will get rendered as a message.
-func getFieldDescriptorType(nativeType string) *dpb.FieldDescriptorProto_Type {
+func getFieldDescriptorType(nativeType string, enumValues []string) *dpb.FieldDescriptorProto_Type {
 	protoType := dpb.FieldDescriptorProto_TYPE_MESSAGE
 	if protoType, ok := protoBufScalarTypes[nativeType]; ok {
+		return &protoType
+	}
+	if enumValues != nil {
+		protoType := dpb.FieldDescriptorProto_TYPE_ENUM
 		return &protoType
 	}
 	return &protoType

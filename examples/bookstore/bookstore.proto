@@ -4,9 +4,9 @@ package bookstore;
 
 import "google/api/annotations.proto";
 
-import "google/protobuf/empty.proto";
-
 import "google/protobuf/descriptor.proto";
+
+import "google/protobuf/empty.proto";
 
 message Book {
   string author = 1;

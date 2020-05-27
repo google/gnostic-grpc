@@ -11,7 +11,7 @@ OpenAPI description.
 
 #### What we will build:
 
-![alt text](https://drive.google.com/uc?export=view&id=118eI8Tb88gJF47nclHbLxqOS1N_ygt4o "gRPC with Transcoding")
+![alt text](https://raw.githubusercontent.com/googleapis/gnostic-grpc/master/examples/images/end-to-end-grpc-gateway.png "gRPC with Transcoding")
 
 This tutorial has six steps:
 

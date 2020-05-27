@@ -8,7 +8,7 @@ OpenAPI description.
 
 
 #### What we will build:
-![alt text](https://drive.google.com/uc?export=view&id=1hXqL-KYaa-38p_nyfC2Moycxv0eV2Ya6 "gRPC with Transcoding")
+![alt text](https://raw.githubusercontent.com/googleapis/gnostic-grpc/master/examples/images/end-to-end-envoy.png "gRPC with Transcoding")
 
 #### Prerequisite
 Install [gnostic](https://github.com/googleapis/gnostic), [gnostic-grpc](https://github.com/googleapis/gnostic-grpc),

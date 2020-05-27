@@ -21,7 +21,15 @@ message TestParameterQueryParameters {
 }
 
 message TestParameterQueryEnumParameters {
-  repeated int64 param2 = 1;
+  repeated Param2 param2 = 1;
+
+  enum Param2 {
+    DINGO = 0;
+
+    HUSKY = 1;
+
+    RETRIEVER = 2;
+  }
 }
 
 message TestParameterPathParameters {
@@ -29,7 +37,13 @@ message TestParameterPathParameters {
 }
 
 message TestParameterPathEnumParameters {
-  int64 param4 = 1;
+  Param4 param4 = 1;
+
+  enum Param4 {
+    DINGO = 0;
+
+    HUSKY = 1;
+  }
 }
 
 message TestParameterMultiplePathParameters {
