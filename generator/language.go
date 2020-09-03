@@ -14,10 +14,11 @@
 package generator
 
 import (
-	surface_v1 "github.com/googleapis/gnostic/surface"
 	"regexp"
 	"strconv"
 	"strings"
+
+	surface_v1 "github.com/googleapis/gnostic/surface"
 )
 
 type ProtoLanguageModel struct{}
@@ -60,6 +61,14 @@ func findNativeType(fType string, fFormat string) string {
 	case "boolean":
 		return "bool"
 	case "number":
+		switch fFormat {
+		case "float":
+			return "float"
+		case "double":
+			return "double"
+		default:
+			return "float"
+		}
 		return "int32"
 	case "integer":
 		switch fFormat {
