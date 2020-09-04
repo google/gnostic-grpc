@@ -69,7 +69,6 @@ func findNativeType(fType string, fFormat string) string {
 		default:
 			return "float"
 		}
-		return "int32"
 	case "integer":
 		switch fFormat {
 		case "int32":
