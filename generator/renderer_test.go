@@ -18,7 +18,6 @@ import (
 	surface "github.com/googleapis/gnostic/surface"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -112,9 +111,10 @@ func runGeneratorWithoutEnvironment(input string, packageName string) ([]byte, e
 }
 
 func buildSurfaceModel(input string) (*surface.Model, error) {
-	cmd := exec.Command("gnostic", "--pb-out=-", input)
-	b, _ := cmd.Output()
-	documentv3, _ := createOpenAPIDocFromGnosticOutput(b)
+	documentv3, err := ParseOpenAPIDoc(input)
+	if err != nil {
+		return nil, err
+	}
 	surfaceModel, err := surface.NewModelFromOpenAPI3(documentv3, input)
 	return surfaceModel, err
 }
