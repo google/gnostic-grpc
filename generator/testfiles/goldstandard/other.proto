@@ -20,6 +20,12 @@ message Person {
   string name = 3;
 
   repeated string photo_urls = 4;
+
+  float height = 5;
+
+  double cash = 6;
+
+  float iq = 7;
 }
 
 message TestExernalReference2Parameters {
