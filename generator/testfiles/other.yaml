@@ -91,3 +91,11 @@ components:
             wrapped: true
           items:
             type: string
+        height:
+          type: number
+        cash:
+          type: number
+          format: double
+        iq:
+          type: number
+          format: float

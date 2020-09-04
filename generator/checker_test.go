@@ -23,7 +23,11 @@ import (
 
 func TestNewFeatureCheckerParameters(t *testing.T) {
 	input := "testfiles/parameters.yaml"
-	documentv3 := readOpenAPIBinary(input)
+	documentv3, err := ParseOpenAPIDoc(input)
+	if err != nil {
+		t.Errorf("Error while parsing input file: %s", input)
+		return
+	}
 
 	checker := NewGrpcChecker(documentv3)
 	messages := checker.Run()
@@ -39,7 +43,11 @@ func TestNewFeatureCheckerParameters(t *testing.T) {
 
 func TestFeatureCheckerRequestBodies(t *testing.T) {
 	input := "testfiles/requestBodies.yaml"
-	documentv3 := readOpenAPIBinary(input)
+	documentv3, err := ParseOpenAPIDoc(input)
+	if err != nil {
+		t.Errorf("Error while parsing input file: %s", input)
+		return
+	}
 
 	checker := NewGrpcChecker(documentv3)
 	messages := checker.Run()
@@ -54,7 +62,11 @@ func TestFeatureCheckerRequestBodies(t *testing.T) {
 
 func TestFeatureCheckerResponses(t *testing.T) {
 	input := "testfiles/responses.yaml"
-	documentv3 := readOpenAPIBinary(input)
+	documentv3, err := ParseOpenAPIDoc(input)
+	if err != nil {
+		t.Errorf("Error while parsing input file: %s", input)
+		return
+	}
 
 	checker := NewGrpcChecker(documentv3)
 	messages := checker.Run()
@@ -69,7 +81,11 @@ func TestFeatureCheckerResponses(t *testing.T) {
 
 func TestFeatureCheckerOther(t *testing.T) {
 	input := "testfiles/other.yaml"
-	documentv3 := readOpenAPIBinary(input)
+	documentv3, err := ParseOpenAPIDoc(input)
+	if err != nil {
+		t.Errorf("Error while parsing input file: %s", input)
+		return
+	}
 
 	checker := NewGrpcChecker(documentv3)
 	messages := checker.Run()
@@ -96,9 +112,12 @@ func validateKeys(t *testing.T, expectedKeys [][]string, messages []*plugins.Mes
 	}
 }
 
-func readOpenAPIBinary(input string) *openapiv3.Document {
+func ParseOpenAPIDoc(input string) (*openapiv3.Document, error) {
 	cmd := exec.Command("gnostic", "--pb-out=-", input)
-	b, _ := cmd.Output()
-	documentv3, _ := createOpenAPIDocFromGnosticOutput(b)
-	return documentv3
+	b, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+	documentv3, err := createOpenAPIDocFromGnosticOutput(b)
+	return documentv3, err
 }
