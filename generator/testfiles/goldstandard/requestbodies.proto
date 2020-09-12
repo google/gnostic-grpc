@@ -28,11 +28,11 @@ message TestRequestBodyReferenceRequest {
 
 service Requestbodies {
   rpc TestRequestBody ( TestRequestBodyRequest ) returns ( google.protobuf.Empty ) {
-    option (google.api.http) = { get:"/testRequestBody"  };
+    option (google.api.http) = { get:"/testRequestBody" body:"person"  };
   }
 
   rpc TestRequestBodyReference ( TestRequestBodyReferenceRequest ) returns ( google.protobuf.Empty ) {
-    option (google.api.http) = { get:"/testRequestBodyReference"  };
+    option (google.api.http) = { get:"/testRequestBodyReference" body:"person"  };
   }
 }
 
