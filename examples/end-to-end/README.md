@@ -58,7 +58,7 @@ requests to localhost:51051.
   
 Get the envoy docker image:
 
-    docker pull envoyproxy/envoy-dev:bcc66c6b74c365d1d2834cfe15b847ae13be0eb6  
+    docker pull envoyproxy/envoy-dev:5d95032baa803f853e9120048b56c8be3dab4b0d  
   
 The file `envoy-proxy/Dockerfile` uses the envoy image we just pulled as base image and copies `envoy.yaml`
 and `proto.pb` to the filesystem of the docker container.  

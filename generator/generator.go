@@ -416,7 +416,7 @@ func getRequestBodyForRequestParameters(name string, types []*surface_v1.Type) *
 	requestParameterType := &surface_v1.Type{}
 
 	for _, t := range types {
-		if t.Name == name {
+		if t.TypeName == name {
 			requestParameterType = t
 		}
 	}

@@ -31,7 +31,7 @@ func NewProtoLanguageModel() *ProtoLanguageModel {
 func (language *ProtoLanguageModel) Prepare(model *surface_v1.Model, inputDocumentType string) {
 	for _, t := range model.Types {
 		// determine the name of protocol buffer messages
-		t.TypeName = protoTypeName(t.Name)
+		t.TypeName = protoTypeName(strings.Replace(t.Name, "Parameters", "Request", 1))
 
 		for _, f := range t.Fields {
 			f.FieldName = protoFieldName(f.Name, f.Type)
@@ -47,7 +47,7 @@ func (language *ProtoLanguageModel) Prepare(model *surface_v1.Model, inputDocume
 		m.HandlerName = protoTypeName(m.Name)
 		m.ProcessorName = m.Name
 		m.ClientName = m.Name
-		m.ParametersTypeName = protoTypeName(m.ParametersTypeName)
+		m.ParametersTypeName = protoTypeName(strings.Replace(m.ParametersTypeName, "Parameters", "Request", 1))
 		m.ResponsesTypeName = protoTypeName(m.ResponsesTypeName)
 	}
 

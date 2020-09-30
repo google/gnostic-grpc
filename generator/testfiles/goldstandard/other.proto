@@ -28,7 +28,7 @@ message Person {
   float iq = 7;
 }
 
-message TestExernalReference2Parameters {
+message TestExernalReference2Request {
   parameters.Parameter2 parameter2 = 1;
 }
 
@@ -48,7 +48,7 @@ service Other {
     option (google.api.http) = { get:"/testExternalReference"  };
   }
 
-  rpc TestExernalReference2 ( TestExernalReference2Parameters ) returns ( google.protobuf.Empty ) {
+  rpc TestExernalReference2 ( TestExernalReference2Request ) returns ( google.protobuf.Empty ) {
     option (google.api.http) = { get:"/testExternalReference2" body:"parameter2"  };
   }
 
