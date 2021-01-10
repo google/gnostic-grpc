@@ -1,6 +1,6 @@
-[![Build Status](https://travis-ci.org/googleapis/gnostic-grpc.svg?branch=master)](https://travis-ci.org/googleapis/gnostic-grpc)
-[![Go Report Card](https://goreportcard.com/badge/github.com/googleapis/gnostic-grpc)](https://goreportcard.com/report/github.com/googleapis/gnostic-grpc)
-[![Test Coverage](https://codecov.io/gh/googleapis/gnostic-grpc/branch/master/graph/badge.svg)](https://codecov.io/gh/googleapis)
+[![Build Status](https://travis-ci.org/google/gnostic-grpc.svg?branch=master)](https://travis-ci.org/google/gnostic-grpc)
+[![Go Report Card](https://goreportcard.com/badge/github.com/google/gnostic-grpc)](https://goreportcard.com/report/github.com/google/gnostic-grpc)
+[![Test Coverage](https://codecov.io/gh/google/gnostic-grpc/branch/master/graph/badge.svg)](https://codecov.io/gh/google)
 
 # gnostic gRPC plugin
 [GSoC 2019 project](https://summerofcode.withgoogle.com/archive/2019/projects/5019228334194688/)
@@ -9,11 +9,11 @@ This tool converts an OpenAPI v3.0 API description into a description of a gRPC
 service that can be used to implement that API using [gRPC-JSON Transcoding](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/grpc_json_transcoder_filter). gRPC services are described using the [Protocol Buffers](https://developers.google.com/protocol-buffers/) language.
 
 OpenAPI descriptions are read and processed with
-[gnostic](https://github.com/googleapis/gnostic), and this tool runs as a
+[gnostic](https://github.com/google/gnostic), and this tool runs as a
 gnostic plugin.
 
 ## High level overview:
-![High Level Overview](https://raw.githubusercontent.com/googleapis/gnostic-grpc/master/examples/images/high-level-overview.png "High Level Overview")
+![High Level Overview](https://raw.githubusercontent.com/google/gnostic-grpc/master/examples/images/high-level-overview.png "High Level Overview")
 
 Under the hood the plugin first creates a FileDescriptorSet (`bookststore.descr`) from the input
 data. Then [protoreflect](https://github.com/jhump/protoreflect/) is used to print the output file. 
@@ -21,8 +21,8 @@ data. Then [protoreflect](https://github.com/jhump/protoreflect/) is used to pri
 ## How to use:    
 Install gnostic and the plugin:
     
-    go get -u github.com/googleapis/gnostic
-    go get -u github.com/googleapis/gnostic-grpc
+    go get -u github.com/google/gnostic
+    go get -u github.com/google/gnostic-grpc
 
 Run gnostic with the plugin:
 
@@ -31,7 +31,7 @@ Run gnostic with the plugin:
 This generates the gRPC service definition `examples/bookstore/bookstore.proto`.
 
 ## End-to-end example
-This [directory](https://github.com/googleapis/gnostic-grpc/tree/master/examples/end-to-end) contains a tutorial on how to build a gRPC service that implements an OpenAPI specification.
+This [directory](https://github.com/google/gnostic-grpc/tree/master/examples/end-to-end) contains a tutorial on how to build a gRPC service that implements an OpenAPI specification.
 
 ## What conversions are currently supported?
 
