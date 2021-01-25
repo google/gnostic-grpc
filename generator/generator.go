@@ -40,8 +40,6 @@ var generatedSymbolicReferences = make(map[string]bool, 0)
 // Gathers all messages that have been generated from symbolic references in recursive calls.
 var generatedMessages = make(map[string]string, 0)
 
-var shouldRenderEmptyImport = false
-
 // Uses the output of gnostic to return a dpb.FileDescriptorSet (in bytes). 'renderer' contains
 // the 'model' (surface model) which has all the relevant data to create the dpb.FileDescriptorSet.
 // There are four main steps:
@@ -50,7 +48,7 @@ var shouldRenderEmptyImport = false
 // 									references. A symbolic reference is an URL to another OpenAPI description inside of
 //									current description.
 //		3. buildMessagesFromTypes is called to create all messages which will be rendered in .proto
-//		4. buildServiceFromMethods is called to create a RPC service which will be rendered in .proto
+//		4. buildAllServiceDescriptors is called to create a RPC service which will be rendered in .proto
 func (renderer *Renderer) runFileDescriptorSetGenerator() (fdSet *dpb.FileDescriptorSet, err error) {
 	syntax := "proto3"
 	n := renderer.Package + ".proto"
@@ -76,34 +74,15 @@ func (renderer *Renderer) runFileDescriptorSetGenerator() (fdSet *dpb.FileDescri
 		return nil, err
 	}
 
-	err = buildServiceFromMethods(mainProto, renderer)
+	allServices, err := buildAllServiceDescriptors(mainProto.MessageType, renderer)
 	if err != nil {
 		return nil, err
 	}
+	mainProto.Service = allServices
 
-	addDependencies(fdSet)
+	addDependencies(fdSet, renderer.Model.Methods)
 
 	return fdSet, err
-}
-
-// addDependencies adds the dependencies to the FileDescriptorProto we want to render (the last one). This essentially
-// makes the 'import'  statements inside the .proto definition.
-func addDependencies(fdSet *dpb.FileDescriptorSet) {
-	// At last, we need to add the dependencies to the FileDescriptorProto in order to get them rendered.
-	lastFdProto := getLast(fdSet.File)
-	for _, fd := range fdSet.File {
-		if fd != lastFdProto {
-			if *fd.Name == "google/protobuf/empty.proto" { // Reference: https://github.com/googleapis/gnostic-grpc/issues/8
-				if shouldRenderEmptyImport {
-					lastFdProto.Dependency = append(lastFdProto.Dependency, *fd.Name)
-				}
-				continue
-			}
-			lastFdProto.Dependency = append(lastFdProto.Dependency, *fd.Name)
-		}
-	}
-	// Sort imports so they will be rendered in a consistent order.
-	sort.Strings(lastFdProto.Dependency)
 }
 
 // buildSymbolicReferences recursively generates all .proto definitions to external OpenAPI descriptions (URLs to other
@@ -255,44 +234,68 @@ func buildMessagesFromTypes(descr *dpb.FileDescriptorProto, renderer *Renderer) 
 	return nil
 }
 
-// buildServiceFromMethods builds a protobuf RPC service. For every method the corresponding gRPC-HTTP transcoding options (https://github.com/googleapis/googleapis/blob/master/google/api/http.proto)
+// buildAllServiceDescriptors builds a protobuf RPC service. For every method the corresponding gRPC-HTTP transcoding options (https://github.com/googleapis/googleapis/blob/master/google/api/http.proto)
 // have to be set.
-func buildServiceFromMethods(descr *dpb.FileDescriptorProto, renderer *Renderer) (err error) {
-	methods := renderer.Model.Methods
-	serviceName := findValidServiceName(descr.MessageType, strings.Title(renderer.Package))
-
+func buildAllServiceDescriptors(messages []*dpb.DescriptorProto, renderer *Renderer) (services []*dpb.ServiceDescriptorProto, err error) {
+	serviceName := findValidServiceName(messages, strings.Title(renderer.Package))
+	methodDescriptors, err := buildAllMethodDescriptors(renderer.Model.Methods, renderer.Model.Types)
+	if err != nil {
+		return nil, err
+	}
 	service := &dpb.ServiceDescriptorProto{
-		Name: &serviceName,
+		Name:   &serviceName,
+		Method: methodDescriptors,
 	}
-	descr.Service = []*dpb.ServiceDescriptorProto{service}
+	services = append(services, service)
+	return services, nil
+}
 
+func buildAllMethodDescriptors(methods []*surface_v1.Method, types []*surface_v1.Type) (allMethodDescriptors []*dpb.MethodDescriptorProto, err error) {
 	for _, method := range methods {
-		mOptionsDescr := &dpb.MethodOptions{}
-		requestBody := getRequestBodyForRequestParameters(method.ParametersTypeName, renderer.Model.Types)
-		httpRule := getHttpRuleForMethod(method, requestBody)
-		if err := proto.SetExtension(mOptionsDescr, annotations.E_Http, &httpRule); err != nil {
-			return err
+		methodDescriptor, err := buildMethodDescriptor(method, types)
+		if err != nil {
+			return nil, err
 		}
-
-		if method.ParametersTypeName == "" {
-			method.ParametersTypeName = "google.protobuf.Empty"
-			shouldRenderEmptyImport = true
-		}
-		if method.ResponsesTypeName == "" {
-			method.ResponsesTypeName = "google.protobuf.Empty"
-			shouldRenderEmptyImport = true
-		}
-
-		mDescr := &dpb.MethodDescriptorProto{
-			Name:       &method.HandlerName,
-			InputType:  &method.ParametersTypeName,
-			OutputType: &method.ResponsesTypeName,
-			Options:    mOptionsDescr,
-		}
-
-		service.Method = append(service.Method, mDescr)
+		allMethodDescriptors = append(allMethodDescriptors, methodDescriptor)
 	}
-	return nil
+	return allMethodDescriptors, nil
+}
+
+func buildMethodDescriptor(method *surface_v1.Method, types []*surface_v1.Type) (methodDescriptor *dpb.MethodDescriptorProto, err error) {
+	options, err := buildMethodOptions(method, types)
+	if err != nil {
+		return nil, err
+	}
+	inputType, outputType := buildInputTypeAndOutputType(method.ParametersTypeName, method.ResponsesTypeName)
+	methodDescriptor = &dpb.MethodDescriptorProto{
+		Name:       &method.HandlerName,
+		InputType:  &inputType,
+		OutputType: &outputType,
+		Options:    options,
+	}
+	return methodDescriptor, nil
+}
+
+func buildInputTypeAndOutputType(parametersTypeName string, responseTypeName string) (inputType string, outputType string) {
+	inputType = parametersTypeName
+	outputType = responseTypeName
+	if parametersTypeName == "" {
+		inputType = "google.protobuf.Empty"
+	}
+	if responseTypeName == "" {
+		outputType = "google.protobuf.Empty"
+	}
+	return inputType, outputType
+}
+
+func buildMethodOptions(method *surface_v1.Method, types []*surface_v1.Type) (options *dpb.MethodOptions, err error) {
+	options = &dpb.MethodOptions{}
+	httpRule := getHttpRuleForMethod(method)
+	httpRule.Body = getRequestBodyForRequestParameter(method.ParametersTypeName, types)
+	if err := proto.SetExtension(options, annotations.E_Http, &httpRule); err != nil {
+		return nil, err
+	}
+	return options, nil
 }
 
 // buildEnumDescriptorProto builds the necessary descriptor to render a enum. (https://developers.google.com/protocol-buffers/docs/proto3#enum)
@@ -346,6 +349,42 @@ func buildKeyValueFields(field *surface_v1.Field) []*dpb.FieldDescriptorProto {
 		TypeName: getTypeNameForMapValueType(valueType),
 	}
 	return []*dpb.FieldDescriptorProto{keyField, valueField}
+}
+
+// addDependencies adds the dependencies to the FileDescriptorProto we want to render (the last one). This essentially
+// makes the 'import'  statements inside the .proto definition.
+func addDependencies(fdSet *dpb.FileDescriptorSet, methods []*surface_v1.Method) {
+	// At last, we need to add the dependencies to the FileDescriptorProto in order to get them rendered.
+	lastFdProto := getLast(fdSet.File)
+	for _, fd := range fdSet.File {
+		if fd == lastFdProto {
+			continue
+		}
+
+		if !isEmptyDependency(*fd.Name) {
+			lastFdProto.Dependency = append(lastFdProto.Dependency, *fd.Name)
+		} else if shouldAddEmptyDependency(methods) {
+			// Reference: https://github.com/googleapis/gnostic-grpc/issues/8
+			lastFdProto.Dependency = append(lastFdProto.Dependency, *fd.Name)
+		}
+	}
+	// Sort imports so they will be rendered in a consistent order.
+	sort.Strings(lastFdProto.Dependency)
+}
+
+// isEmptyDependency returns true if the 'name' of the dependency is empty.proto
+func isEmptyDependency(name string) bool {
+	return name == "google/protobuf/empty.proto"
+}
+
+// shouldAddEmptyDependency returns true if at least one request parameter or response parameter is empty
+func shouldAddEmptyDependency(methods []*surface_v1.Method) bool {
+	for _, method := range methods {
+		if method.ParametersTypeName == "" || method.ResponsesTypeName == "" {
+			return true
+		}
+	}
+	return false
 }
 
 // validatePathParameter validates if the path parameter has the requested structure.
@@ -410,9 +449,9 @@ func setFieldDescriptorTypeName(fd *dpb.FieldDescriptorProto, f *surface_v1.Fiel
 	}
 }
 
-// getRequestBodyForRequestParameters finds the corresponding surface model type for 'name' and returns the name of the
+// getRequestBodyForRequestParameter finds the corresponding surface model type for 'name' and returns the name of the
 // field that is a request body. If no such field is found it returns nil.
-func getRequestBodyForRequestParameters(name string, types []*surface_v1.Type) *string {
+func getRequestBodyForRequestParameter(name string, types []*surface_v1.Type) string {
 	requestParameterType := &surface_v1.Type{}
 
 	for _, t := range types {
@@ -423,15 +462,15 @@ func getRequestBodyForRequestParameters(name string, types []*surface_v1.Type) *
 
 	for _, f := range requestParameterType.Fields {
 		if f.Position == surface_v1.Position_BODY {
-			return &f.FieldName
+			return f.FieldName
 		}
 	}
-	return nil
+	return ""
 }
 
 // getHttpRuleForMethod constructs a HttpRule from google/api/http.proto. Enables gRPC-HTTP transcoding on 'method'.
 // If not nil, body is also set.
-func getHttpRuleForMethod(method *surface_v1.Method, body *string) annotations.HttpRule {
+func getHttpRuleForMethod(method *surface_v1.Method) annotations.HttpRule {
 	var httpRule annotations.HttpRule
 	switch method.Method {
 	case "GET":
@@ -465,11 +504,6 @@ func getHttpRuleForMethod(method *surface_v1.Method, body *string) annotations.H
 			},
 		}
 	}
-
-	if body != nil {
-		httpRule.Body = *body
-	}
-
 	return httpRule
 }
 
