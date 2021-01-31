@@ -15,6 +15,7 @@
 package generator
 
 import (
+	"google.golang.org/protobuf/types/descriptorpb"
 	"log"
 	"os/exec"
 	"path"
@@ -43,150 +44,50 @@ var generatedMessages = make(map[string]string, 0)
 // Uses the output of gnostic to return a dpb.FileDescriptorSet (in bytes). 'renderer' contains
 // the 'model' (surface model) which has all the relevant data to create the dpb.FileDescriptorSet.
 // There are four main steps:
-// 		1. buildDependencies to build all static FileDescriptorProto we need.
-// 		2. buildSymbolicReferences 	recursively executes this plugin to generate all FileDescriptorSet based on symbolic
+//		1. buildAllMessageDescriptors is called to create all messages which will be rendered in .proto
+//		2. buildAllServiceDescriptors is called to create a RPC service which will be rendered in .proto
+// 		3. buildSymbolicReferences 	recursively executes this plugin to generate all FileDescriptorSet based on symbolic
 // 									references. A symbolic reference is an URL to another OpenAPI description inside of
 //									current description.
-//		3. buildAllMessageDescriptors is called to create all messages which will be rendered in .proto
-//		4. buildAllServiceDescriptors is called to create a RPC service which will be rendered in .proto
+// 		4. buildDependencies to build all static FileDescriptorProto we need.
 func (renderer *Renderer) runFileDescriptorSetGenerator() (fdSet *dpb.FileDescriptorSet, err error) {
 	syntax := "proto3"
 	n := renderer.Package + ".proto"
 
-	// mainProto is the proto we ultimately want to render.
-	mainProto := &dpb.FileDescriptorProto{
+	protoToBeRendered := &dpb.FileDescriptorProto{
 		Name:    &n,
 		Package: &renderer.Package,
 		Syntax:  &syntax,
-	}
-	fdSet = &dpb.FileDescriptorSet{
-		File: []*dpb.FileDescriptorProto{mainProto},
-	}
-
-	buildDependencies(fdSet)
-	err = buildSymbolicReferences(fdSet, renderer)
-	if err != nil {
-		return nil, err
 	}
 
 	allMessages, err := buildAllMessageDescriptors(renderer)
 	if err != nil {
 		return nil, err
 	}
-	mainProto.MessageType = allMessages
+	protoToBeRendered.MessageType = allMessages
 
-	allServices, err := buildAllServiceDescriptors(mainProto.MessageType, renderer)
+	allServices, err := buildAllServiceDescriptors(protoToBeRendered.MessageType, renderer)
 	if err != nil {
 		return nil, err
 	}
-	mainProto.Service = allServices
+	protoToBeRendered.Service = allServices
 
-	addDependencies(fdSet, renderer.Model.Methods)
+	symbolicReferenceDependencies, err := buildSymbolicReferences(renderer)
+	if err != nil {
+		return nil, err
+	}
+	dependencies := buildDependencies()
+	dependencies = append(dependencies, symbolicReferenceDependencies...)
+	dependencyNames := getNamesOfDependenciesThatWillBeImported(dependencies, renderer.Model.Methods)
+	protoToBeRendered.Dependency = dependencyNames
+
+	allFileDescriptors := append(symbolicReferenceDependencies, dependencies...)
+	allFileDescriptors = append(allFileDescriptors, protoToBeRendered)
+	fdSet = &dpb.FileDescriptorSet{
+		File: allFileDescriptors,
+	}
 
 	return fdSet, err
-}
-
-// buildSymbolicReferences recursively generates all .proto definitions to external OpenAPI descriptions (URLs to other
-// descriptions inside the current description).
-func buildSymbolicReferences(fdSet *dpb.FileDescriptorSet, renderer *Renderer) (err error) {
-	symbolicReferences := renderer.Model.SymbolicReferences
-	symbolicReferences = trimAndRemoveDuplicates(symbolicReferences)
-
-	symbolicFileDescriptorProtos := make([]*dpb.FileDescriptorProto, 0)
-	for _, ref := range symbolicReferences {
-		if _, alreadyGenerated := generatedSymbolicReferences[ref]; !alreadyGenerated {
-			generatedSymbolicReferences[ref] = true
-
-			// Lets get the standard gnostic output from the symbolic reference.
-			cmd := exec.Command("gnostic", "--pb-out=-", ref)
-			b, err := cmd.Output()
-			if err != nil {
-				return err
-			}
-
-			// Construct an OpenAPI document v3.
-			document, err := createOpenAPIDocFromGnosticOutput(b)
-			if err != nil {
-				return err
-			}
-
-			// Create the surface model. Keep in mind that this resolves the references of the symbolic reference again!
-			surfaceModel, err := surface_v1.NewModelFromOpenAPI3(document, ref)
-			if err != nil {
-				return err
-			}
-
-			// Prepare surface model for recursive call. TODO: Keep discovery documents in mind.
-			inputDocumentType := "openapi.v3.Document"
-			if document.Openapi == "2.0.0" {
-				inputDocumentType = "openapi.v2.Document"
-			}
-			NewProtoLanguageModel().Prepare(surfaceModel, inputDocumentType)
-
-			// Recursively call the generator.
-			recursiveRenderer := NewRenderer(surfaceModel)
-			fileName := path.Base(ref)
-			recursiveRenderer.Package = strings.TrimSuffix(fileName, filepath.Ext(fileName))
-			newFdSet, err := recursiveRenderer.runFileDescriptorSetGenerator()
-			if err != nil {
-				return err
-			}
-			renderer.SymbolicFdSets = append(renderer.SymbolicFdSets, newFdSet)
-
-			symbolicProto := getLast(newFdSet.File)
-			symbolicFileDescriptorProtos = append(symbolicFileDescriptorProtos, symbolicProto)
-		}
-	}
-
-	fdSet.File = append(symbolicFileDescriptorProtos, fdSet.File...)
-	return nil
-}
-
-// Protoreflect needs all the dependencies that are used inside of the FileDescriptorProto (that gets rendered)
-// to work properly. Those dependencies are google/protobuf/empty.proto, google/api/annotations.proto,
-// and "google/protobuf/descriptor.proto". For all those dependencies the corresponding
-// FileDescriptorProto has to be added to the FileDescriptorSet. Protoreflect won't work
-// if a reference is missing.
-func buildDependencies(fdSet *dpb.FileDescriptorSet) {
-	// Dependency to google/api/annotations.proto for gRPC-HTTP transcoding. Here a couple of problems arise:
-	// 1. Problem: 	We cannot call descriptor.ForMessage(&annotations.E_Http), which would be our
-	//				required dependency. However, we can call descriptor.ForMessage(&http) and
-	//				then construct the extension manually.
-	// 2. Problem: 	The name is set wrong.
-	// 3. Problem: 	google/api/annotations.proto has a dependency to google/protobuf/descriptor.proto.
-	http := annotations.Http{}
-	fd, _ := descriptor.MessageDescriptorProto(&http)
-
-	extensionName := "http"
-	n := "google/api/annotations.proto"
-	l := dpb.FieldDescriptorProto_LABEL_OPTIONAL
-	t := dpb.FieldDescriptorProto_TYPE_MESSAGE
-	tName := "google.api.HttpRule"
-	extendee := ".google.protobuf.MethodOptions"
-
-	httpExtension := &dpb.FieldDescriptorProto{
-		Name:     &extensionName,
-		Number:   &annotations.E_Http.Field,
-		Label:    &l,
-		Type:     &t,
-		TypeName: &tName,
-		Extendee: &extendee,
-	}
-
-	fd.Extension = append(fd.Extension, httpExtension)                        // 1. Problem
-	fd.Name = &n                                                              // 2. Problem
-	fd.Dependency = append(fd.Dependency, "google/protobuf/descriptor.proto") //3.rd Problem
-
-	// Build other required dependencies
-	e := empty.Empty{}
-	fdp := dpb.DescriptorProto{}
-	fd2, _ := descriptor.MessageDescriptorProto(&e)
-	fd3, _ := descriptor.MessageDescriptorProto(&fdp)
-	dependencies := []*dpb.FileDescriptorProto{fd, fd2, fd3}
-
-	// According to the documentation of protoReflect.CreateFileDescriptorFromSet the file I want to print
-	// needs to be at the end of the array. All other FileDescriptorProto are dependencies.
-	fdSet.File = append(dependencies, fdSet.File...)
 }
 
 // buildAllMessageDescriptors builds protobuf messages from the surface model types. If the type is a RPC request parameter
@@ -226,8 +127,8 @@ func buildFieldDescriptor(field *surface_v1.Field, t *surface_v1.Type, count int
 	fieldDescriptor = &dpb.FieldDescriptorProto{Number: &ctr}
 	fieldDescriptor.Name = &field.FieldName
 	fieldDescriptor.Type = getFieldDescriptorType(field.NativeType, field.EnumValues)
-	setFieldDescriptorLabel(fieldDescriptor, field)
-	setFieldDescriptorTypeName(fieldDescriptor, field, packageName)
+	fieldDescriptor.Label = getFieldDescriptorLabel(field)
+	fieldDescriptor.TypeName = getFieldDescriptorTypeName(*fieldDescriptor.Type, field, packageName)
 	return fieldDescriptor
 }
 
@@ -239,6 +140,101 @@ func validateRequestParameter(field *surface_v1.Field) {
 	if field.Position == surface_v1.Position_QUERY {
 		validateQueryParameter(field)
 	}
+}
+
+// getFieldDescriptorType returns a field descriptor type for the given 'nativeType'. If it is not a scalar type
+// then we have a reference to another type which will get rendered as a message.
+func getFieldDescriptorType(nativeType string, enumValues []string) *dpb.FieldDescriptorProto_Type {
+	protoType := dpb.FieldDescriptorProto_TYPE_MESSAGE
+	if protoType, ok := protoBufScalarTypes[nativeType]; ok {
+		return &protoType
+	}
+	if enumValues != nil {
+		protoType := dpb.FieldDescriptorProto_TYPE_ENUM
+		return &protoType
+	}
+	return &protoType
+}
+
+// getFieldDescriptorLabel returns the label for the descriptor based on the information in he surface field.
+func getFieldDescriptorLabel(f *surface_v1.Field) *dpb.FieldDescriptorProto_Label {
+	label := dpb.FieldDescriptorProto_LABEL_OPTIONAL
+	if f.Kind == surface_v1.FieldKind_ARRAY || strings.Contains(f.NativeType, "map") {
+		label = dpb.FieldDescriptorProto_LABEL_REPEATED
+	}
+	return &label
+}
+
+// getFieldDescriptorTypeName returns the typeName of the descriptor. A TypeName has to be set if the field is a reference to another
+// descriptor or enum. Otherwise it is nil. Names are set according to the protocol buffer style guide for message names:
+// https://developers.google.com/protocol-buffers/docs/style#message-and-field-names
+func getFieldDescriptorTypeName(fieldDescriptorType descriptorpb.FieldDescriptorProto_Type, field *surface_v1.Field, packageName string) *string {
+	// Check whether we generated this message already inside of another dependency. If so we will use that name instead.
+	if n, ok := generatedMessages[field.NativeType]; ok {
+		return &n
+	}
+
+	typeName := ""
+	if fieldDescriptorType == dpb.FieldDescriptorProto_TYPE_MESSAGE {
+		typeName = packageName + "." + field.NativeType
+	}
+	if fieldDescriptorType == dpb.FieldDescriptorProto_TYPE_ENUM {
+		typeName = field.NativeType
+	}
+	return &typeName
+}
+
+// buildMapDescriptor builds the necessary descriptor to render a map. (https://developers.google.com/protocol-buffers/docs/proto3#maps)
+// A map is represented as nested message with two fields: 'key', 'value' and the Options set accordingly.
+func buildMapDescriptor(field *surface_v1.Field) *dpb.DescriptorProto {
+	isMapEntry := true
+	n := field.FieldName + "Entry"
+
+	mapDP := &dpb.DescriptorProto{
+		Name:    &n,
+		Field:   buildKeyValueFields(field),
+		Options: &dpb.MessageOptions{MapEntry: &isMapEntry},
+	}
+	return mapDP
+}
+
+// buildKeyValueFields builds the necessary 'key', 'value' fields for the map descriptor.
+func buildKeyValueFields(field *surface_v1.Field) []*dpb.FieldDescriptorProto {
+	k, v := "key", "value"
+	var n1, n2 int32 = 1, 2
+	l := dpb.FieldDescriptorProto_LABEL_OPTIONAL
+	t := dpb.FieldDescriptorProto_TYPE_STRING
+	keyField := &dpb.FieldDescriptorProto{
+		Name:   &k,
+		Number: &n1,
+		Label:  &l,
+		Type:   &t,
+	}
+
+	valueType := field.NativeType[11:] // This transforms a string like 'map[string]int32' to 'int32'. In other words: the type of the value from the map.
+	valueField := &dpb.FieldDescriptorProto{
+		Name:     &v,
+		Number:   &n2,
+		Label:    &l,
+		Type:     getFieldDescriptorType(valueType, field.EnumValues),
+		TypeName: getTypeNameForMapValueType(valueType),
+	}
+	return []*dpb.FieldDescriptorProto{keyField, valueField}
+}
+
+// buildEnumDescriptorProto builds the necessary descriptor to render a enum. (https://developers.google.com/protocol-buffers/docs/proto3#enum)
+func buildEnumDescriptorProto(f *surface_v1.Field) *dpb.EnumDescriptorProto {
+	enumDescriptor := &dpb.EnumDescriptorProto{Name: &f.NativeType}
+	for enumCtr, value := range f.EnumValues {
+		num := int32(enumCtr)
+		name := strings.ToUpper(value)
+		valueDescriptor := &dpb.EnumValueDescriptorProto{
+			Name:   &name,
+			Number: &num,
+		}
+		enumDescriptor.Value = append(enumDescriptor.Value, valueDescriptor)
+	}
+	return enumDescriptor
 }
 
 // buildAllServiceDescriptors builds a protobuf RPC service. For every method the corresponding gRPC-HTTP transcoding options (https://github.com/googleapis/googleapis/blob/master/google/api/http.proto)
@@ -305,176 +301,6 @@ func buildMethodOptions(method *surface_v1.Method, types []*surface_v1.Type) (op
 	return options, nil
 }
 
-// buildEnumDescriptorProto builds the necessary descriptor to render a enum. (https://developers.google.com/protocol-buffers/docs/proto3#enum)
-func buildEnumDescriptorProto(f *surface_v1.Field) *dpb.EnumDescriptorProto {
-	enumDescriptor := &dpb.EnumDescriptorProto{Name: &f.NativeType}
-	for enumCtr, value := range f.EnumValues {
-		num := int32(enumCtr)
-		name := strings.ToUpper(value)
-		valueDescriptor := &dpb.EnumValueDescriptorProto{
-			Name:   &name,
-			Number: &num,
-		}
-		enumDescriptor.Value = append(enumDescriptor.Value, valueDescriptor)
-	}
-	return enumDescriptor
-}
-
-// buildMapDescriptor builds the necessary descriptor to render a map. (https://developers.google.com/protocol-buffers/docs/proto3#maps)
-// A map is represented as nested message with two fields: 'key', 'value' and the Options set accordingly.
-func buildMapDescriptor(field *surface_v1.Field) *dpb.DescriptorProto {
-	isMapEntry := true
-	n := field.FieldName + "Entry"
-
-	mapDP := &dpb.DescriptorProto{
-		Name:    &n,
-		Field:   buildKeyValueFields(field),
-		Options: &dpb.MessageOptions{MapEntry: &isMapEntry},
-	}
-	return mapDP
-}
-
-// buildKeyValueFields builds the necessary 'key', 'value' fields for the map descriptor.
-func buildKeyValueFields(field *surface_v1.Field) []*dpb.FieldDescriptorProto {
-	k, v := "key", "value"
-	var n1, n2 int32 = 1, 2
-	l := dpb.FieldDescriptorProto_LABEL_OPTIONAL
-	t := dpb.FieldDescriptorProto_TYPE_STRING
-	keyField := &dpb.FieldDescriptorProto{
-		Name:   &k,
-		Number: &n1,
-		Label:  &l,
-		Type:   &t,
-	}
-
-	valueType := field.NativeType[11:] // This transforms a string like 'map[string]int32' to 'int32'. In other words: the type of the value from the map.
-	valueField := &dpb.FieldDescriptorProto{
-		Name:     &v,
-		Number:   &n2,
-		Label:    &l,
-		Type:     getFieldDescriptorType(valueType, field.EnumValues),
-		TypeName: getTypeNameForMapValueType(valueType),
-	}
-	return []*dpb.FieldDescriptorProto{keyField, valueField}
-}
-
-// addDependencies adds the dependencies to the FileDescriptorProto we want to render (the last one). This essentially
-// makes the 'import'  statements inside the .proto definition.
-func addDependencies(fdSet *dpb.FileDescriptorSet, methods []*surface_v1.Method) {
-	// At last, we need to add the dependencies to the FileDescriptorProto in order to get them rendered.
-	lastFdProto := getLast(fdSet.File)
-	for _, fd := range fdSet.File {
-		if fd == lastFdProto {
-			continue
-		}
-
-		if !isEmptyDependency(*fd.Name) {
-			lastFdProto.Dependency = append(lastFdProto.Dependency, *fd.Name)
-		} else if shouldAddEmptyDependency(methods) {
-			// Reference: https://github.com/googleapis/gnostic-grpc/issues/8
-			lastFdProto.Dependency = append(lastFdProto.Dependency, *fd.Name)
-		}
-	}
-	// Sort imports so they will be rendered in a consistent order.
-	sort.Strings(lastFdProto.Dependency)
-}
-
-// isEmptyDependency returns true if the 'name' of the dependency is empty.proto
-func isEmptyDependency(name string) bool {
-	return name == "google/protobuf/empty.proto"
-}
-
-// shouldAddEmptyDependency returns true if at least one request parameter or response parameter is empty
-func shouldAddEmptyDependency(methods []*surface_v1.Method) bool {
-	for _, method := range methods {
-		if method.ParametersTypeName == "" || method.ResponsesTypeName == "" {
-			return true
-		}
-	}
-	return false
-}
-
-// validatePathParameter validates if the path parameter has the requested structure.
-// This is necessary according to: https://github.com/googleapis/googleapis/blob/master/google/api/http.proto#L62
-func validatePathParameter(field *surface_v1.Field) {
-	if field.Kind != surface_v1.FieldKind_SCALAR {
-		log.Println("The path parameter with the Name " + field.Name + " is invalid. " +
-			"The path template may refer to one or more fields in the gRPC request message, as" +
-			" long as each field is a non-repeated field with a primitive (non-message) type. " +
-			"See: https://github.com/googleapis/googleapis/blob/master/google/api/http.proto#L62 for more information.")
-	}
-}
-
-// validateQueryParameter validates if the query parameter has the requested structure.
-// This is necessary according to: https://github.com/googleapis/googleapis/blob/master/google/api/http.proto#L118
-func validateQueryParameter(field *surface_v1.Field) {
-	_, isScalar := protoBufScalarTypes[field.NativeType]
-	if !(field.Kind == surface_v1.FieldKind_SCALAR ||
-		(field.Kind == surface_v1.FieldKind_ARRAY && isScalar) ||
-		(field.Kind == surface_v1.FieldKind_REFERENCE)) {
-		log.Println("The query parameter with the Name " + field.Name + " is invalid. " +
-			"Note that fields which are mapped to URL query parameters must have a primitive type or" +
-			" a repeated primitive type or a non-repeated message type. " +
-			"See: https://github.com/googleapis/googleapis/blob/master/google/api/http.proto#L118 for more information.")
-	}
-
-}
-
-// isRequestParameter checks whether 't' is a type that will be used as a request parameter for a RPC method.
-func isRequestParameter(t *surface_v1.Type) bool {
-	if strings.Contains(t.Description, t.GetName()+" holds parameters to") {
-		return true
-	}
-	return false
-}
-
-// setFieldDescriptorLabel sets a label for 'fd'. If it is an array we need the 'repeated' label.
-func setFieldDescriptorLabel(fd *dpb.FieldDescriptorProto, f *surface_v1.Field) {
-	label := dpb.FieldDescriptorProto_LABEL_OPTIONAL
-	if f.Kind == surface_v1.FieldKind_ARRAY || strings.Contains(f.NativeType, "map") {
-		label = dpb.FieldDescriptorProto_LABEL_REPEATED
-	}
-	fd.Label = &label
-}
-
-// setFieldDescriptorTypeName sets the TypeName of 'fd'. A TypeName has to be set if the field is a reference to another
-// message. Otherwise it is nil. Names are set according to the protocol buffer style guide for message names:
-// https://developers.google.com/protocol-buffers/docs/style#message-and-field-names
-func setFieldDescriptorTypeName(fd *dpb.FieldDescriptorProto, f *surface_v1.Field, packageName string) {
-	// A field with a type of Message always has a typeName associated with it (the name of the Message).
-	if *fd.Type == dpb.FieldDescriptorProto_TYPE_MESSAGE {
-		typeName := packageName + "." + f.NativeType
-
-		// Check whether we generated this message already inside of another dependency. If so we will use that name instead.
-		if n, ok := generatedMessages[f.NativeType]; ok {
-			typeName = n
-		}
-		fd.TypeName = &typeName
-	}
-	if *fd.Type == dpb.FieldDescriptorProto_TYPE_ENUM {
-		fd.TypeName = &f.NativeType
-	}
-}
-
-// getRequestBodyForRequestParameter finds the corresponding surface model type for 'name' and returns the name of the
-// field that is a request body. If no such field is found it returns nil.
-func getRequestBodyForRequestParameter(name string, types []*surface_v1.Type) string {
-	requestParameterType := &surface_v1.Type{}
-
-	for _, t := range types {
-		if t.TypeName == name {
-			requestParameterType = t
-		}
-	}
-
-	for _, f := range requestParameterType.Fields {
-		if f.Position == surface_v1.Position_BODY {
-			return f.FieldName
-		}
-	}
-	return ""
-}
-
 // getHttpRuleForMethod constructs a HttpRule from google/api/http.proto. Enables gRPC-HTTP transcoding on 'method'.
 // If not nil, body is also set.
 func getHttpRuleForMethod(method *surface_v1.Method) annotations.HttpRule {
@@ -514,6 +340,188 @@ func getHttpRuleForMethod(method *surface_v1.Method) annotations.HttpRule {
 	return httpRule
 }
 
+// getRequestBodyForRequestParameter finds the corresponding surface model type for 'name' and returns the name of the
+// field that is a request body. If no such field is found it returns nil.
+func getRequestBodyForRequestParameter(name string, types []*surface_v1.Type) string {
+	requestParameterType := &surface_v1.Type{}
+
+	for _, t := range types {
+		if t.TypeName == name {
+			requestParameterType = t
+		}
+	}
+
+	for _, f := range requestParameterType.Fields {
+		if f.Position == surface_v1.Position_BODY {
+			return f.FieldName
+		}
+	}
+	return ""
+}
+
+// buildSymbolicReferences recursively generates all .proto definitions to external OpenAPI descriptions (URLs to other
+// descriptions inside the current description).
+func buildSymbolicReferences(renderer *Renderer) (symbolicFileDescriptors []*dpb.FileDescriptorProto, err error) {
+	symbolicReferences := renderer.Model.SymbolicReferences
+	symbolicReferences = trimAndRemoveDuplicates(symbolicReferences)
+
+	for _, ref := range symbolicReferences {
+		if _, alreadyGenerated := generatedSymbolicReferences[ref]; !alreadyGenerated {
+			generatedSymbolicReferences[ref] = true
+
+			// Lets get the standard gnostic output from the symbolic reference.
+			cmd := exec.Command("gnostic", "--pb-out=-", ref)
+			b, err := cmd.Output()
+			if err != nil {
+				return nil, err
+			}
+
+			// Construct an OpenAPI document v3.
+			document, err := createOpenAPIDocFromGnosticOutput(b)
+			if err != nil {
+				return nil, err
+			}
+
+			// Create the surface model. Keep in mind that this resolves the references of the symbolic reference again!
+			surfaceModel, err := surface_v1.NewModelFromOpenAPI3(document, ref)
+			if err != nil {
+				return nil, err
+			}
+
+			// Prepare surface model for recursive call. TODO: Keep discovery documents in mind.
+			inputDocumentType := "openapi.v3.Document"
+			if document.Openapi == "2.0.0" {
+				inputDocumentType = "openapi.v2.Document"
+			}
+			NewProtoLanguageModel().Prepare(surfaceModel, inputDocumentType)
+
+			// Recursively call the generator.
+			recursiveRenderer := NewRenderer(surfaceModel)
+			fileName := path.Base(ref)
+			recursiveRenderer.Package = strings.TrimSuffix(fileName, filepath.Ext(fileName))
+			newFdSet, err := recursiveRenderer.runFileDescriptorSetGenerator()
+			if err != nil {
+				return nil, err
+			}
+			renderer.SymbolicFdSets = append(renderer.SymbolicFdSets, newFdSet)
+
+			symbolicProto := getLast(newFdSet.File)
+			symbolicFileDescriptors = append(symbolicFileDescriptors, symbolicProto)
+		}
+	}
+	return symbolicFileDescriptors, nil
+}
+
+// Protoreflect needs all the dependencies that are used inside of the FileDescriptorProto (that gets rendered)
+// to work properly. Those dependencies are google/protobuf/empty.proto, google/api/annotations.proto,
+// and "google/protobuf/descriptor.proto". For all those dependencies the corresponding
+// FileDescriptorProto has to be added to the FileDescriptorSet. Protoreflect won't work
+// if a reference is missing.
+func buildDependencies() (dependencies []*dpb.FileDescriptorProto) {
+	// Dependency to google/api/annotations.proto for gRPC-HTTP transcoding. Here a couple of problems arise:
+	// 1. Problem: 	We cannot call descriptor.ForMessage(&annotations.E_Http), which would be our
+	//				required dependency. However, we can call descriptor.ForMessage(&http) and
+	//				then construct the extension manually.
+	// 2. Problem: 	The name is set wrong.
+	// 3. Problem: 	google/api/annotations.proto has a dependency to google/protobuf/descriptor.proto.
+	http := annotations.Http{}
+	fd, _ := descriptor.MessageDescriptorProto(&http)
+
+	extensionName := "http"
+	n := "google/api/annotations.proto"
+	l := dpb.FieldDescriptorProto_LABEL_OPTIONAL
+	t := dpb.FieldDescriptorProto_TYPE_MESSAGE
+	tName := "google.api.HttpRule"
+	extendee := ".google.protobuf.MethodOptions"
+
+	httpExtension := &dpb.FieldDescriptorProto{
+		Name:     &extensionName,
+		Number:   &annotations.E_Http.Field,
+		Label:    &l,
+		Type:     &t,
+		TypeName: &tName,
+		Extendee: &extendee,
+	}
+
+	fd.Extension = append(fd.Extension, httpExtension)                        // 1. Problem
+	fd.Name = &n                                                              // 2. Problem
+	fd.Dependency = append(fd.Dependency, "google/protobuf/descriptor.proto") //3.rd Problem
+
+	// Build other required dependencies
+	e := empty.Empty{}
+	fdp := dpb.DescriptorProto{}
+	fd2, _ := descriptor.MessageDescriptorProto(&e)
+	fd3, _ := descriptor.MessageDescriptorProto(&fdp)
+	dependencies = []*dpb.FileDescriptorProto{fd, fd2, fd3}
+	return dependencies
+}
+
+// getNamesOfDependenciesThatWillBeImported adds the dependencies to the FileDescriptorProto we want to render (the last one). This essentially
+// makes the 'import'  statements inside the .proto definition.
+func getNamesOfDependenciesThatWillBeImported(dependencies []*dpb.FileDescriptorProto, methods []*surface_v1.Method) (names []string) {
+	// At last, we need to add the dependencies to the FileDescriptorProto in order to get them rendered.
+	for _, fd := range dependencies {
+		if isEmptyDependency(*fd.Name) && shouldAddEmptyDependency(methods) {
+			// Reference: https://github.com/googleapis/gnostic-grpc/issues/8
+			names = append(names, *fd.Name)
+			continue
+		}
+		names = append(names, *fd.Name)
+	}
+	// Sort imports so they will be rendered in a consistent order.
+	sort.Strings(names)
+	return names
+}
+
+// validatePathParameter validates if the path parameter has the requested structure.
+// This is necessary according to: https://github.com/googleapis/googleapis/blob/master/google/api/http.proto#L62
+func validatePathParameter(field *surface_v1.Field) {
+	if field.Kind != surface_v1.FieldKind_SCALAR {
+		log.Println("The path parameter with the Name " + field.Name + " is invalid. " +
+			"The path template may refer to one or more fields in the gRPC request message, as" +
+			" long as each field is a non-repeated field with a primitive (non-message) type. " +
+			"See: https://github.com/googleapis/googleapis/blob/master/google/api/http.proto#L62 for more information.")
+	}
+}
+
+// validateQueryParameter validates if the query parameter has the requested structure.
+// This is necessary according to: https://github.com/googleapis/googleapis/blob/master/google/api/http.proto#L118
+func validateQueryParameter(field *surface_v1.Field) {
+	_, isScalar := protoBufScalarTypes[field.NativeType]
+	if !(field.Kind == surface_v1.FieldKind_SCALAR ||
+		(field.Kind == surface_v1.FieldKind_ARRAY && isScalar) ||
+		(field.Kind == surface_v1.FieldKind_REFERENCE)) {
+		log.Println("The query parameter with the Name " + field.Name + " is invalid. " +
+			"Note that fields which are mapped to URL query parameters must have a primitive type or" +
+			" a repeated primitive type or a non-repeated message type. " +
+			"See: https://github.com/googleapis/googleapis/blob/master/google/api/http.proto#L118 for more information.")
+	}
+
+}
+
+// isEmptyDependency returns true if the 'name' of the dependency is empty.proto
+func isEmptyDependency(name string) bool {
+	return name == "google/protobuf/empty.proto"
+}
+
+// shouldAddEmptyDependency returns true if at least one request parameter or response parameter is empty
+func shouldAddEmptyDependency(methods []*surface_v1.Method) bool {
+	for _, method := range methods {
+		if method.ParametersTypeName == "" || method.ResponsesTypeName == "" {
+			return true
+		}
+	}
+	return false
+}
+
+// isRequestParameter checks whether 't' is a type that will be used as a request parameter for a RPC method.
+func isRequestParameter(t *surface_v1.Type) bool {
+	if strings.Contains(t.Description, t.GetName()+" holds parameters to") {
+		return true
+	}
+	return false
+}
+
 // getTypeNameForMapValueType returns the type name for the given 'valueType'.
 // A type name for a field is only set if it is some kind of reference (non-scalar values) otherwise it is nil.
 func getTypeNameForMapValueType(valueType string) *string {
@@ -522,20 +530,6 @@ func getTypeNameForMapValueType(valueType string) *string {
 	}
 	typeName := valueType
 	return &typeName
-}
-
-// getFieldDescriptorType returns a field descriptor type for the given 'nativeType'. If it is not a scalar type
-// then we have a reference to another type which will get rendered as a message.
-func getFieldDescriptorType(nativeType string, enumValues []string) *dpb.FieldDescriptorProto_Type {
-	protoType := dpb.FieldDescriptorProto_TYPE_MESSAGE
-	if protoType, ok := protoBufScalarTypes[nativeType]; ok {
-		return &protoType
-	}
-	if enumValues != nil {
-		protoType := dpb.FieldDescriptorProto_TYPE_ENUM
-		return &protoType
-	}
-	return &protoType
 }
 
 // createOpenAPIDocFromGnosticOutput uses the 'binaryInput' from gnostic to create a OpenAPI document.
