@@ -47,7 +47,7 @@ var generatedMessages = make(map[string]string, 0)
 // 		2. buildSymbolicReferences 	recursively executes this plugin to generate all FileDescriptorSet based on symbolic
 // 									references. A symbolic reference is an URL to another OpenAPI description inside of
 //									current description.
-//		3. buildMessagesFromTypes is called to create all messages which will be rendered in .proto
+//		3. buildAllMessageDescriptors is called to create all messages which will be rendered in .proto
 //		4. buildAllServiceDescriptors is called to create a RPC service which will be rendered in .proto
 func (renderer *Renderer) runFileDescriptorSetGenerator() (fdSet *dpb.FileDescriptorSet, err error) {
 	syntax := "proto3"
@@ -69,10 +69,11 @@ func (renderer *Renderer) runFileDescriptorSetGenerator() (fdSet *dpb.FileDescri
 		return nil, err
 	}
 
-	err = buildMessagesFromTypes(mainProto, renderer)
+	allMessages, err := buildAllMessageDescriptors(renderer)
 	if err != nil {
 		return nil, err
 	}
+	mainProto.MessageType = allMessages
 
 	allServices, err := buildAllServiceDescriptors(mainProto.MessageType, renderer)
 	if err != nil {
@@ -188,50 +189,56 @@ func buildDependencies(fdSet *dpb.FileDescriptorSet) {
 	fdSet.File = append(dependencies, fdSet.File...)
 }
 
-// buildMessagesFromTypes builds protobuf messages from the surface model types. If the type is a RPC request parameter
+// buildAllMessageDescriptors builds protobuf messages from the surface model types. If the type is a RPC request parameter
 // the fields have to follow certain rules, and therefore have to be validated.
-func buildMessagesFromTypes(descr *dpb.FileDescriptorProto, renderer *Renderer) (err error) {
+func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.DescriptorProto, err error) {
 	for _, t := range renderer.Model.Types {
 		message := &dpb.DescriptorProto{}
 		message.Name = &t.TypeName
 
 		for i, f := range t.Fields {
-			if isRequestParameter(t) {
-				if f.Position == surface_v1.Position_PATH {
-					validatePathParameter(f)
-				}
-
-				if f.Position == surface_v1.Position_QUERY {
-					validateQueryParameter(f)
-				}
+			if strings.Contains(f.NativeType, "map[string][]") {
+				// Not supported for now: https://github.com/LorenzHW/gnostic-grpc-deprecated/issues/3#issuecomment-509348357
+				continue
 			}
-			if f.EnumValues != nil {
-				message.EnumType = append(message.EnumType, buildEnumDescriptorProto(f))
-			}
-
-			ctr := int32(i + 1)
-			fieldDescriptor := &dpb.FieldDescriptorProto{Number: &ctr}
-			fieldDescriptor.Name = &f.FieldName
-			fieldDescriptor.Type = getFieldDescriptorType(f.NativeType, f.EnumValues)
-			setFieldDescriptorLabel(fieldDescriptor, f)
-			setFieldDescriptorTypeName(fieldDescriptor, f, renderer.Package)
-
-			// Maps are represented as nested types inside of the descriptor.
+			fieldDescriptor := buildFieldDescriptor(f, t, i, renderer.Package)
 			if f.Kind == surface_v1.FieldKind_MAP {
-				if strings.Contains(f.NativeType, "map[string][]") {
-					// Not supported for now: https://github.com/LorenzHW/gnostic-grpc-deprecated/issues/3#issuecomment-509348357
-					continue
-				}
-				mapDescriptorProto := buildMapDescriptorProto(f)
-				fieldDescriptor.TypeName = mapDescriptorProto.Name
-				message.NestedType = append(message.NestedType, mapDescriptorProto)
+				// Maps are represented as nested types inside of the descriptor.
+				mapDescriptor := buildMapDescriptor(f)
+				fieldDescriptor.TypeName = mapDescriptor.Name
+				message.NestedType = append(message.NestedType, mapDescriptor)
+			} else if f.EnumValues != nil {
+				message.EnumType = append(message.EnumType, buildEnumDescriptorProto(f))
 			}
 			message.Field = append(message.Field, fieldDescriptor)
 		}
-		descr.MessageType = append(descr.MessageType, message)
+		messageDescriptors = append(messageDescriptors, message)
 		generatedMessages[*message.Name] = renderer.Package + "." + *message.Name
 	}
-	return nil
+	return messageDescriptors, nil
+}
+
+func buildFieldDescriptor(field *surface_v1.Field, t *surface_v1.Type, count int, packageName string) (fieldDescriptor *dpb.FieldDescriptorProto) {
+	if isRequestParameter(t) {
+		validateRequestParameter(field)
+	}
+	ctr := int32(count + 1)
+	fieldDescriptor = &dpb.FieldDescriptorProto{Number: &ctr}
+	fieldDescriptor.Name = &field.FieldName
+	fieldDescriptor.Type = getFieldDescriptorType(field.NativeType, field.EnumValues)
+	setFieldDescriptorLabel(fieldDescriptor, field)
+	setFieldDescriptorTypeName(fieldDescriptor, field, packageName)
+	return fieldDescriptor
+}
+
+func validateRequestParameter(field *surface_v1.Field) {
+	if field.Position == surface_v1.Position_PATH {
+		validatePathParameter(field)
+	}
+
+	if field.Position == surface_v1.Position_QUERY {
+		validateQueryParameter(field)
+	}
 }
 
 // buildAllServiceDescriptors builds a protobuf RPC service. For every method the corresponding gRPC-HTTP transcoding options (https://github.com/googleapis/googleapis/blob/master/google/api/http.proto)
@@ -313,9 +320,9 @@ func buildEnumDescriptorProto(f *surface_v1.Field) *dpb.EnumDescriptorProto {
 	return enumDescriptor
 }
 
-// buildMapDescriptorProto builds the necessary descriptor to render a map. (https://developers.google.com/protocol-buffers/docs/proto3#maps)
+// buildMapDescriptor builds the necessary descriptor to render a map. (https://developers.google.com/protocol-buffers/docs/proto3#maps)
 // A map is represented as nested message with two fields: 'key', 'value' and the Options set accordingly.
-func buildMapDescriptorProto(field *surface_v1.Field) *dpb.DescriptorProto {
+func buildMapDescriptor(field *surface_v1.Field) *dpb.DescriptorProto {
 	isMapEntry := true
 	n := field.FieldName + "Entry"
 
