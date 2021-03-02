@@ -36,35 +36,35 @@ message Error {
   string message = 2;
 }
 
-message CreateShelfParameters {
+message CreateShelfRequest {
   Shelf shelf = 1;
 }
 
-message GetShelfParameters {
+message GetShelfRequest {
   int64 shelf = 1;
 }
 
-message DeleteShelfParameters {
+message DeleteShelfRequest {
   int64 shelf = 1;
 }
 
-message ListBooksParameters {
+message ListBooksRequest {
   int64 shelf = 1;
 }
 
-message CreateBookParameters {
+message CreateBookRequest {
   int64 shelf = 1;
 
   Book book = 2;
 }
 
-message GetBookParameters {
+message GetBookRequest {
   int64 shelf = 1;
 
   int64 book = 2;
 }
 
-message DeleteBookParameters {
+message DeleteBookRequest {
   int64 shelf = 1;
 
   int64 book = 2;
@@ -75,7 +75,7 @@ service Bookstore {
     option (google.api.http) = { get:"/shelves"  };
   }
 
-  rpc CreateShelf ( CreateShelfParameters ) returns ( Shelf ) {
+  rpc CreateShelf ( CreateShelfRequest ) returns ( Shelf ) {
     option (google.api.http) = { post:"/shelves" body:"shelf"  };
   }
 
@@ -83,27 +83,27 @@ service Bookstore {
     option (google.api.http) = { delete:"/shelves"  };
   }
 
-  rpc GetShelf ( GetShelfParameters ) returns ( Shelf ) {
+  rpc GetShelf ( GetShelfRequest ) returns ( Shelf ) {
     option (google.api.http) = { get:"/shelves/{shelf}"  };
   }
 
-  rpc DeleteShelf ( DeleteShelfParameters ) returns ( google.protobuf.Empty ) {
+  rpc DeleteShelf ( DeleteShelfRequest ) returns ( google.protobuf.Empty ) {
     option (google.api.http) = { delete:"/shelves/{shelf}"  };
   }
 
-  rpc ListBooks ( ListBooksParameters ) returns ( ListBooksResponse ) {
+  rpc ListBooks ( ListBooksRequest ) returns ( ListBooksResponse ) {
     option (google.api.http) = { get:"/shelves/{shelf}/books"  };
   }
 
-  rpc CreateBook ( CreateBookParameters ) returns ( Book ) {
+  rpc CreateBook ( CreateBookRequest ) returns ( Book ) {
     option (google.api.http) = { post:"/shelves/{shelf}/books" body:"book"  };
   }
 
-  rpc GetBook ( GetBookParameters ) returns ( Book ) {
+  rpc GetBook ( GetBookRequest ) returns ( Book ) {
     option (google.api.http) = { get:"/shelves/{shelf}/books/{book}"  };
   }
 
-  rpc DeleteBook ( DeleteBookParameters ) returns ( google.protobuf.Empty ) {
+  rpc DeleteBook ( DeleteBookRequest ) returns ( google.protobuf.Empty ) {
     option (google.api.http) = { delete:"/shelves/{shelf}/books/{book}"  };
   }
 }

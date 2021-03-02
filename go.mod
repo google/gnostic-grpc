@@ -11,5 +11,6 @@ require (
 	golang.org/x/net v0.0.0-20191002035440-2ec189313ef0
 	google.golang.org/genproto v0.0.0-20200311144346-b662892dd51b
 	google.golang.org/grpc v1.27.0
+	google.golang.org/protobuf v1.23.0
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
