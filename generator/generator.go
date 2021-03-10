@@ -72,6 +72,12 @@ func (renderer *Renderer) runFileDescriptorSetGenerator() (fdSet *dpb.FileDescri
 	}
 	protoToBeRendered.Service = allServices
 
+	sourceCodeInfo, err := buildSourceCodeInfo(renderer.Model.Types)
+	if err != nil {
+		return nil, err
+	}
+	protoToBeRendered.SourceCodeInfo = sourceCodeInfo
+
 	symbolicReferenceDependencies, err := buildSymbolicReferences(renderer)
 	if err != nil {
 		return nil, err
@@ -93,25 +99,21 @@ func (renderer *Renderer) runFileDescriptorSetGenerator() (fdSet *dpb.FileDescri
 // buildAllMessageDescriptors builds protobuf messages from the surface model types. If the type is a RPC request parameter
 // the fields have to follow certain rules, and therefore have to be validated.
 func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.DescriptorProto, err error) {
-	for _, t := range renderer.Model.Types {
+	for _, surfaceType := range renderer.Model.Types {
 		message := &dpb.DescriptorProto{}
-		message.Name = &t.TypeName
+		message.Name = &surfaceType.TypeName
 
-		for i, f := range t.Fields {
-			if strings.Contains(f.NativeType, "map[string][]") {
+		for i, surfaceField := range surfaceType.Fields {
+			if strings.Contains(surfaceField.NativeType, "map[string][]") {
 				// Not supported for now: https://github.com/LorenzHW/gnostic-grpc-deprecated/issues/3#issuecomment-509348357
 				continue
 			}
-			fieldDescriptor := buildFieldDescriptor(f, t, i, renderer.Package)
-			if f.Kind == surface_v1.FieldKind_MAP {
-				// Maps are represented as nested types inside of the descriptor.
-				mapDescriptor := buildMapDescriptor(f)
-				fieldDescriptor.TypeName = mapDescriptor.Name
-				message.NestedType = append(message.NestedType, mapDescriptor)
-			} else if f.EnumValues != nil {
-				message.EnumType = append(message.EnumType, buildEnumDescriptorProto(f))
+			if isRequestParameter(surfaceType) {
+				validateRequestParameter(surfaceField)
 			}
-			message.Field = append(message.Field, fieldDescriptor)
+
+			addFieldDescriptor(message, surfaceField, i, renderer.Package)
+			addEnumDescriptorIfNecessary(message, surfaceField)
 		}
 		messageDescriptors = append(messageDescriptors, message)
 		generatedMessages[*message.Name] = renderer.Package + "." + *message.Name
@@ -119,17 +121,31 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 	return messageDescriptors, nil
 }
 
-func buildFieldDescriptor(field *surface_v1.Field, t *surface_v1.Type, count int, packageName string) (fieldDescriptor *dpb.FieldDescriptorProto) {
-	if isRequestParameter(t) {
-		validateRequestParameter(field)
+func addFieldDescriptor(message *dpb.DescriptorProto, surfaceField *surface_v1.Field, idx int, packageName string) {
+	count := int32(idx + 1)
+	fieldDescriptor := &dpb.FieldDescriptorProto{Number: &count, Name: &surfaceField.FieldName}
+	fieldDescriptor.Type = getFieldDescriptorType(surfaceField.NativeType, surfaceField.EnumValues)
+	fieldDescriptor.Label = getFieldDescriptorLabel(surfaceField)
+	fieldDescriptor.TypeName = getFieldDescriptorTypeName(*fieldDescriptor.Type, surfaceField, packageName)
+
+	addMapDescriptorIfNecessary(surfaceField, fieldDescriptor, message)
+
+	message.Field = append(message.Field, fieldDescriptor)
+}
+
+func addMapDescriptorIfNecessary(f *surface_v1.Field, fieldDescriptor *dpb.FieldDescriptorProto, message *dpb.DescriptorProto) {
+	if f.Kind == surface_v1.FieldKind_MAP {
+		// Maps are represented as nested types inside of the descriptor.
+		mapDescriptor := buildMapDescriptor(f)
+		fieldDescriptor.TypeName = mapDescriptor.Name
+		message.NestedType = append(message.NestedType, mapDescriptor)
 	}
-	ctr := int32(count + 1)
-	fieldDescriptor = &dpb.FieldDescriptorProto{Number: &ctr}
-	fieldDescriptor.Name = &field.FieldName
-	fieldDescriptor.Type = getFieldDescriptorType(field.NativeType, field.EnumValues)
-	fieldDescriptor.Label = getFieldDescriptorLabel(field)
-	fieldDescriptor.TypeName = getFieldDescriptorTypeName(*fieldDescriptor.Type, field, packageName)
-	return fieldDescriptor
+}
+
+func addEnumDescriptorIfNecessary(message *dpb.DescriptorProto, f *surface_v1.Field) {
+	if f.EnumValues != nil {
+		message.EnumType = append(message.EnumType, buildEnumDescriptorProto(f))
+	}
 }
 
 func validateRequestParameter(field *surface_v1.Field) {
@@ -359,6 +375,23 @@ func getRequestBodyForRequestParameter(name string, types []*surface_v1.Type) st
 	return ""
 }
 
+// buildSourceCodeInfo builds the object which holds additional information, such as the description from OpenAPI
+// components. This information will be rendered as a comment in the final .proto file.
+func buildSourceCodeInfo(types []*surface_v1.Type) (sourceCodeInfo *dpb.SourceCodeInfo, err error) {
+	allLocations := make([]*dpb.SourceCodeInfo_Location, 0)
+	for idx, surfaceType := range types {
+		location := &dpb.SourceCodeInfo_Location{
+			Path:            []int32{4, int32(idx)},
+			LeadingComments: &surfaceType.Description,
+		}
+		allLocations = append(allLocations, location)
+	}
+	sourceCodeInfo = &dpb.SourceCodeInfo{
+		Location: allLocations,
+	}
+	return sourceCodeInfo, nil
+}
+
 // buildSymbolicReferences recursively generates all .proto definitions to external OpenAPI descriptions (URLs to other
 // descriptions inside the current description).
 func buildSymbolicReferences(renderer *Renderer) (symbolicFileDescriptors []*dpb.FileDescriptorProto, err error) {
@@ -515,8 +548,8 @@ func shouldAddEmptyDependency(methods []*surface_v1.Method) bool {
 }
 
 // isRequestParameter checks whether 't' is a type that will be used as a request parameter for a RPC method.
-func isRequestParameter(t *surface_v1.Type) bool {
-	if strings.Contains(t.Description, t.GetName()+" holds parameters to") {
+func isRequestParameter(sufaceType *surface_v1.Type) bool {
+	if strings.Contains(sufaceType.Description, sufaceType.GetName()+" holds parameters to") {
 		return true
 	}
 	return false

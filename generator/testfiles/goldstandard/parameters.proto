@@ -16,10 +16,12 @@ message Parameter2 {
   int64 param8 = 1;
 }
 
+//TestParameterQueryParameters holds parameters to TestParameterQuery
 message TestParameterQueryRequest {
   int32 param1 = 1;
 }
 
+//TestParameterQueryEnumParameters holds parameters to TestParameterQueryEnum
 message TestParameterQueryEnumRequest {
   repeated Param2 param2 = 1;
 
@@ -32,10 +34,12 @@ message TestParameterQueryEnumRequest {
   }
 }
 
+//TestParameterPathParameters holds parameters to TestParameterPath
 message TestParameterPathRequest {
   string param3 = 1;
 }
 
+//TestParameterPathEnumParameters holds parameters to TestParameterPathEnum
 message TestParameterPathEnumRequest {
   Param4 param4 = 1;
 
@@ -46,12 +50,14 @@ message TestParameterPathEnumRequest {
   }
 }
 
+//TestParameterMultiplePathParameters holds parameters to TestParameterMultiplePath
 message TestParameterMultiplePathRequest {
   string param5 = 1;
 
   string param6 = 2;
 }
 
+//TestParameterReferenceParameters holds parameters to TestParameterReference
 message TestParameterReferenceRequest {
   Parameter1 parameter1 = 1;
 }
