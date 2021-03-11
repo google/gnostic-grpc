@@ -28,6 +28,7 @@ message Person {
   float iq = 7;
 }
 
+//TestExernalReference2Parameters holds parameters to TestExernalReference2
 message TestExernalReference2Request {
   parameters.Parameter2 parameter2 = 1;
 }

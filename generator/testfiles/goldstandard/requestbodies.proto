@@ -18,10 +18,12 @@ message Person {
   repeated string photo_urls = 4;
 }
 
+//TestRequestBodyParameters holds parameters to TestRequestBody
 message TestRequestBodyRequest {
   Person person = 1;
 }
 
+//TestRequestBodyReferenceParameters holds parameters to TestRequestBodyReference
 message TestRequestBodyReferenceRequest {
   Person person = 1;
 }
