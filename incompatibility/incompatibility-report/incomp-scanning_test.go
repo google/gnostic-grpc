@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package linter
+package incompatibility
 
 import (
 	"github.com/googleapis/gnostic-grpc/incompatibility/utils"
@@ -38,6 +38,6 @@ func ServerIncompCheck(t *testing.T, expectingServer bool, input string) {
 func TestBasic(t *testing.T) {
 	noServerPath := "../../generator/testfiles/other.yaml"
 	ServerIncompCheck(t, false, noServerPath)
-	serverPath := "oas-examples/petstore.yaml"
+	serverPath := "../oas-examples/petstore.yaml"
 	ServerIncompCheck(t, true, serverPath)
 }
