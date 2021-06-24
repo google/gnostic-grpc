@@ -11,17 +11,16 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package linter
+package incompatibility
 
 import (
-	"github.com/googleapis/gnostic-grpc/incompatibility/incompatibility-report"
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
 )
 
-func getIncompatibilites(document *openapiv3.Document) *incompatibility.IncompatibilityReport {
-	var incompatibilities []*incompatibility.Incompatibility
+func getIncompatibilites(document *openapiv3.Document) *IncompatibilityReport {
+	var incompatibilities []*Incompatibility
 	if document.Servers != nil {
-		incompatibilities = append(incompatibilities, &incompatibility.Incompatibility{Token: "servers", Classification: "SERVERS"})
+		incompatibilities = append(incompatibilities, &Incompatibility{Token: "servers", Classification: "SERVERS"})
 	}
-	return &incompatibility.IncompatibilityReport{Incompatibilities: incompatibilities}
+	return &IncompatibilityReport{Incompatibilities: incompatibilities}
 }
