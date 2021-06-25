@@ -20,10 +20,11 @@ import (
 	"testing"
 )
 
-func ServerIncompCheck(t *testing.T, expectingServer bool, input string) {
-	document, err := utils.ParseOpenAPIDoc(input)
+// Simple check for catching server incompatibility
+func ServerIncompCheck(t *testing.T, expectingServer bool, fileName string) {
+	document, err := utils.ParseOpenAPIDoc(fileName)
 	if err != nil {
-		t.Errorf("Error while parsing input file: %s", input)
+		t.Errorf("Error while parsing input file: %s", fileName)
 		return
 	}
 	incomp := getIncompatibilites(document).Incompatibilities
