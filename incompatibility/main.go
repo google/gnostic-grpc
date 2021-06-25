@@ -7,6 +7,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// Main function for incomplatibility plugin
 func main() {
 	env, err := plugins.NewEnvironment()
 	env.RespondAndExitIfError(err)

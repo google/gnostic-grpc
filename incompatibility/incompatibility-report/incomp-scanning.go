@@ -17,9 +17,11 @@ import (
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
 )
 
+// Scan for incompatibilities in an OpenAPI document
 func getIncompatibilites(document *openapiv3.Document) *IncompatibilityReport {
 	var incompatibilities []*Incompatibility
-	if document.Servers != nil {
+
+	if document.Servers != nil { // Simple servers lookup
 		incompatibilities = append(incompatibilities, &Incompatibility{Token: "servers", Classification: "SERVERS"})
 	}
 	return &IncompatibilityReport{Incompatibilities: incompatibilities}
