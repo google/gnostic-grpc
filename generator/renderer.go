@@ -42,7 +42,7 @@ func NewRenderer(model *surface.Model) (renderer *Renderer) {
 	return renderer
 }
 
-// Generate runs the renderer to generate the named files.
+// Render runs the renderer to generate the named files.
 func (renderer *Renderer) Render(response *plugins.Response, fileName string) (err error) {
 	renderer.FdSet, err = renderer.runFileDescriptorSetGenerator()
 
