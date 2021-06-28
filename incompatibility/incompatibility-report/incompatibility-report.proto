@@ -20,8 +20,8 @@ option go_package = "../incompatibility-report;incompatibility";
 package incompatibility;
 
 message Incompatibility {
-    string token = 1;
-    string classification = 2;
+    repeated string token_path = 1; //unique path to incompatibility
+    string classification = 2; // incomaptibility class.
 }
 
 message IncompatibilityReport {
@@ -33,16 +33,16 @@ enum Severity {
     FAIL = 1;
 }
 
-message FormattedIncompatibility {
+message IncompatibilityDescription {
     int32 line = 1;
     int32 column = 2;
-    string token = 3;
-    string hint = 4;
-    Severity incompatibility_level = 5;
+    repeated string token_path = 3;
+    repeated string hint = 4;
+    Severity severity = 5;
 }
 
-message FormattedIncompatibilityReport {
-    repeated FormattedIncompatibility incompatibilities = 1;
+message IDReport {
+    repeated IncompatibilityDescription incompatibilities = 1;
 }
 
 message Analysis {
