@@ -15,30 +15,40 @@
 package incompatibility
 
 import (
-	"github.com/googleapis/gnostic-grpc/incompatibility/utils"
+	"github.com/googleapis/gnostic-grpc/utils"
+	openapiv3 "github.com/googleapis/gnostic/openapiv3"
+
 	// openapiv3 "github.com/googleapis/gnostic/openapiv3"
 	"testing"
 )
 
-// Simple check for catching server incompatibility
-func ServerIncompCheck(t *testing.T, expectingServer bool, fileName string) {
-	document, err := utils.ParseOpenAPIDoc(fileName)
-	if err != nil {
-		t.Errorf("Error while parsing input file: %s", fileName)
-		return
+// Helper Function to check for single incompatibilty
+func IncompatibilityCheck(document *openapiv3.Document, incompatibilityClass string) bool {
+	for _, incompatibility := range ScanIncompatibilities(document).Incompatibilities {
+		if incompatibility.Classification == incompatibilityClass {
+			return true
+		}
 	}
-	incomp := getIncompatibilites(document).Incompatibilities
-	foundServer := len(incomp) != 0 && incomp[0].Classification == "SERVERS"
-	if expectingServer && !foundServer {
-		t.Error("Failed to report servers incompatibility")
-	} else if !expectingServer && foundServer {
-		t.Error("Reported false servers incompatibility")
-	}
+	return false
 }
 
-func TestBasic(t *testing.T) {
+// Simple test for servers incompatibility
+func TestBasicServerIncompatibility(t *testing.T) {
 	noServerPath := "../../generator/testfiles/other.yaml"
-	ServerIncompCheck(t, false, noServerPath)
+	serverAbsentDocument, err := utils.ParseOpenAPIDoc(noServerPath)
+	if err != nil {
+		t.Fatalf("Error while parsing input file: %s\n", noServerPath)
+	}
+	if IncompatibilityCheck(serverAbsentDocument, "SERVERS") {
+		t.Errorf("Reporting false servers incompatibility for file at %s\n", noServerPath)
+	}
+
 	serverPath := "../oas-examples/petstore.yaml"
-	ServerIncompCheck(t, true, serverPath)
+	serverPresentDocument, err := utils.ParseOpenAPIDoc(serverPath)
+	if err != nil {
+		t.Fatalf("Error while parsing input file: %s\n", serverPath)
+	}
+	if !IncompatibilityCheck(serverPresentDocument, "SERVERS") {
+		t.Errorf("Failed to report server incompatibility at %s", serverPath)
+	}
 }
