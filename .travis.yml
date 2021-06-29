@@ -14,6 +14,8 @@ script:
   # This statement installs the binary of gnostic and makes it available in $PATH. The binary
   # is needed in one of the methods. Therefore, we explicitly need this statement.
   - go get github.com/googleapis/gnostic@v0.5.1
+  - apt-get install -y protobuf-compiler
+  - protoc --version
   - go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic
 
 after_success:
