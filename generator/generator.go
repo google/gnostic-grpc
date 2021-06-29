@@ -566,19 +566,6 @@ func getTypeNameForMapValueType(valueType string) *string {
 	return &typeName
 }
 
-// // createOpenAPIDocFromGnosticOutput uses the 'binaryInput' from gnostic to create a OpenAPI document.
-// func createOpenAPIDocFromGnosticOutput(binaryInput []byte) (*openapiv3.Document, error) {
-// 	document := &openapiv3.Document{}
-// 	err := proto.Unmarshal(binaryInput, document)
-// 	if err != nil {
-// 		// If we execute gnostic with argument: '-pb-out=-' we get an EOF. So lets only return other errors.
-// 		if err.Error() != "unexpected EOF" {
-// 			return nil, err
-// 		}
-// 	}
-// 	return document, nil
-// }
-
 // trimAndRemoveDuplicates returns a list of URLs that are not duplicates (considering only the part until the first '#')
 func trimAndRemoveDuplicates(urls []string) []string {
 	result := make([]string, 0)

@@ -13,7 +13,7 @@
 *.out
 
 # # Proto compiled go files
-# *.pb.go
+*.pb.go
 
 # IDEs
 .idea/*
