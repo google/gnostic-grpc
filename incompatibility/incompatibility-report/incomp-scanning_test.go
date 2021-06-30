@@ -15,11 +15,10 @@
 package incompatibility
 
 import (
+	"testing"
+
 	"github.com/googleapis/gnostic-grpc/utils"
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
-
-	// openapiv3 "github.com/googleapis/gnostic/openapiv3"
-	"testing"
 )
 
 // Helper Function to check for single incompatibilty
