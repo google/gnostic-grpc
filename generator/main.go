@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// descriptor_renderer generates a FileDescriptorSet from a gnostic output file.
 package generator
 
 import (
@@ -27,20 +26,12 @@ import (
 	surface "github.com/googleapis/gnostic/surface"
 )
 
-// This is the main function for the code generation plugin.
+// RunProtoGenerator generates a FileDescriptorSet from a gnostic output file.
 func RunProtoGenerator() {
 	env, err := plugins.NewEnvironment()
 	env.RespondAndExitIfError(err)
 
-	fileName := env.Request.SourceName
-	for {
-		extension := filepath.Ext(fileName)
-		if extension == "" {
-			break
-		}
-		fileName = fileName[0 : len(fileName)-len(extension)]
-	}
-
+	fileName := getFilenameWithoutFileExtension(env)
 	packageName, err := resolvePackageName(fileName)
 	env.RespondAndExitIfError(err)
 
@@ -91,4 +82,16 @@ func resolvePackageName(p string) (string, error) {
 		return "", errors.New("invalid package name " + p)
 	}
 	return p, nil
+}
+
+func getFilenameWithoutFileExtension(env *plugins.Environment) string {
+	fileName := env.Request.SourceName
+	for {
+		extension := filepath.Ext(fileName)
+		if extension == "" {
+			break
+		}
+		fileName = fileName[0 : len(fileName)-len(extension)]
+	}
+	return fileName
 }

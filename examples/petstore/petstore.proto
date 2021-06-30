@@ -90,14 +90,17 @@ message ApiResponse {
   string message = 3;
 }
 
+//UpdatePetParameters holds parameters to UpdatePet
 message UpdatePetRequest {
   Pet pet = 1;
 }
 
+//AddPetParameters holds parameters to AddPet
 message AddPetRequest {
   Pet pet = 1;
 }
 
+//FindPetsByStatusParameters holds parameters to FindPetsByStatus
 message FindPetsByStatusRequest {
   repeated Status status = 1;
 
@@ -110,10 +113,12 @@ message FindPetsByStatusRequest {
   }
 }
 
+//FindPetsByTagsParameters holds parameters to FindPetsByTags
 message FindPetsByTagsRequest {
   repeated string tags = 1;
 }
 
+//GetPetByIdParameters holds parameters to GetPetById
 message GetPetByIdRequest {
   int64 pet_id = 1;
 }
@@ -124,18 +129,21 @@ message UpdatePetWithFormRequestBodyapplicationXWwwFormUrlencoded {
   string status = 2;
 }
 
+//UpdatePetWithFormParameters holds parameters to UpdatePetWithForm
 message UpdatePetWithFormRequest {
   int64 pet_id = 1;
 
   UpdatePetWithFormRequestBodyapplicationXWwwFormUrlencoded application_x_www_form_urlencoded = 2;
 }
 
+//DeletePetParameters holds parameters to DeletePet
 message DeletePetRequest {
   string api_key = 1;
 
   int64 pet_id = 2;
 }
 
+//UploadFileParameters holds parameters to UploadFile
 message UploadFileRequest {
   int64 pet_id = 1;
 
@@ -146,46 +154,56 @@ message GetInventoryOK {
   map<string, int32> additional_properties = 1;
 }
 
+//PlaceOrderParameters holds parameters to PlaceOrder
 message PlaceOrderRequest {
   Order order = 1;
 }
 
+//GetOrderByIdParameters holds parameters to GetOrderById
 message GetOrderByIdRequest {
   int64 order_id = 1;
 }
 
+//DeleteOrderParameters holds parameters to DeleteOrder
 message DeleteOrderRequest {
   int64 order_id = 1;
 }
 
+//CreateUserParameters holds parameters to CreateUser
 message CreateUserRequest {
   User user = 1;
 }
 
+//CreateUsersWithArrayInputParameters holds parameters to CreateUsersWithArrayInput
 message CreateUsersWithArrayInputRequest {
   User user = 1;
 }
 
+//CreateUsersWithListInputParameters holds parameters to CreateUsersWithListInput
 message CreateUsersWithListInputRequest {
   User user = 1;
 }
 
+//LoginUserParameters holds parameters to LoginUser
 message LoginUserRequest {
   string username = 1;
 
   string password = 2;
 }
 
+//GetUserByNameParameters holds parameters to GetUserByName
 message GetUserByNameRequest {
   string username = 1;
 }
 
+//UpdateUserParameters holds parameters to UpdateUser
 message UpdateUserRequest {
   string username = 1;
 
   User user = 2;
 }
 
+//DeleteUserParameters holds parameters to DeleteUser
 message DeleteUserRequest {
   string username = 1;
 }
