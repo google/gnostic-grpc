@@ -25,7 +25,7 @@ message Incompatibility {
     string classification = 2; // incomaptibility class.
 }
 
-// Report of base incompatibilites
+// Report of base incompatibilities
 message IncompatibilityReport {
     repeated Incompatibility incompatibilities = 1;
 }
@@ -45,7 +45,7 @@ message IncompatibilityDescription {
     // string path to incompatibility
     repeated string token_path = 3;
 
-    // hint to describe incompatiblity
+    // hint to describe incompatibility
     repeated string hint = 4;
 
     Severity severity = 5;
