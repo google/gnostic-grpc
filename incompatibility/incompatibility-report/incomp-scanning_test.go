@@ -31,23 +31,24 @@ func IncompatibilityCheck(document *openapiv3.Document, incompatibilityClass str
 	return false
 }
 
+// Helper Test Function generate OpenAPI representation or Error
+func generateDoc(t *testing.T, path string) *openapiv3.Document {
+	document, err := utils.ParseOpenAPIDoc(path)
+	if err != nil {
+		t.Fatalf("Error while parsing input file: %s\n", path)
+	}
+	return document
+}
+
 // Simple test for servers incompatibility
 func TestBasicServerIncompatibility(t *testing.T) {
 	noServerPath := "../../generator/testfiles/other.yaml"
-	serverAbsentDocument, err := utils.ParseOpenAPIDoc(noServerPath)
-	if err != nil {
-		t.Fatalf("Error while parsing input file: %s\n", noServerPath)
-	}
-	if IncompatibilityCheck(serverAbsentDocument, "SERVERS") {
+	if IncompatibilityCheck(generateDoc(t, noServerPath), "SERVERS") {
 		t.Errorf("Reporting false servers incompatibility for file at %s\n", noServerPath)
 	}
 
 	serverPath := "../oas-examples/petstore.yaml"
-	serverPresentDocument, err := utils.ParseOpenAPIDoc(serverPath)
-	if err != nil {
-		t.Fatalf("Error while parsing input file: %s\n", serverPath)
-	}
-	if !IncompatibilityCheck(serverPresentDocument, "SERVERS") {
+	if !IncompatibilityCheck(generateDoc(t, serverPath), "SERVERS") {
 		t.Errorf("Failed to report server incompatibility at %s", serverPath)
 	}
 }
