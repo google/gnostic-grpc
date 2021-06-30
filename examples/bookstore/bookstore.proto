@@ -36,34 +36,41 @@ message Error {
   string message = 2;
 }
 
+//CreateShelfParameters holds parameters to CreateShelf
 message CreateShelfRequest {
   Shelf shelf = 1;
 }
 
+//GetShelfParameters holds parameters to GetShelf
 message GetShelfRequest {
   int64 shelf = 1;
 }
 
+//DeleteShelfParameters holds parameters to DeleteShelf
 message DeleteShelfRequest {
   int64 shelf = 1;
 }
 
+//ListBooksParameters holds parameters to ListBooks
 message ListBooksRequest {
   int64 shelf = 1;
 }
 
+//CreateBookParameters holds parameters to CreateBook
 message CreateBookRequest {
   int64 shelf = 1;
 
   Book book = 2;
 }
 
+//GetBookParameters holds parameters to GetBook
 message GetBookRequest {
   int64 shelf = 1;
 
   int64 book = 2;
 }
 
+//DeleteBookParameters holds parameters to DeleteBook
 message DeleteBookRequest {
   int64 shelf = 1;
 
