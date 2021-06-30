@@ -15,7 +15,15 @@ package incompatibility
 
 import (
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
+	plugins "github.com/googleapis/gnostic/plugins"
 )
+
+// Create a report of incompatibilities, write protobuf message to
+// environment, bool indicates if detailed incompatibility report is
+// desired.
+func CreateIncompReport(env *plugins.Environment, detailed bool) {
+	//TODO
+}
 
 // Scan for incompatibilities in an OpenAPI document
 func ScanIncompatibilities(document *openapiv3.Document) *IncompatibilityReport {
