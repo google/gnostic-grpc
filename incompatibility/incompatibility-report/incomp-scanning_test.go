@@ -22,7 +22,7 @@ import (
 )
 
 // Helper Function to check for single incompatibilty
-func IncompatibilityCheck(document *openapiv3.Document, incompatibilityClass string) bool {
+func incompatibilityCheck(document *openapiv3.Document, incompatibilityClass string) bool {
 	for _, incompatibility := range ScanIncompatibilities(document).Incompatibilities {
 		if incompatibility.Classification == incompatibilityClass {
 			return true
@@ -43,12 +43,12 @@ func generateDoc(t *testing.T, path string) *openapiv3.Document {
 // Simple test for servers incompatibility
 func TestBasicServerIncompatibility(t *testing.T) {
 	noServerPath := "../../generator/testfiles/other.yaml"
-	if IncompatibilityCheck(generateDoc(t, noServerPath), "SERVERS") {
+	if incompatibilityCheck(generateDoc(t, noServerPath), "SERVERS") {
 		t.Errorf("Reporting false servers incompatibility for file at %s\n", noServerPath)
 	}
 
 	serverPath := "../oas-examples/petstore.yaml"
-	if !IncompatibilityCheck(generateDoc(t, serverPath), "SERVERS") {
+	if incompatibilityCheck(generateDoc(t, serverPath), "SERVERS") {
 		t.Errorf("Failed to report server incompatibility at %s", serverPath)
 	}
 }
