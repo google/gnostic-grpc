@@ -21,7 +21,6 @@ import (
 )
 
 func main() {
-	println(incompatibility.BaseIncompatibility_Report, incompatibility.ID_Report)
 	env, err := plugins.NewEnvironment()
 	env.RespondAndExitIfError(err)
 	switch paramLen := len(env.Request.Parameters); paramLen {
@@ -35,14 +34,16 @@ func main() {
 }
 
 func lintIncompatibilities(env *plugins.Environment) {
-	paramName := env.Request.Parameters[0].Name
-	switch paramName {
-	case "incomp-report": // Base compatibility scanning
+	if env.Request.Parameters[0].Name != "report" {
+		exitWithMessage(env, "unsupported parameter name")
+	}
+	switch env.Request.Parameters[0].Value {
+	case "incomp": // Base incompatibility scanning
 		incompatibility.CreateIncompReport(env, incompatibility.BaseIncompatibility_Report)
-	case "detailed-report":
+	case "detailed-incomp": //Detailed incompatibility scanning
 		incompatibility.CreateIncompReport(env, incompatibility.ID_Report)
 	default:
-		exitWithMessage(env, "unsupported parameter")
+		exitWithMessage(env, "unsupported parameter value")
 	}
 }
 
