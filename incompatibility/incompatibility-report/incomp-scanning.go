@@ -18,11 +18,23 @@ import (
 	plugins "github.com/googleapis/gnostic/plugins"
 )
 
+type Report int
+
+const (
+	BaseIncompatibility_Report = iota
+	ID_Report
+)
+
 // Create a report of incompatibilities, write protobuf message to
 // environment, bool indicates if detailed incompatibility report is
 // desired.
-func CreateIncompReport(env *plugins.Environment, detailed bool) {
-	//TODO
+func CreateIncompReport(env *plugins.Environment, reportType Report) {
+
+	// Generate Base Incompatibility Report
+
+	// If indicated by report type associate incompatibilities with line
+	// references, etc. and generate an ID_REPORT
+
 }
 
 // Scan for incompatibilities in an OpenAPI document
