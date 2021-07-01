@@ -48,7 +48,7 @@ func TestBasicServerIncompatibility(t *testing.T) {
 	}
 
 	serverPath := "../oas-examples/petstore.yaml"
-	if incompatibilityCheck(generateDoc(t, serverPath), "SERVERS") {
+	if !incompatibilityCheck(generateDoc(t, serverPath), "SERVERS") {
 		t.Errorf("Failed to report server incompatibility at %s", serverPath)
 	}
 }
