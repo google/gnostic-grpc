@@ -24,16 +24,17 @@ func main() {
 	env, err := plugins.NewEnvironment()
 	env.RespondAndExitIfError(err)
 	switch paramLen := len(env.Request.Parameters); paramLen {
-	case 0: //Run proto Generation
+	case 0:
 		generator.RunProtoGenerator(env)
-	case 1: //Scan for incompatibilities
-		lintIncompatibilities(env)
+	case 1:
+		ResolveMode(env)
 	default:
 		exitWithMessage(env, "This plugin only supports at most one parameter during an invocation")
 	}
 }
 
-func lintIncompatibilities(env *plugins.Environment) {
+// Determine execution from parameters
+func ResolveMode(env *plugins.Environment) {
 	if env.Request.Parameters[0].Name != "report" {
 		exitWithMessage(env, "unsupported parameter name")
 	}
