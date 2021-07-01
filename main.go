@@ -27,14 +27,13 @@ func main() {
 	case 0:
 		generator.RunProtoGenerator(env)
 	case 1:
-		ResolveMode(env)
+		resolveModeFromParameters(env)
 	default:
 		exitWithMessage(env, "This plugin only supports at most one parameter during an invocation")
 	}
 }
 
-// Determine execution from parameters
-func ResolveMode(env *plugins.Environment) {
+func resolveModeFromParameters(env *plugins.Environment) {
 	if env.Request.Parameters[0].Name != "report" {
 		exitWithMessage(env, "unsupported parameter name")
 	}
