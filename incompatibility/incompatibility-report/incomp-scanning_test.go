@@ -1,4 +1,4 @@
-// Copyright 2019 Google Inc. All Rights Reserved.
+// Copyright 2021 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,12 +43,18 @@ func generateDoc(t *testing.T, path string) *openapiv3.Document {
 // Simple test for servers incompatibility
 func TestBasicServerIncompatibility(t *testing.T) {
 	noServerPath := "../../generator/testfiles/other.yaml"
-	if incompatibilityCheck(generateDoc(t, noServerPath), "SERVERS") {
-		t.Errorf("Reporting false servers incompatibility for file at %s\n", noServerPath)
-	}
-
 	serverPath := "../oas-examples/petstore.yaml"
-	if !incompatibilityCheck(generateDoc(t, serverPath), "SERVERS") {
-		t.Errorf("Failed to report server incompatibility at %s", serverPath)
+
+	var serversTest = []struct {
+		path            string
+		serversDetected bool
+	}{
+		{noServerPath, false},
+		{serverPath, true},
+	}
+	for _, tt := range serversTest {
+		if incompatibilityCheck(generateDoc(t, tt.path), "SERVERS") != tt.serversDetected {
+			t.Errorf("Incorrect server detection for file at %s, got %t\n", noServerPath, tt.serversDetected)
+		}
 	}
 }
