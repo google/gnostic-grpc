@@ -16,8 +16,38 @@ package main
 
 import (
 	"github.com/googleapis/gnostic-grpc/generator"
+	"github.com/googleapis/gnostic-grpc/incompatibility/incompatibility-report"
+	plugins "github.com/googleapis/gnostic/plugins"
 )
 
 func main() {
-	generator.RunProtoGenerator()
+	env, err := plugins.NewEnvironment()
+	env.RespondAndExitIfError(err)
+	switch paramLen := len(env.Request.Parameters); paramLen {
+	case 0:
+		generator.RunProtoGenerator(env)
+	case 1:
+		resolveModeFromParameters(env)
+	default:
+		exitWithMessage(env, "This plugin only supports at most one parameter during an invocation")
+	}
+}
+
+func resolveModeFromParameters(env *plugins.Environment) {
+	if env.Request.Parameters[0].Name != "report" {
+		exitWithMessage(env, "unsupported parameter name")
+	}
+	switch env.Request.Parameters[0].Value {
+	case "incomp": // Base incompatibility scanning
+		incompatibility.CreateIncompReport(env, incompatibility.BaseIncompatibility_Report)
+	case "detailed-incomp": //Detailed incompatibility scanning
+		incompatibility.CreateIncompReport(env, incompatibility.ID_Report)
+	default:
+		exitWithMessage(env, "unsupported parameter value")
+	}
+}
+
+func exitWithMessage(env *plugins.Environment, errMsg string) {
+	env.Response.Errors = append(env.Response.Errors, errMsg)
+	env.RespondAndExit()
 }

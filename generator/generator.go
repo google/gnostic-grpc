@@ -15,7 +15,6 @@
 package generator
 
 import (
-	"google.golang.org/protobuf/types/descriptorpb"
 	"log"
 	"os/exec"
 	"path"
@@ -24,11 +23,13 @@ import (
 	"strconv"
 	"strings"
 
+	"google.golang.org/protobuf/types/descriptorpb"
+
 	"github.com/golang/protobuf/descriptor"
 	"github.com/golang/protobuf/proto"
 	dpb "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/golang/protobuf/ptypes/empty"
-	openapiv3 "github.com/googleapis/gnostic/openapiv3"
+	"github.com/googleapis/gnostic-grpc/utils"
 	surface_v1 "github.com/googleapis/gnostic/surface"
 	"google.golang.org/genproto/googleapis/api/annotations"
 )
@@ -410,7 +411,7 @@ func buildSymbolicReferences(renderer *Renderer) (symbolicFileDescriptors []*dpb
 			}
 
 			// Construct an OpenAPI document v3.
-			document, err := createOpenAPIDocFromGnosticOutput(b)
+			document, err := utils.CreateOpenAPIDocFromGnosticOutput(b)
 			if err != nil {
 				return nil, err
 			}
@@ -563,19 +564,6 @@ func getTypeNameForMapValueType(valueType string) *string {
 	}
 	typeName := valueType
 	return &typeName
-}
-
-// createOpenAPIDocFromGnosticOutput uses the 'binaryInput' from gnostic to create a OpenAPI document.
-func createOpenAPIDocFromGnosticOutput(binaryInput []byte) (*openapiv3.Document, error) {
-	document := &openapiv3.Document{}
-	err := proto.Unmarshal(binaryInput, document)
-	if err != nil {
-		// If we execute gnostic with argument: '-pb-out=-' we get an EOF. So lets only return other errors.
-		if err.Error() != "unexpected EOF" {
-			return nil, err
-		}
-	}
-	return document, nil
 }
 
 // trimAndRemoveDuplicates returns a list of URLs that are not duplicates (considering only the part until the first '#')

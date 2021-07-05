@@ -27,10 +27,7 @@ import (
 )
 
 // RunProtoGenerator generates a FileDescriptorSet from a gnostic output file.
-func RunProtoGenerator() {
-	env, err := plugins.NewEnvironment()
-	env.RespondAndExitIfError(err)
-
+func RunProtoGenerator(env *plugins.Environment) {
 	fileName := getFilenameWithoutFileExtension(env)
 	packageName, err := resolvePackageName(fileName)
 	env.RespondAndExitIfError(err)
