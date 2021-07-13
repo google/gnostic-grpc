@@ -18,7 +18,7 @@ import (
 	"testing"
 )
 
-// Simple test for servers incompatibility
-func TestBasicServerIncompatibility(t *testing.T) {
+// TODO fill in first test
+func TestPathsOperationSimple(t *testing.T) {
 
 }

@@ -6,8 +6,6 @@ import (
 	"github.com/googleapis/gnostic-grpc/incompatibility/incompatibility-report"
 )
 
-type OpenAPICompOp func(i interface{}) *incompatibility.IncompatibilityReport
-
 // ComponentType - component type in OpenAPIDoc, i.e. Parameters, Components, ...
 // ParentTraverse - lambda to tranverse from parent to component of type ComponentType
 // OperationOnComponent - lambda which looks at current layer for incompatibilities
