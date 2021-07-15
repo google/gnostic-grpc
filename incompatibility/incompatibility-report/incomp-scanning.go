@@ -14,6 +14,8 @@
 package incompatibility
 
 import (
+	"reflect"
+
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
 	plugins "github.com/googleapis/gnostic/plugins"
 )
@@ -39,10 +41,32 @@ func CreateIncompReport(env *plugins.Environment, reportType Report) {
 
 // Scan for incompatibilities in an OpenAPI document
 func ScanIncompatibilities(document *openapiv3.Document) *IncompatibilityReport {
-	var incompatibilities []*Incompatibility
 
-	if document.Servers != nil {
-		incompatibilities = append(incompatibilities, &Incompatibility{TokenPath: []string{"servers"}, Classification: "SERVERS"})
+	paths, err := knownIncompatibilityPaths()
+	if err == 1 {
+		return &IncompatibilityReport{}
 	}
-	return &IncompatibilityReport{Incompatibilities: incompatibilities}
+	IncompReport, err := paths.compile(document)
+	if err == 1 {
+		return &IncompatibilityReport{}
+	}
+	return IncompReport
+}
+
+// Function to get path representations of
+func knownIncompatibilityPaths() (PathOperation, int) {
+	reportServersTyped := func(document *openapiv3.Document) *IncompatibilityReport {
+		var incompatibilities []*Incompatibility
+		if document.Servers != nil {
+			incompatibilities = append(incompatibilities, &Incompatibility{Classification: "SERVERS"})
+		}
+		return &IncompatibilityReport{Incompatibilities: incompatibilities}
+	}
+	reportServersGR, err := makeGenericIncompatibilityReportFunc(reportServersTyped)
+	parentP := PathOperation{
+		ComponentType:        reflect.TypeOf(openapiv3.Document{}),
+		OperationOnComponent: reportServersGR,
+	}
+	return parentP, err
+
 }
