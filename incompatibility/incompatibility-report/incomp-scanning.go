@@ -43,18 +43,18 @@ func CreateIncompReport(env *plugins.Environment, reportType Report) {
 func ScanIncompatibilities(document *openapiv3.Document) *IncompatibilityReport {
 
 	paths, err := knownIncompatibilityPaths()
-	if err == 1 {
+	if err != nil {
 		return &IncompatibilityReport{}
 	}
 	IncompReport, err := paths.compile(document)
-	if err == 1 {
+	if err != nil {
 		return &IncompatibilityReport{}
 	}
 	return IncompReport
 }
 
 // Function to get path representations of
-func knownIncompatibilityPaths() (PathOperation, int) {
+func knownIncompatibilityPaths() (PathOperation, error) {
 	reportServersTyped := func(document *openapiv3.Document) *IncompatibilityReport {
 		var incompatibilities []*Incompatibility
 		if document.Servers != nil {

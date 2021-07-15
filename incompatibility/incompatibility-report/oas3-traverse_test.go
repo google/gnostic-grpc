@@ -44,12 +44,12 @@ func TestGenericGeneration(t *testing.T) {
 		if !trial.expConversionFail {
 			typeFlag := trial.expInT != genGeneric.inputType &&
 				trial.expOutT != genGeneric.outputType
-			errorFlag := err == 1
+			errorFlag := err != nil
 			existenceFlag := genGeneric.op == nil
 			if typeFlag || errorFlag || existenceFlag {
 				t.Errorf("Incorrect Generic Function Generation at trial %d", ind)
 			}
-		} else if err == 0 {
+		} else if err == nil {
 			t.Errorf("Error not reported for Bad Input at trial %d", ind)
 		}
 	}
@@ -66,11 +66,11 @@ func TestGenericFunctionInvocation(t *testing.T) {
 	}
 	for ind, trial := range funcCreationTest {
 		genGeneric, genErr := makeGenericOperation(trial.function)
-		if genErr == 1 {
+		if genErr != nil {
 			t.Errorf("Error reported in Generic Generation at trial %d", ind)
 		} else {
 			res, errInvoc := genGeneric.op(trial.input)
-			if errInvoc == 1 {
+			if errInvoc != nil {
 				t.Errorf("Error reported in Generic Invocation at trial %d", ind)
 			} else if res != trial.expOutput {
 				t.Errorf("Error reported in Generic Output comparison at trial %d, expected %v, got %v", ind, trial.expOutput, res)
