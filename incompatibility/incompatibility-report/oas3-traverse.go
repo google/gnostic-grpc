@@ -4,6 +4,7 @@ import (
 	"reflect"
 )
 
+// Structure for generic single-input single-output function with error indication
 type GenericOperation struct {
 	op         func(interface{}) (interface{}, int)
 	inputType  reflect.Type
@@ -24,7 +25,8 @@ func (op1 GenericOperation) typeEquality(op2 GenericOperation) transverseComp {
 	return DiffType
 }
 
-// TODO
+// arg function should be a single-input single-output function
+// creates generic wrapper around function, indicates error on return
 func makeGenericOperation(function interface{}) (GenericOperation, int) {
 	switch inputType := reflect.TypeOf(function); inputType.Kind() {
 	case reflect.Func:
@@ -62,6 +64,8 @@ error:
 	return GenericOperation{}, 1
 }
 
+// function should be a single-input single-output function whose output type is *IncompatibilityReport
+// performs error checking for these requirements and casts into generic type
 func makeGenericIncompatibilityReportFunc(function interface{}) (func(interface{}) (*IncompatibilityReport, int), int) {
 	genGeneric, err := makeGenericOperation(function)
 	badType := genGeneric.outputType != reflect.TypeOf(&IncompatibilityReport{})
