@@ -17,9 +17,12 @@ import (
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
 )
 
-type ChainIncompatibilitySearch func(*openapiv3.Document) (incompatibilities []*Incompatibility)
+var IncompatibilityChains []ChainIncompatibilitySearch = []ChainIncompatibilitySearch{
+	DocumentBaseSearch,
+	PathsSearch,
+}
 
-const DefinedChains []ChainIncompatibilitySearch = []ChainIncompatibilitySearch{DocumentBaseSearch, PathsSearch}
+type ChainIncompatibilitySearch func(*openapiv3.Document) (incompatibilities []*Incompatibility)
 
 func SearchChains(doc *openapiv3.Document, chains ...ChainIncompatibilitySearch) *IncompatibilityReport {
 	var incompatibilities []*Incompatibility
@@ -27,12 +30,6 @@ func SearchChains(doc *openapiv3.Document, chains ...ChainIncompatibilitySearch)
 		incompatibilities = append(incompatibilities, chain(doc)...)
 	}
 	return &IncompatibilityReport{Incompatibilities: incompatibilities}
-}
-
-// GetKnownIncompatibilityPaths combines hardcoded chains
-func GetKnownIncompatibilityPaths() (chains []ChainIncompatibilitySearch) {
-	chains = append(chains, DocumentBaseSearch, PathsSearch)
-	return
 }
 
 // ======================== Hard Coded Chains ====================== //

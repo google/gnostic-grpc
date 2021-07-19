@@ -29,7 +29,6 @@ func incompatibilityEquality(i1 *Incompatibility, i2 *Incompatibility) (equality
 	}
 	if len(i1.TokenPath) != len(i2.TokenPath) {
 		equality = false
-		println(i1.TokenPath[0])
 		return
 	}
 	for ind, token := range i1.TokenPath {
@@ -48,9 +47,7 @@ func searchForIncompatibility(i1 *Incompatibility, rp2 *IncompatibilityReport) (
 			found = true
 			return
 		}
-		println(rp2Item.Classification)
 	}
-	println(i1.Classification, found)
 	return
 }
 
@@ -120,7 +117,7 @@ func TestChainCoverage(t *testing.T) {
 			)},
 	}
 	for ind, tt := range chainTest {
-		if !incompatibilityReportEquality(SearchChains(tt.givenDocument, GetKnownIncompatibilityPaths()...), tt.expectedIncompatibilityReport) {
+		if !incompatibilityReportEquality(SearchChains(tt.givenDocument, IncompatibilityChains...), tt.expectedIncompatibilityReport) {
 			t.Errorf("Unexpected incompatibilty report at index %d", ind)
 		}
 	}
