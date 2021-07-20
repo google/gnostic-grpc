@@ -14,6 +14,8 @@
 package incompatibility
 
 import (
+	"strconv"
+
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
 )
 
@@ -53,13 +55,13 @@ func PathsSearch(doc *openapiv3.Document) (incompatibilities []*Incompatibility)
 		pathKey := AddKeyPath(pathsKey, pathItem.Name)
 		pathValue := pathItem.Value
 		if pathValue.Head != nil {
-			incompatibilities = append(incompatibilities, &Incompatibility{TokenPath: AddKeyPath(pathKey, "head"), Classification: "HEAD"})
+			incompatibilities = append(incompatibilities, NewIncompatibility(AddKeyPath(pathKey, "head"), "HEAD"))
 		}
 		if pathValue.Options != nil {
-			incompatibilities = append(incompatibilities, &Incompatibility{TokenPath: AddKeyPath(pathKey, "options"), Classification: "OPTIONS"})
+			incompatibilities = append(incompatibilities, NewIncompatibility(AddKeyPath(pathKey, "options"), "OPTIONS"))
 		}
 		if pathValue.Trace != nil {
-			incompatibilities = append(incompatibilities, &Incompatibility{TokenPath: AddKeyPath(pathKey, "trace"), Classification: "TRACE"})
+			incompatibilities = append(incompatibilities, NewIncompatibility(AddKeyPath(pathKey, "trace"), "TRACE"))
 		}
 		incompatibilities = append(incompatibilities,
 			ValidOperationSearch(pathValue.Get, AddKeyPath(pathKey, "get"))...)
@@ -83,20 +85,62 @@ func ValidOperationSearch(operation *openapiv3.Operation, keys []string) (incomp
 		return
 	}
 	if operation.Callbacks != nil {
-		incompatibilities = append(incompatibilities, &Incompatibility{TokenPath: AddKeyPath(keys, "callbacks")})
+		incompatibilities = append(incompatibilities, NewIncompatibility(AddKeyPath(keys, "callbacks"), "CALLBACKS"))
 	}
 	if operation.Security != nil {
-		incompatibilities = append(incompatibilities, &Incompatibility{TokenPath: AddKeyPath(keys, "security")})
+		incompatibilities = append(incompatibilities, NewIncompatibility(AddKeyPath(keys, "security"), "SECURITY"))
+	}
+	for ind, paramOrRef := range operation.Parameters {
+		incompatibilities = append(incompatibilities, ParametersSearch(paramOrRef.GetParameter(), AddKeyPath(keys, "parameters", strconv.Itoa(ind)))...)
 	}
 	return
 
 }
 
+func ParametersSearch(param *openapiv3.Parameter, keys []string) (incompatibilities []*Incompatibility) {
+	if param == nil {
+		return
+	}
+	if param.Style != "" {
+		incompatibilities = append(incompatibilities, NewIncompatibility(AddKeyPath(keys, "style"), "STYLE"))
+	}
+	if param.Explode {
+		incompatibilities = append(incompatibilities, NewIncompatibility(AddKeyPath(keys, "explode"), "EXPLODE"))
+	}
+	if param.AllowReserved {
+		incompatibilities = append(incompatibilities, NewIncompatibility(AddKeyPath(keys, "allowReserved"), "ALLOWRESERVED"))
+	}
+	if param.AllowEmptyValue {
+		incompatibilities = append(incompatibilities, NewIncompatibility(AddKeyPath(keys, "allowEmptyValue"), "ALLOWEMPTYVALUE"))
+	}
+	if param.Schema != nil {
+		incompatibilities = append(incompatibilities, SchemaSearch(param.Schema.GetSchema(), AddKeyPath(keys, "schema"))...)
+	}
+	return
+}
+
+func SchemaSearch(schema *openapiv3.Schema, keys []string) (incompatibilities []*Incompatibility) {
+	if schema == nil {
+		return
+	}
+	if schema.Nullable {
+		incompatibilities = append(incompatibilities, NewIncompatibility(AddKeyPath(keys, "nullable"), "NULLABLE"))
+	}
+	if schema.Discriminator != nil {
+		incompatibilities = append(incompatibilities, NewIncompatibility(AddKeyPath(keys, "discriminator"), "DISCRIMINATOR"))
+	}
+	return
+}
+
+func NewIncompatibility(path []string, classification string) *Incompatibility {
+	return &Incompatibility{TokenPath: path, Classification: classification}
+}
+
 // AddKeyPath adds string to end of a copy of path
-func AddKeyPath(path []string, item string) (newPath []string) {
+func AddKeyPath(path []string, items ...string) (newPath []string) {
 	newPath = make([]string, len(path))
 	copy(newPath, path)
-	newPath = append(newPath, item)
+	newPath = append(newPath, items...)
 	println(path, newPath)
 	return
 }
