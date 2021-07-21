@@ -49,7 +49,7 @@ func (p ParamTraverse) traverse(i interface{}) []*Incompatibility {
 			incompatibilities = append(incompatibilities, p.traverseTyped(path.Value)...)
 		}
 	case *openapiv3.PathItem:
-		p.traverseTyped(i)
+		incompatibilities = append(incompatibilities, p.traverseTyped(i)...)
 
 	}
 	return incompatibilities
