@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/protobuf v1.4.2
+	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/googleapis/gnostic v0.5.1
 	github.com/grpc-ecosystem/grpc-gateway v1.12.2
 	github.com/jhump/protoreflect v1.6.0

@@ -16,38 +16,13 @@ package incompatibility
 
 import (
 	"fmt"
-	"reflect"
+	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
 )
-
-// searchForIncompatibility looks for the i1 incompatibilty in the rp2 incompatibility report
-func searchForIncompatibility(i1 *Incompatibility, rp2 *IncompatibilityReport) (found bool) {
-	for _, rp2Item := range rp2.GetIncompatibilities() {
-		if reflect.DeepEqual(i1, rp2Item) {
-			found = true
-			return
-		}
-	}
-	return
-}
-
-// incompatibilityReportEquality checks equality for two incompatibility reports
-func incompatibilityReportEquality(rp1 *IncompatibilityReport, rp2 *IncompatibilityReport) (equality bool) {
-	equality = true
-	if len(rp1.GetIncompatibilities()) != len(rp2.GetIncompatibilities()) {
-		equality = false
-		return
-	}
-	for _, incompatibility := range rp1.GetIncompatibilities() {
-		if !searchForIncompatibility(incompatibility, rp2) {
-			equality = false
-			return
-		}
-	}
-	return
-}
 
 func makeIncompatibilityReport(incompatiblities ...*Incompatibility) *IncompatibilityReport {
 	return &IncompatibilityReport{Incompatibilities: incompatiblities}
@@ -92,7 +67,7 @@ func TestReporterCoverage(t *testing.T) {
 				Security: []*openapiv3.SecurityRequirement{{
 					AdditionalProperties: []*openapiv3.NamedStringArray{},
 				}}},
-			makeIncompatibilityReport(NewIncompatibility("SECURITY", "security")),
+			makeIncompatibilityReport(newIncompatibility("SECURITY", "security")),
 			aggregateIncompatibilityReporters(DocumentBaseSearch),
 		},
 		{
@@ -109,19 +84,24 @@ func TestReporterCoverage(t *testing.T) {
 				}},
 				Paths: makePathsObject("pathName", OPTIONS, HEAD, TRACE)},
 			makeIncompatibilityReport(
-				NewIncompatibility("SECURITY", "security"),
-				NewIncompatibility("OPTIONS", "paths", "pathName", "options"),
-				NewIncompatibility("HEAD", "paths", "pathName", "head"),
-				NewIncompatibility("TRACE", "paths", "pathName", "trace"),
+				newIncompatibility("SECURITY", "security"),
+				newIncompatibility("OPTIONS", "paths", "pathName", "options"),
+				newIncompatibility("HEAD", "paths", "pathName", "head"),
+				newIncompatibility("TRACE", "paths", "pathName", "trace"),
 			),
-			aggregateIncompatibilityReporters(PathsSearch, DocumentBaseSearch),
+			aggregateIncompatibilityReporters(DocumentBaseSearch, PathsSearch),
 		},
 	}
 	for ind, tt := range reporterTest {
-		testname := fmt.Sprintf("Reporter Coverage Test at index %d", ind)
+		testname := fmt.Sprintf("CoverageTest%d", ind)
 		t.Run(testname, func(t *testing.T) {
-			if !incompatibilityReportEquality(SearchChains(tt.givenDocument, tt.incompatibilityReporters), tt.expectedIncompatibilityReport) {
-				t.Errorf("Unexpected incompatibilty report at index %d", ind)
+			got := ReportOnDoc(tt.givenDocument, tt.incompatibilityReporters)
+			ignoreUnexportedOption := cmpopts.IgnoreUnexported(IncompatibilityReport{}, Incompatibility{})
+			orderOption := cmpopts.SortSlices(func(l, r *Incompatibility) bool {
+				return strings.Compare(l.Classification, r.Classification) < 0
+			})
+			if diff := cmp.Diff(tt.expectedIncompatibilityReport, got, ignoreUnexportedOption, orderOption); diff != "" {
+				t.Errorf("SearchChains(%v, %v): diff (-want +got):\n%v", tt.givenDocument, tt.incompatibilityReporters, diff)
 			}
 		})
 	}
