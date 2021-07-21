@@ -15,35 +15,17 @@
 package incompatibility
 
 import (
+	"fmt"
+	"reflect"
 	"testing"
 
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
 )
 
-// incompatibilityEquality checks equality for two incompatibilities
-func incompatibilityEquality(i1 *Incompatibility, i2 *Incompatibility) (equality bool) {
-	equality = true
-	if i1.Classification != i2.Classification {
-		equality = false
-		return
-	}
-	if len(i1.TokenPath) != len(i2.TokenPath) {
-		equality = false
-		return
-	}
-	for ind, token := range i1.TokenPath {
-		if token != i2.TokenPath[ind] {
-			equality = false
-			return
-		}
-	}
-	return
-}
-
 // searchForIncompatibility looks for the i1 incompatibilty in the rp2 incompatibility report
 func searchForIncompatibility(i1 *Incompatibility, rp2 *IncompatibilityReport) (found bool) {
 	for _, rp2Item := range rp2.GetIncompatibilities() {
-		if incompatibilityEquality(i1, rp2Item) {
+		if reflect.DeepEqual(i1, rp2Item) {
 			found = true
 			return
 		}
@@ -95,30 +77,52 @@ func makePathsObject(pathsName string, operationType ...InvalidOperationType) *o
 }
 
 // Simple test for in-progress incompatibility chain coverage
-func TestChainCoverage(t *testing.T) {
+func TestReporterCoverage(t *testing.T) {
 
-	var chainTest = []struct {
+	var reporterTest = []struct {
 		givenDocument                 *openapiv3.Document
 		expectedIncompatibilityReport *IncompatibilityReport
+		incompatibilityReporters      IncompatibilityReporter
 	}{
-		{&openapiv3.Document{}, &IncompatibilityReport{}},
-		{&openapiv3.Document{Security: []*openapiv3.SecurityRequirement{{
-			AdditionalProperties: []*openapiv3.NamedStringArray{},
-		}}},
-			makeIncompatibilityReport(&Incompatibility{TokenPath: []string{"security"}, Classification: "SECURITY"})},
-		{&openapiv3.Document{Security: []*openapiv3.SecurityRequirement{{
-			AdditionalProperties: []*openapiv3.NamedStringArray{},
-		}}, Paths: makePathsObject("pathName", OPTIONS, HEAD, TRACE)},
+		{&openapiv3.Document{}, &IncompatibilityReport{}, aggregateIncompatibilityReporters()},
+		{&openapiv3.Document{}, &IncompatibilityReport{}, aggregateIncompatibilityReporters(DocumentBaseSearch)},
+		{&openapiv3.Document{}, &IncompatibilityReport{}, aggregateIncompatibilityReporters(PathsSearch, DocumentBaseSearch)},
+		{
+			&openapiv3.Document{
+				Security: []*openapiv3.SecurityRequirement{{
+					AdditionalProperties: []*openapiv3.NamedStringArray{},
+				}}},
+			makeIncompatibilityReport(NewIncompatibility("SECURITY", "security")),
+			aggregateIncompatibilityReporters(DocumentBaseSearch),
+		},
+		{
+			&openapiv3.Document{Security: []*openapiv3.SecurityRequirement{{
+				AdditionalProperties: []*openapiv3.NamedStringArray{},
+			}}},
+			makeIncompatibilityReport(), // only includes path
+			aggregateIncompatibilityReporters(PathsSearch),
+		},
+		{
+			&openapiv3.Document{
+				Security: []*openapiv3.SecurityRequirement{{
+					AdditionalProperties: []*openapiv3.NamedStringArray{},
+				}},
+				Paths: makePathsObject("pathName", OPTIONS, HEAD, TRACE)},
 			makeIncompatibilityReport(
-				&Incompatibility{TokenPath: []string{"security"}, Classification: "SECURITY"},
-				&Incompatibility{TokenPath: []string{"paths", "pathName", "options"}, Classification: "OPTIONS"},
-				&Incompatibility{TokenPath: []string{"paths", "pathName", "head"}, Classification: "HEAD"},
-				&Incompatibility{TokenPath: []string{"paths", "pathName", "trace"}, Classification: "TRACE"},
-			)},
+				NewIncompatibility("SECURITY", "security"),
+				NewIncompatibility("OPTIONS", "paths", "pathName", "options"),
+				NewIncompatibility("HEAD", "paths", "pathName", "head"),
+				NewIncompatibility("TRACE", "paths", "pathName", "trace"),
+			),
+			aggregateIncompatibilityReporters(PathsSearch, DocumentBaseSearch),
+		},
 	}
-	for ind, tt := range chainTest {
-		if !incompatibilityReportEquality(SearchChains(tt.givenDocument, IncompatibilityChains...), tt.expectedIncompatibilityReport) {
-			t.Errorf("Unexpected incompatibilty report at index %d", ind)
-		}
+	for ind, tt := range reporterTest {
+		testname := fmt.Sprintf("Reporter Coverage Test at index %d", ind)
+		t.Run(testname, func(t *testing.T) {
+			if !incompatibilityReportEquality(SearchChains(tt.givenDocument, tt.incompatibilityReporters), tt.expectedIncompatibilityReport) {
+				t.Errorf("Unexpected incompatibilty report at index %d", ind)
+			}
+		})
 	}
 }
