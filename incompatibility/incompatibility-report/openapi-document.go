@@ -51,6 +51,7 @@ func (d DocumentTraverse) traverse(i interface{}) []*Incompatibility {
 		}
 		// traverse document
 		for _, childTraverse := range d.paths {
+			// child will have to know how to get from doc level to child level, see paths
 			incompatibilities = append(incompatibilities, childTraverse.traverse(doc)...)
 		}
 	}

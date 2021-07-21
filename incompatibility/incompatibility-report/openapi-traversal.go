@@ -15,5 +15,5 @@ package incompatibility
 
 type OpenAPITraversal interface {
 	acceptIncompatibilityRule(...OpenAPIIncompatibilityRule) // New rules to scan for incompatibilities
-	traverse(interface{}) []*Incompatibility                 //
+	traverse(interface{}) []*Incompatibility                 // 'traverse' through rest of document
 }
