@@ -16,6 +16,7 @@ package incompatibility
 
 import (
 	"fmt"
+	"math"
 	"strings"
 	"testing"
 
@@ -27,6 +28,23 @@ import (
 func makeIncompatibilityReport(incompatiblities ...*Incompatibility) *IncompatibilityReport {
 	return &IncompatibilityReport{Incompatibilities: incompatiblities}
 }
+
+var ignoreUnexportedOption = cmpopts.IgnoreUnexported(IncompatibilityReport{}, Incompatibility{})
+var incompatibilityOrderOption = cmpopts.SortSlices(func(l, r *Incompatibility) bool {
+	if l.Classification != r.Classification {
+		return l.Classification < r.Classification
+	} else {
+		minimumArrayLen := math.Min(float64(len(l.TokenPath)), float64(len(r.TokenPath)))
+		for i := 0; i < int(minimumArrayLen); i++ {
+			lstring := l.TokenPath[i]
+			rstring := r.TokenPath[i]
+			if lstring != rstring {
+				return strings.Compare(lstring, rstring) < 0
+			}
+		}
+	}
+	return true
+})
 
 type InvalidOperationType int
 
@@ -67,7 +85,7 @@ func TestReporterCoverage(t *testing.T) {
 				Security: []*openapiv3.SecurityRequirement{{
 					AdditionalProperties: []*openapiv3.NamedStringArray{},
 				}}},
-			makeIncompatibilityReport(newIncompatibility("SECURITY", "security")),
+			makeIncompatibilityReport(newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_Security, "security")),
 			aggregateIncompatibilityReporters(DocumentBaseSearch),
 		},
 		{
@@ -84,23 +102,19 @@ func TestReporterCoverage(t *testing.T) {
 				}},
 				Paths: makePathsObject("pathName", OPTIONS, HEAD, TRACE)},
 			makeIncompatibilityReport(
-				newIncompatibility("SECURITY", "security"),
-				newIncompatibility("OPTIONS", "paths", "pathName", "options"),
-				newIncompatibility("HEAD", "paths", "pathName", "head"),
-				newIncompatibility("TRACE", "paths", "pathName", "trace"),
+				newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_Security, "security"),
+				newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_InvalidOperation, "paths", "pathName", "options"),
+				newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_InvalidOperation, "paths", "pathName", "head"),
+				newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_InvalidOperation, "paths", "pathName", "trace"),
 			),
-			aggregateIncompatibilityReporters(DocumentBaseSearch, PathsSearch),
+			aggregateIncompatibilityReporters(DocumentBaseSearch),
 		},
 	}
 	for ind, tt := range reporterTest {
 		testname := fmt.Sprintf("CoverageTest%d", ind)
 		t.Run(testname, func(t *testing.T) {
 			got := ReportOnDoc(tt.givenDocument, tt.incompatibilityReporters)
-			ignoreUnexportedOption := cmpopts.IgnoreUnexported(IncompatibilityReport{}, Incompatibility{})
-			orderOption := cmpopts.SortSlices(func(l, r *Incompatibility) bool {
-				return strings.Compare(l.Classification, r.Classification) < 0
-			})
-			if diff := cmp.Diff(tt.expectedIncompatibilityReport, got, ignoreUnexportedOption, orderOption); diff != "" {
+			if diff := cmp.Diff(tt.expectedIncompatibilityReport, got, ignoreUnexportedOption, incompatibilityOrderOption); diff != "" {
 				t.Errorf("SearchChains(%v, %v): diff (-want +got):\n%v", tt.givenDocument, tt.incompatibilityReporters, diff)
 			}
 		})

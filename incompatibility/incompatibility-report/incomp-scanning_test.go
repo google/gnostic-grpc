@@ -22,7 +22,7 @@ import (
 )
 
 // Helper Function to check for single incompatibilty
-func incompatibilityCheck(document *openapiv3.Document, incompatibilityClass string) bool {
+func incompatibilityCheck(document *openapiv3.Document, incompatibilityClass IncompatibiltiyClassification) bool {
 	for _, incompatibility := range ScanIncompatibilities(document).Incompatibilities {
 		if incompatibility.Classification == incompatibilityClass {
 			return true
@@ -40,21 +40,21 @@ func generateDoc(t *testing.T, path string) *openapiv3.Document {
 	return document
 }
 
-// Simple test for servers incompatibility
-func TestBasicServerIncompatibility(t *testing.T) {
-	noServerPath := "../../generator/testfiles/other.yaml"
-	serverPath := "../oas-examples/petstore.yaml"
+// Simple test for security incompatibility
+func TestBasicSecurityIncompatibility(t *testing.T) {
+	path1 := "../../generator/testfiles/other.yaml"
+	path2 := "../oas-examples/petstore.yaml"
 
 	var serversTest = []struct {
-		path            string
-		serversDetected bool
+		path           string
+		expectSecurity bool
 	}{
-		{noServerPath, false},
-		{serverPath, true},
+		{path1, false},
+		{path2, false},
 	}
 	for _, tt := range serversTest {
-		if incompatibilityCheck(generateDoc(t, tt.path), "SERVERS") != tt.serversDetected {
-			t.Errorf("Incorrect server detection for file at %s, got %t\n", noServerPath, tt.serversDetected)
+		if incompatibilityCheck(generateDoc(t, tt.path), IncompatibiltiyClassification_Security) != tt.expectSecurity {
+			t.Errorf("Incorrect security detection for file at %s, got %t\n", path1, tt.expectSecurity)
 		}
 	}
 }

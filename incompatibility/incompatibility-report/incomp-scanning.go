@@ -39,10 +39,6 @@ func CreateIncompReport(env *plugins.Environment, reportType Report) {
 
 // Scan for incompatibilities in an OpenAPI document
 func ScanIncompatibilities(document *openapiv3.Document) *IncompatibilityReport {
-	var incompatibilities []*Incompatibility
 
-	if document.Servers != nil {
-		incompatibilities = append(incompatibilities, &Incompatibility{TokenPath: []string{"servers"}, Classification: "SERVERS"})
-	}
-	return &IncompatibilityReport{Incompatibilities: incompatibilities}
+	return ReportOnDoc(document, IncompatibilityReporters...)
 }
