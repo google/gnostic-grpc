@@ -19,21 +19,34 @@ option go_package = "../incompatibility-report;incompatibility";
 
 package incompatibility;
 
+// Severity level for an incompatibility
+enum Severity {
+    INFO = 0;
+    WARNING = 1;
+    FAIL = 2;
+}
+
+enum IncompatibiltiyClassification{
+    Security = 0;
+    InvalidOperation = 1;
+    ParameterStyling = 2;
+    DataValidation = 3;
+    InvalidDataState = 4;
+    Inheritance = 5;
+    ExternalTranscodingSupport = 6;
+
+}
+
 // Base incompatibility structure in a file
 message Incompatibility {
     repeated string token_path = 1; //unique path to incompatibility
-    string classification = 2; // incomaptibility class.
+    IncompatibiltiyClassification classification = 2; // incomaptibility class.
+    Severity severity = 3;
 }
 
 // Report of base incompatibilities
 message IncompatibilityReport {
     repeated Incompatibility incompatibilities = 1;
-}
-
-// Severity level for an incompatibility
-enum Severity {
-    INFO = 0;
-    FAIL = 1;
 }
 
 // Detailed structure of an incompatibility in a file
@@ -47,8 +60,6 @@ message IncompatibilityDescription {
 
     // hint to describe incompatibility
     repeated string hint = 4;
-
-    Severity severity = 5;
 }
 
 // Report of incompatibility descriptions
