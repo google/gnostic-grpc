@@ -107,7 +107,7 @@ func TestReporterCoverage(t *testing.T) {
 				newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_InvalidOperation, "paths", "pathName", "head"),
 				newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_InvalidOperation, "paths", "pathName", "trace"),
 			),
-			aggregateIncompatibilityReporters(DocumentBaseSearch),
+			aggregateIncompatibilityReporters(DocumentBaseSearch, PathsSearch),
 		},
 	}
 	for ind, tt := range reporterTest {

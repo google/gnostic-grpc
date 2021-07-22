@@ -26,7 +26,7 @@ enum Severity {
     FAIL = 2;
 }
 
-enum Classification {
+enum IncompatibiltiyClassification{
     Security = 0;
     InvalidOperation = 1;
     ParameterStyling = 2;
@@ -34,12 +34,13 @@ enum Classification {
     InvalidDataState = 4;
     Inheritance = 5;
     ExternalTranscodingSupport = 6;
+
 }
 
 // Base incompatibility structure in a file
 message Incompatibility {
     repeated string token_path = 1; //unique path to incompatibility
-    Classification classification = 2; // incomaptibility class.
+    IncompatibiltiyClassification classification = 2; // incomaptibility class.
     Severity severity = 3;
 }
 
