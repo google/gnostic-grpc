@@ -23,6 +23,7 @@ import (
 var IncompatibilityReporters []IncompatibilityReporter = []IncompatibilityReporter{
 	DocumentBaseSearch,
 	PathsSearch,
+	ComponentsSearch,
 }
 
 // A reporter takes in any openapiv3 document and returns incopatibilities
@@ -88,7 +89,60 @@ func PathsSearch(doc *openapiv3.Document) []*Incompatibility {
 			validOperationSearch(pathValue.Delete, addKeyPath(pathKey, "delete"))...)
 		incompatibilities = append(incompatibilities,
 			validOperationSearch(pathValue.Patch, addKeyPath(pathKey, "patch"))...)
+
+		for ind, paramOrRef := range pathValue.Parameters {
+			incompatibilities = append(incompatibilities,
+				parametersSearch(paramOrRef.GetParameter(), addKeyPath(pathKey, "parameters", strconv.Itoa(ind)))...)
+		}
 	}
+	return incompatibilities
+}
+
+func ComponentsSearch(doc *openapiv3.Document) []*Incompatibility {
+	var incompatibilities []*Incompatibility
+	if doc.Components == nil {
+		return incompatibilities
+	}
+	pathsKey := []string{"components"}
+
+	if doc.Components.Callbacks != nil {
+		incompatibilities = append(incompatibilities,
+			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_ExternalTranscodingSupport, addKeyPath(pathsKey, "callbacks")...))
+	}
+	if doc.Components.Schemas != nil {
+		for _, schemaRef := range doc.Components.Schemas.GetAdditionalProperties() {
+			incompatibilities = append(incompatibilities, schemaSearch(schemaRef.Value.GetSchema(), addKeyPath(pathsKey, "schemas", schemaRef.Name))...)
+		}
+	}
+	if doc.Components.Responses != nil {
+		for _, resRef := range doc.Components.Responses.GetAdditionalProperties() {
+			incompatibilities = append(incompatibilities,
+				responseSearch(resRef.Value.GetResponse(), addKeyPath(pathsKey, "requestBodies", resRef.Name))...,
+			)
+		}
+	}
+	if doc.Components.Parameters != nil {
+		for _, paramRef := range doc.Components.Parameters.GetAdditionalProperties() {
+			incompatibilities = append(incompatibilities,
+				parametersSearch(paramRef.GetValue().GetParameter(), addKeyPath(pathsKey, "parameters", paramRef.Name))...,
+			)
+		}
+	}
+	if doc.Components.RequestBodies != nil {
+		for _, reqRef := range doc.Components.RequestBodies.GetAdditionalProperties() {
+			incompatibilities = append(incompatibilities,
+				requestBodySearch(reqRef.Value.GetRequestBody(), addKeyPath(pathsKey, "requestBodies", reqRef.Name))...,
+			)
+		}
+	}
+	if doc.Components.Headers != nil {
+		for _, comRef := range doc.Components.Headers.GetAdditionalProperties() {
+			incompatibilities = append(incompatibilities,
+				headerSearch(comRef.Name, comRef.Value.GetHeader(), addKeyPath(pathsKey, "headers", comRef.Name))...,
+			)
+		}
+	}
+
 	return incompatibilities
 }
 
@@ -194,7 +248,118 @@ func schemaSearch(schema *openapiv3.Schema, keys []string) []*Incompatibility {
 		incompatibilities = append(incompatibilities,
 			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, addKeyPath(keys, "minimum")...))
 	}
+	if schema.Pattern != "" {
+		incompatibilities = append(incompatibilities,
+			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, addKeyPath(keys, "pattern")...))
+	}
+	if schema.MaxItems != 0 {
+		incompatibilities = append(incompatibilities,
+			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, addKeyPath(keys, "maxItems")...))
+	}
+	if schema.MinItems != 0 {
+		incompatibilities = append(incompatibilities,
+			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, addKeyPath(keys, "minItems")...))
+	}
+	if schema.UniqueItems {
+		incompatibilities = append(incompatibilities,
+			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, addKeyPath(keys, "uniqueItems")...))
+	}
+	if len(schema.AllOf) != 0 {
+		incompatibilities = append(incompatibilities,
+			newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_Inheritance, addKeyPath(keys, "allOf")...))
+	}
+	if len(schema.OneOf) != 0 {
+		incompatibilities = append(incompatibilities,
+			newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_Inheritance, addKeyPath(keys, "oneOf")...))
+	}
+	if len(schema.AnyOf) != 0 {
+		incompatibilities = append(incompatibilities,
+			newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_Inheritance, addKeyPath(keys, "anyOf")...))
+	}
+	if schema.Items != nil {
+		for ind, item := range schema.Items.SchemaOrReference {
+			incompatibilities = append(incompatibilities, schemaSearch(item.GetSchema(), addKeyPath(keys, "items", strconv.Itoa(ind)))...)
+		}
+	}
+	if schema.Properties != nil {
+		for ind, prop := range schema.Properties.AdditionalProperties {
+			incompatibilities = append(incompatibilities, schemaSearch(prop.Value.GetSchema(), addKeyPath(keys, "properties", strconv.Itoa(ind), prop.Name))...)
+		}
+	}
+	if schema.AdditionalProperties != nil && schema.AdditionalProperties.GetSchemaOrReference() != nil {
+		incompatibilities = append(incompatibilities,
+			schemaSearch(schema.AdditionalProperties.GetSchemaOrReference().GetSchema(), addKeyPath(keys, "additionalProperties"))...)
+	}
 
+	return incompatibilities
+}
+
+// responseSearch scans for incompatibilities in a response object
+func responseSearch(resp *openapiv3.Response, keys []string) []*Incompatibility {
+	var incompatibilities []*Incompatibility
+	if resp == nil {
+		return incompatibilities
+	}
+	if resp.Headers != nil {
+		for _, prop := range resp.Headers.AdditionalProperties {
+			incompatibilities = append(incompatibilities,
+				headerSearch(prop.Name, prop.GetValue().GetHeader(), addKeyPath(keys, prop.Name))...,
+			)
+		}
+	}
+	if resp.Content != nil {
+		for _, prop := range resp.Content.AdditionalProperties {
+			incompatibilities = append(incompatibilities,
+				contentSearch(prop.Value, addKeyPath(keys, prop.Name))...,
+			)
+		}
+	}
+	return incompatibilities
+}
+
+//  headerSearch scans for incompatibilities in a header object
+func headerSearch(headerName string, header *openapiv3.Header, keys []string) []*Incompatibility {
+	var incompatibilities []*Incompatibility
+	if header == nil {
+		return incompatibilities
+	}
+	paramEquiv := header2Paramter(headerName, header)
+	incompatibilities = append(incompatibilities,
+		parametersSearch(paramEquiv, keys)...)
+	return incompatibilities
+}
+
+// contentSearch scans for incompatibilities in a media object
+func contentSearch(media *openapiv3.MediaType, keys []string) []*Incompatibility {
+	var incompatibilities []*Incompatibility
+	if media == nil {
+		return incompatibilities
+	}
+	if media.Encoding != nil {
+		incompatibilities = append(incompatibilities,
+			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_ParameterStyling, addKeyPath(keys, "encoding")...))
+	}
+	if media.Schema != nil {
+		incompatibilities = append(incompatibilities,
+			schemaSearch(media.Schema.GetSchema(), addKeyPath(keys, "schema"))...,
+		)
+	}
+	return incompatibilities
+}
+
+// requestBodySearch scans for incompatibilities in a restBody object
+func requestBodySearch(req *openapiv3.RequestBody, keys []string) []*Incompatibility {
+	var incompatibilities []*Incompatibility
+	if req == nil {
+		return incompatibilities
+	}
+	if req.Content != nil {
+		for _, namedContent := range req.Content.GetAdditionalProperties() {
+			incompatibilities = append(incompatibilities,
+				contentSearch(namedContent.Value, addKeyPath(keys, namedContent.Name))...,
+			)
+		}
+	}
 	return incompatibilities
 }
 
@@ -208,4 +373,24 @@ func addKeyPath(path []string, items ...string) (newPath []string) {
 	copy(newPath, path)
 	newPath = append(newPath, items...)
 	return
+}
+
+// header2Parameter creates an equivalent parameter object representation from a header
+func header2Paramter(name string, header *openapiv3.Header) *openapiv3.Parameter {
+	return &openapiv3.Parameter{
+		Name:                   name,
+		In:                     "header",
+		Description:            header.Description,
+		Required:               header.Required,
+		Deprecated:             header.Deprecated,
+		AllowEmptyValue:        header.AllowEmptyValue,
+		Style:                  header.Style,
+		Explode:                header.Explode,
+		AllowReserved:          header.AllowReserved,
+		Schema:                 header.Schema,
+		Example:                header.Example,
+		Examples:               header.Examples,
+		Content:                header.Content,
+		SpecificationExtension: header.SpecificationExtension,
+	}
 }
