@@ -15,10 +15,12 @@
 package incompatibility
 
 import (
+	"io/ioutil"
 	"testing"
 
 	"github.com/googleapis/gnostic-grpc/utils"
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
+	"gopkg.in/yaml.v3"
 )
 
 // Helper Function to check for single incompatibilty
@@ -45,16 +47,49 @@ func TestBasicSecurityIncompatibility(t *testing.T) {
 	path1 := "../../generator/testfiles/other.yaml"
 	path2 := "../../examples/petstore/petstore.yaml"
 
-	var serversTest = []struct {
+	var securityTest = []struct {
 		path           string
 		expectSecurity bool
 	}{
 		{path1, false},
 		{path2, true},
 	}
-	for _, tt := range serversTest {
+	for _, tt := range securityTest {
 		if incompatibilityCheck(generateDoc(t, tt.path), IncompatibiltiyClassification_Security) != tt.expectSecurity {
 			t.Errorf("Incorrect security detection for file at %s, got %t\n", path1, tt.expectSecurity)
 		}
+	}
+}
+
+func TestIncompatibilityExistence(t *testing.T) {
+	petstorePath := "../../examples/petstore/petstore.yaml"
+	petstoreJson := "../oas-examples/petstore.json"
+	bookstorePath := "../../examples/bookstore/bookstore.yaml"
+
+	var existenceTest = []struct {
+		path string
+	}{
+		{petstorePath},
+		{petstoreJson},
+		{bookstorePath},
+	}
+
+	for _, tt := range existenceTest {
+		var node yaml.Node
+		incompReport := ScanIncompatibilities(generateDoc(t, tt.path))
+		data, _ := ioutil.ReadFile(tt.path)
+		marshErr := yaml.Unmarshal(data, &node)
+		if marshErr != nil {
+			t.Fatalf("Unable to marshal file<%s>", tt.path)
+		}
+		for _, incomp := range incompReport.GetIncompatibilities() {
+			_, searchErr :=
+				findNode(node.Content[0], incomp.GetTokenPath()...)
+			if searchErr != nil {
+				t.Errorf(searchErr.Error())
+			}
+			// fmt.Printf("ln: %d, col: %d, incomp: %+v\n\n", fnde.Line, fnde.Column, incomp.TokenPath)
+		}
+
 	}
 }

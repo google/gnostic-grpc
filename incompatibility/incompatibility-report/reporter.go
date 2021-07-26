@@ -377,6 +377,9 @@ func addKeyPath(path []string, items ...string) (newPath []string) {
 
 // header2Parameter creates an equivalent parameter object representation from a header
 func header2Paramter(name string, header *openapiv3.Header) *openapiv3.Parameter {
+	if header == nil {
+		return &openapiv3.Parameter{}
+	}
 	return &openapiv3.Parameter{
 		Name:                   name,
 		In:                     "header",

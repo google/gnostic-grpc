@@ -55,7 +55,7 @@ func CreateIncompReport(env *plugins.Environment, reportType Report) {
 func printIncompatibilityReport(rep *IncompatibilityReport) {
 	println(fmt.Sprintf("Found %d incompatibilities\n", len(rep.GetIncompatibilities())))
 	for _, incomp := range rep.GetIncompatibilities() {
-		print(fmt.Sprintf("%+v\n", incomp.Classification))
+		print(fmt.Sprintf("%+v\n", incomp))
 	}
 }
 
