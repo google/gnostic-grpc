@@ -52,7 +52,6 @@ func CreateIncompReport(env *plugins.Environment, reportType Report) {
 		env.RespondAndExit()
 	}
 	env.RespondAndExitIfError(errors.New("no supported models for incompatibility reporting"))
-
 }
 
 func writeProtobufMessage(incompatibilityReport *IncompatibilityReport, env *plugins.Environment) {
