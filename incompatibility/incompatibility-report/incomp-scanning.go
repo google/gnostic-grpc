@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
 	plugins "github.com/googleapis/gnostic/plugins"
 	"google.golang.org/protobuf/proto"
