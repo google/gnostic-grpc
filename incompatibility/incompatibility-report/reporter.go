@@ -93,7 +93,8 @@ func PathsSearch(doc *openapiv3.Document) []*Incompatibility {
 		for ind, paramOrRef := range path.Parameters {
 			incompatibilities = append(incompatibilities,
 				parametersSearch(paramOrRef.GetParameter(), extendPath(pathKey, "parameters", strconv.Itoa(ind)))...)
-
+		}
+	}
 	return incompatibilities
 }
 
