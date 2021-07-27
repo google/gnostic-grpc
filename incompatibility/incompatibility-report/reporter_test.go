@@ -43,7 +43,7 @@ var incompatibilityOrderOption = cmpopts.SortSlices(func(l, r *Incompatibility) 
 			}
 		}
 	}
-	return true
+	return false
 })
 
 type InvalidOperationType int

@@ -14,6 +14,7 @@
 package incompatibility
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -47,13 +48,14 @@ func CreateIncompReport(env *plugins.Environment, reportType Report) {
 		err := proto.Unmarshal(model.Value, openAPIdocument)
 		env.RespondAndExitIfError(err)
 		incompatibilityReport := ScanIncompatibilities(openAPIdocument)
-		WriteBinaryProtobuf(incompatibilityReport, env)
+		writeProtobufMessage(incompatibilityReport, env)
 		env.RespondAndExit()
 	}
+	env.RespondAndExitIfError(errors.New("no supported models for incompatibility reporting"))
 
 }
 
-func WriteBinaryProtobuf(incompatibilityReport *IncompatibilityReport, env *plugins.Environment) {
+func writeProtobufMessage(incompatibilityReport *IncompatibilityReport, env *plugins.Environment) {
 	incompatibilityReportBytes, err := proto.Marshal(incompatibilityReport)
 	env.RespondAndExitIfError(err)
 	createdFile := &plugins.File{
@@ -71,7 +73,7 @@ func trimSourceName(pathWithExtension string) string {
 	return pathWithExtension
 }
 
-func IncompatibilityReportString(rep *IncompatibilityReport) string {
+func incompatibilityReportString(rep *IncompatibilityReport) string {
 	var reportString string
 	reportString += fmt.Sprintf("Found %d incompatibilities\n", len(rep.GetIncompatibilities()))
 	for _, incomp := range rep.GetIncompatibilities() {
@@ -82,6 +84,5 @@ func IncompatibilityReportString(rep *IncompatibilityReport) string {
 
 // Scan for incompatibilities in an OpenAPI document
 func ScanIncompatibilities(document *openapiv3.Document) *IncompatibilityReport {
-
 	return ReportOnDoc(document, IncompatibilityReporters...)
 }
