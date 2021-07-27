@@ -72,20 +72,22 @@ func TestIncompatibilityExistence(t *testing.T) {
 		{"../../examples/bookstore/bookstore.yaml"},
 	}
 
-	for _, tt := range existenceTest {
+	for _, trial := range existenceTest {
 		var node yaml.Node
-		incompReport := ScanIncompatibilities(generateDoc(t, tt.path))
-		data, _ := ioutil.ReadFile(tt.path)
+		incompReport := ScanIncompatibilities(generateDoc(t, trial.path))
+		data, _ := ioutil.ReadFile(trial.path)
 		marshErr := yaml.Unmarshal(data, &node)
 		if marshErr != nil {
-			t.Fatalf("Unable to marshal file<%s>", tt.path)
+			t.Fatalf("Unable to marshal file<%s>", trial.path)
 		}
 		for _, incomp := range incompReport.GetIncompatibilities() {
-			_, searchErr :=
-				findNode(node.Content[0], incomp.GetTokenPath()...)
-			if searchErr != nil {
-				t.Errorf(searchErr.Error())
-			}
+			t.Run(filepath.Base(trial.path)+"IncompExistence", func(tt *testing.T) {
+				_, searchErr :=
+					findNode(node.Content[0], incomp.GetTokenPath()...)
+				if searchErr != nil {
+					tt.Errorf(searchErr.Error())
+				}
+			})
 		}
 
 	}
