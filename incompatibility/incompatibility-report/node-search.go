@@ -19,7 +19,6 @@ func findNode(node *yaml.Node, path ...string) (*yaml.Node, error) {
 		}
 		return findNode(node.Content[ind], path[1:]...)
 	}
-
 	//Look for key value
 	for i := 0; i < len(node.Content)-1; i += 2 {
 		key := node.Content[i]
@@ -35,7 +34,3 @@ func findNode(node *yaml.Node, path ...string) (*yaml.Node, error) {
 
 	return nil, errors.New("unable to find yaml node")
 }
-
-// func checkValue(node *yaml.Node, strCheck string) bool {
-
-// }

@@ -15,10 +15,12 @@ package incompatibility
 
 import (
 	"fmt"
+	"path/filepath"
+	"strings"
 
-	"github.com/golang/protobuf/proto"
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
 	plugins "github.com/googleapis/gnostic/plugins"
+	"google.golang.org/protobuf/proto"
 )
 
 type Report int
@@ -43,20 +45,39 @@ func CreateIncompReport(env *plugins.Environment, reportType Report) {
 		}
 		openAPIdocument := &openapiv3.Document{}
 		err := proto.Unmarshal(model.Value, openAPIdocument)
-		if err != nil {
-			continue
-		}
-		printIncompatibilityReport(ScanIncompatibilities(openAPIdocument))
-
+		env.RespondAndExitIfError(err)
+		incompatibilityReport := ScanIncompatibilities(openAPIdocument)
+		WriteBinaryProtobuf(incompatibilityReport, env)
+		env.RespondAndExit()
 	}
 
 }
 
-func printIncompatibilityReport(rep *IncompatibilityReport) {
-	println(fmt.Sprintf("Found %d incompatibilities\n", len(rep.GetIncompatibilities())))
-	for _, incomp := range rep.GetIncompatibilities() {
-		print(fmt.Sprintf("%+v\n", incomp))
+func WriteBinaryProtobuf(incompatibilityReport *IncompatibilityReport, env *plugins.Environment) {
+	incompatibilityReportBytes, err := proto.Marshal(incompatibilityReport)
+	env.RespondAndExitIfError(err)
+	createdFile := &plugins.File{
+		Name: trimSourceName(env.Request.SourceName) + "_compatibility.pb",
+		Data: incompatibilityReportBytes,
 	}
+	env.Response.Files = append(env.Response.Files, createdFile)
+}
+
+func trimSourceName(pathWithExtension string) string {
+	fileNameWithExtension := filepath.Base(pathWithExtension)
+	if extInd := strings.IndexByte(fileNameWithExtension, '.'); extInd != -1 {
+		return fileNameWithExtension[:extInd]
+	}
+	return pathWithExtension
+}
+
+func IncompatibilityReportString(rep *IncompatibilityReport) string {
+	var reportString string
+	reportString += fmt.Sprintf("Found %d incompatibilities\n", len(rep.GetIncompatibilities()))
+	for _, incomp := range rep.GetIncompatibilities() {
+		reportString += fmt.Sprintf("%+v\n", incomp)
+	}
+	return reportString
 }
 
 // Scan for incompatibilities in an OpenAPI document
