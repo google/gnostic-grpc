@@ -43,14 +43,14 @@ func generateDoc(t *testing.T, path string) *openapiv3.Document {
 // Simple test for security incompatibility
 func TestBasicSecurityIncompatibility(t *testing.T) {
 	path1 := "../../generator/testfiles/other.yaml"
-	path2 := "../oas-examples/petstore.yaml"
+	path2 := "../../examples/petstore/petstore.yaml"
 
 	var serversTest = []struct {
 		path           string
 		expectSecurity bool
 	}{
 		{path1, false},
-		{path2, false},
+		{path2, true},
 	}
 	for _, tt := range serversTest {
 		if incompatibilityCheck(generateDoc(t, tt.path), IncompatibiltiyClassification_Security) != tt.expectSecurity {

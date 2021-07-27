@@ -14,6 +14,9 @@
 package incompatibility
 
 import (
+	"fmt"
+
+	"github.com/golang/protobuf/proto"
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
 	plugins "github.com/googleapis/gnostic/plugins"
 )
@@ -34,7 +37,26 @@ func CreateIncompReport(env *plugins.Environment, reportType Report) {
 
 	// If indicated by report type associate incompatibilities with line
 	// references, etc. and generate an ID_REPORT
+	for _, model := range env.Request.Models {
+		if model.TypeUrl != "openapi.v3.Document" {
+			continue
+		}
+		openAPIdocument := &openapiv3.Document{}
+		err := proto.Unmarshal(model.Value, openAPIdocument)
+		if err != nil {
+			continue
+		}
+		printIncompatibilityReport(ScanIncompatibilities(openAPIdocument))
 
+	}
+
+}
+
+func printIncompatibilityReport(rep *IncompatibilityReport) {
+	println(fmt.Sprintf("Found %d incompatibilities\n", len(rep.GetIncompatibilities())))
+	for _, incomp := range rep.GetIncompatibilities() {
+		print(fmt.Sprintf("%+v\n", incomp.Classification))
+	}
 }
 
 // Scan for incompatibilities in an OpenAPI document
