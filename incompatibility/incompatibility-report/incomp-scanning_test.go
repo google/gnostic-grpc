@@ -16,6 +16,7 @@ package incompatibility
 
 import (
 	"io/ioutil"
+	"path/filepath"
 	"testing"
 
 	"github.com/googleapis/gnostic-grpc/utils"
@@ -44,34 +45,31 @@ func generateDoc(t *testing.T, path string) *openapiv3.Document {
 
 // Simple test for security incompatibility
 func TestBasicSecurityIncompatibility(t *testing.T) {
-	path1 := "../../generator/testfiles/other.yaml"
-	path2 := "../../examples/petstore/petstore.yaml"
 
 	var securityTest = []struct {
 		path           string
 		expectSecurity bool
 	}{
-		{path1, false},
-		{path2, true},
+		{"../../generator/testfiles/other.yaml", false},
+		{"../../examples/petstore/petstore.yaml", true},
 	}
-	for _, tt := range securityTest {
-		if incompatibilityCheck(generateDoc(t, tt.path), IncompatibiltiyClassification_Security) != tt.expectSecurity {
-			t.Errorf("Incorrect security detection for file at %s, got %t\n", path1, tt.expectSecurity)
-		}
+	for _, trial := range securityTest {
+		t.Run(filepath.Base(trial.path)+"SecurityCheck", func(tt *testing.T) {
+			if incompatibilityCheck(generateDoc(tt, trial.path), IncompatibiltiyClassification_Security) != trial.expectSecurity {
+				tt.Errorf("Incorrect security detection for file, got %t\n", trial.expectSecurity)
+			}
+		})
 	}
 }
 
 func TestIncompatibilityExistence(t *testing.T) {
-	petstorePath := "../../examples/petstore/petstore.yaml"
-	petstoreJson := "../oas-examples/petstore.json"
-	bookstorePath := "../../examples/bookstore/bookstore.yaml"
 
 	var existenceTest = []struct {
 		path string
 	}{
-		{petstorePath},
-		{petstoreJson},
-		{bookstorePath},
+		{"../../examples/petstore/petstore.yaml"},
+		{"../oas-examples/petstore.json"},
+		{"../../examples/bookstore/bookstore.yaml"},
 	}
 
 	for _, tt := range existenceTest {
@@ -88,7 +86,6 @@ func TestIncompatibilityExistence(t *testing.T) {
 			if searchErr != nil {
 				t.Errorf(searchErr.Error())
 			}
-			// fmt.Printf("ln: %d, col: %d, incomp: %+v\n\n", fnde.Line, fnde.Column, incomp.TokenPath)
 		}
 
 	}
