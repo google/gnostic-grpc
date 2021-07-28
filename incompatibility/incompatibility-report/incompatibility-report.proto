@@ -27,13 +27,14 @@ enum Severity {
 }
 
 enum IncompatibiltiyClassification{
-    Security = 0;
-    InvalidOperation = 1;
-    ParameterStyling = 2;
-    DataValidation = 3;
-    InvalidDataState = 4;
-    Inheritance = 5;
-    ExternalTranscodingSupport = 6;
+    IncompatibiltiyClassification_Default = 0;
+    Security = 1;
+    InvalidOperation = 2;
+    ParameterStyling = 3;
+    DataValidation = 4;
+    InvalidDataState = 5;
+    Inheritance = 6;
+    ExternalTranscodingSupport = 7;
 
 }
 

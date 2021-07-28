@@ -15,10 +15,13 @@
 package incompatibility
 
 import (
+	"io/ioutil"
+	"path/filepath"
 	"testing"
 
 	"github.com/googleapis/gnostic-grpc/utils"
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
+	"gopkg.in/yaml.v3"
 )
 
 // Helper Function to check for single incompatibilty
@@ -42,19 +45,50 @@ func generateDoc(t *testing.T, path string) *openapiv3.Document {
 
 // Simple test for security incompatibility
 func TestBasicSecurityIncompatibility(t *testing.T) {
-	path1 := "../../generator/testfiles/other.yaml"
-	path2 := "../../examples/petstore/petstore.yaml"
 
-	var serversTest = []struct {
+	var securityTest = []struct {
 		path           string
 		expectSecurity bool
 	}{
-		{path1, false},
-		{path2, true},
+		{"../../generator/testfiles/other.yaml", false},
+		{"../../examples/petstore/petstore.yaml", true},
 	}
-	for _, tt := range serversTest {
-		if incompatibilityCheck(generateDoc(t, tt.path), IncompatibiltiyClassification_Security) != tt.expectSecurity {
-			t.Errorf("Incorrect security detection for file at %s, got %t\n", path1, tt.expectSecurity)
+	for _, trial := range securityTest {
+		t.Run(filepath.Base(trial.path)+"SecurityCheck", func(tt *testing.T) {
+			if incompatibilityCheck(generateDoc(tt, trial.path), IncompatibiltiyClassification_Security) != trial.expectSecurity {
+				tt.Errorf("Incorrect security detection for file, got %t\n", trial.expectSecurity)
+			}
+		})
+	}
+}
+
+func TestIncompatibilityExistence(t *testing.T) {
+
+	var existenceTest = []struct {
+		path string
+	}{
+		{"../../examples/petstore/petstore.yaml"},
+		{"../oas-examples/petstore.json"},
+		{"../../examples/bookstore/bookstore.yaml"},
+	}
+
+	for _, trial := range existenceTest {
+		var node yaml.Node
+		incompReport := ScanIncompatibilities(generateDoc(t, trial.path))
+		data, _ := ioutil.ReadFile(trial.path)
+		marshErr := yaml.Unmarshal(data, &node)
+		if marshErr != nil {
+			t.Fatalf("Unable to marshal file<%s>", trial.path)
 		}
+		for _, incomp := range incompReport.GetIncompatibilities() {
+			t.Run(filepath.Base(trial.path)+"IncompExistence", func(tt *testing.T) {
+				_, searchErr :=
+					findNode(node.Content[0], incomp.GetTokenPath()...)
+				if searchErr != nil {
+					tt.Errorf(searchErr.Error())
+				}
+			})
+		}
+
 	}
 }
