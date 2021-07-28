@@ -50,8 +50,8 @@ func TestBasicSecurityIncompatibility(t *testing.T) {
 		path           string
 		expectSecurity bool
 	}{
-		{"../../generator/testfiles/other.yaml", false},
-		{"../../examples/petstore/petstore.yaml", true},
+		{"../generator/testfiles/other.yaml", false},
+		{"../examples/petstore/petstore.yaml", true},
 	}
 	for _, trial := range securityTest {
 		t.Run(filepath.Base(trial.path)+"SecurityCheck", func(tt *testing.T) {
@@ -67,9 +67,9 @@ func TestIncompatibilityExistence(t *testing.T) {
 	var existenceTest = []struct {
 		path string
 	}{
-		{"../../examples/petstore/petstore.yaml"},
-		{"../oas-examples/petstore.json"},
-		{"../../examples/bookstore/bookstore.yaml"},
+		{"../examples/petstore/petstore.yaml"},
+		{"oas-examples/petstore.json"},
+		{"../examples/bookstore/bookstore.yaml"},
 	}
 
 	for _, trial := range existenceTest {
