@@ -25,25 +25,22 @@ func findNode(node *yaml.Node, path ...string) (*yaml.Node, error) {
 		}
 		return findNode(node.Content[ind], path[1:]...)
 	}
+
 	//Look for matching key
-	for _, keyValue := range groupKeyValuePairs(node.Content) {
-		key := keyValue.key
-		val := keyValue.value
-		if key.Value != path[0] {
-			continue
-		}
-		return resolveMatchingPath(key, val, path...)
+	if foundKeyVal, ok := MapKeyValuePairs(node.Content)[path[0]]; ok {
+		return resolveMatchingPath(foundKeyVal.key, foundKeyVal.value, path...)
 	}
+
 	return nil, errors.New("unable to find yaml node")
 }
 
-func groupKeyValuePairs(content []*yaml.Node) []keyValue {
-	var keyValuePairs []keyValue
+func MapKeyValuePairs(content []*yaml.Node) map[string]keyValue {
+	var keyNodePair map[string]keyValue = make(map[string]keyValue)
 	for i := 0; i < len(content)-1; i += 2 {
 		ky, val := keyValuePairFromContent(content, i)
-		keyValuePairs = append(keyValuePairs, keyValue{key: ky, value: val})
+		keyNodePair[ky.Value] = keyValue{key: ky, value: val}
 	}
-	return keyValuePairs
+	return keyNodePair
 }
 
 // Helper in which path aligns with matching key node and needs

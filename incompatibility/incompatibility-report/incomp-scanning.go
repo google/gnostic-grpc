@@ -18,8 +18,10 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
 	plugins "github.com/googleapis/gnostic/plugins"
+	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -54,7 +56,9 @@ func CreateIncompReport(env *plugins.Environment, reportType Report) {
 }
 
 func writeProtobufMessage(incompatibilityReport *IncompatibilityReport, env *plugins.Environment) {
-	incompatibilityReportBytes, err := proto.Marshal(incompatibilityReport)
+	incompatibilityReportBytes, err :=
+		prototext.MarshalOptions{Multiline: true, Indent: "    "}.
+			Marshal(incompatibilityReport)
 	env.RespondAndExitIfError(err)
 	createdFile := &plugins.File{
 		Name: trimSourceName(env.Request.SourceName) + "_compatibility.pb",
