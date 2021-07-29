@@ -286,8 +286,8 @@ func schemaSearch(schema *openapiv3.Schema, path []string) []*Incompatibility {
 		}
 	}
 	if schema.Properties != nil {
-		for ind, prop := range schema.Properties.AdditionalProperties {
-			incompatibilities = append(incompatibilities, schemaSearch(prop.Value.GetSchema(), extendPath(path, "properties", strconv.Itoa(ind), prop.Name))...)
+		for _, prop := range schema.Properties.AdditionalProperties {
+			incompatibilities = append(incompatibilities, schemaSearch(prop.Value.GetSchema(), extendPath(path, "properties", prop.Name))...)
 		}
 	}
 	if schema.AdditionalProperties != nil && schema.AdditionalProperties.GetSchemaOrReference() != nil {

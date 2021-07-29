@@ -15,6 +15,7 @@
 package incompatibility
 
 import (
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
@@ -70,6 +71,7 @@ func TestIncompatibilityExistence(t *testing.T) {
 		{"../examples/petstore/petstore.yaml"},
 		{"oas-examples/petstore.json"},
 		{"../examples/bookstore/bookstore.yaml"},
+		{"oas-examples/openapi.yaml"},
 	}
 
 	for _, trial := range existenceTest {
@@ -85,7 +87,7 @@ func TestIncompatibilityExistence(t *testing.T) {
 				_, searchErr :=
 					findNode(node.Content[0], incomp.GetTokenPath()...)
 				if searchErr != nil {
-					tt.Errorf(searchErr.Error())
+					tt.Errorf(searchErr.Error(), fmt.Sprintf("%+v\n", incomp))
 				}
 			})
 		}
