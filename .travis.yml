@@ -8,7 +8,7 @@ sudo: false
 language: go
 
 go:
-  - "1.13"
+  - "1.16"
 
 install:
   - sudo apt-get update
