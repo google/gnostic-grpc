@@ -21,11 +21,12 @@ func FileReport2Analysis(reports ...*IncompatibilityReport) *ApiSetIncompatibili
 	return analysis
 }
 
+// TODO
 func AggregateAnalysis(analysis ...*ApiSetIncompatibility) *ApiSetIncompatibility {
-
 	return nil
 }
 
+// TODO
 func AggregateIncompatibilities(analysis *ApiSetIncompatibility, incompatibilities ...*Incompatibility) {
 	for _, incompatibility := range incompatibilities {
 		addIncompatibility2Analysis(analysis, incompatibility)
