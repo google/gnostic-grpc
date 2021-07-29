@@ -30,7 +30,6 @@ func findNode(node *yaml.Node, path ...string) (*yaml.Node, error) {
 	if foundKeyVal, ok := MapKeyValuePairs(node.Content)[path[0]]; ok {
 		return resolveMatchingPath(foundKeyVal.key, foundKeyVal.value, path...)
 	}
-
 	return nil, errors.New("unable to find yaml node")
 }
 

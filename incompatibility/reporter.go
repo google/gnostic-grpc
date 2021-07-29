@@ -53,7 +53,7 @@ func DocumentBaseSearch(doc *openapiv3.Document) []*Incompatibility {
 		return incompatibilities
 	}
 	incompatibilities = append(incompatibilities,
-		newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_Security, "security"))
+		newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_Security, "security"))
 	return incompatibilities
 }
 
@@ -143,6 +143,9 @@ func ComponentsSearch(doc *openapiv3.Document) []*Incompatibility {
 			)
 		}
 	}
+	if doc.Components.SecuritySchemes != nil {
+		incompatibilities = append(incompatibilities, newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_Security, extendPath(path, "securitySchemes")...))
+	}
 
 	return incompatibilities
 }
@@ -161,7 +164,7 @@ func validOperationSearch(operation *openapiv3.Operation, path []string) []*Inco
 	}
 	if operation.Security != nil {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_Security, extendPath(path, "security")...))
+			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_Security, extendPath(path, "security")...))
 	}
 	for ind, paramOrRef := range operation.Parameters {
 		incompatibilities = append(incompatibilities, parametersSearch(paramOrRef.GetParameter(), extendPath(path, "parameters", strconv.Itoa(ind)))...)
@@ -283,8 +286,8 @@ func schemaSearch(schema *openapiv3.Schema, path []string) []*Incompatibility {
 		}
 	}
 	if schema.Properties != nil {
-		for ind, prop := range schema.Properties.AdditionalProperties {
-			incompatibilities = append(incompatibilities, schemaSearch(prop.Value.GetSchema(), extendPath(path, "properties", strconv.Itoa(ind), prop.Name))...)
+		for _, prop := range schema.Properties.AdditionalProperties {
+			incompatibilities = append(incompatibilities, schemaSearch(prop.Value.GetSchema(), extendPath(path, "properties", prop.Name))...)
 		}
 	}
 	if schema.AdditionalProperties != nil && schema.AdditionalProperties.GetSchemaOrReference() != nil {

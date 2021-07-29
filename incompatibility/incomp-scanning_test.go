@@ -15,6 +15,7 @@
 package incompatibility
 
 import (
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
@@ -50,8 +51,8 @@ func TestBasicSecurityIncompatibility(t *testing.T) {
 		path           string
 		expectSecurity bool
 	}{
-		{"../../generator/testfiles/other.yaml", false},
-		{"../../examples/petstore/petstore.yaml", true},
+		{"../generator/testfiles/other.yaml", false},
+		{"../examples/petstore/petstore.yaml", true},
 	}
 	for _, trial := range securityTest {
 		t.Run(filepath.Base(trial.path)+"SecurityCheck", func(tt *testing.T) {
@@ -67,9 +68,10 @@ func TestIncompatibilityExistence(t *testing.T) {
 	var existenceTest = []struct {
 		path string
 	}{
-		{"../../examples/petstore/petstore.yaml"},
-		{"../oas-examples/petstore.json"},
-		{"../../examples/bookstore/bookstore.yaml"},
+		{"../examples/petstore/petstore.yaml"},
+		{"oas-examples/petstore.json"},
+		{"../examples/bookstore/bookstore.yaml"},
+		{"oas-examples/openapi.yaml"},
 	}
 
 	for _, trial := range existenceTest {
@@ -85,7 +87,7 @@ func TestIncompatibilityExistence(t *testing.T) {
 				_, searchErr :=
 					findNode(node.Content[0], incomp.GetTokenPath()...)
 				if searchErr != nil {
-					tt.Errorf(searchErr.Error())
+					tt.Errorf(searchErr.Error(), fmt.Sprintf("%+v\n", incomp))
 				}
 			})
 		}

@@ -85,7 +85,7 @@ func TestReporterCoverage(t *testing.T) {
 				Security: []*openapiv3.SecurityRequirement{{
 					AdditionalProperties: []*openapiv3.NamedStringArray{},
 				}}},
-			makeIncompatibilityReport(newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_Security, "security")),
+			makeIncompatibilityReport(newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_Security, "security")),
 			aggregateIncompatibilityReporters(DocumentBaseSearch),
 		},
 		{
@@ -102,7 +102,7 @@ func TestReporterCoverage(t *testing.T) {
 				}},
 				Paths: makePathsObject("pathName", OPTIONS, HEAD, TRACE)},
 			makeIncompatibilityReport(
-				newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_Security, "security"),
+				newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_Security, "security"),
 				newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_InvalidOperation, "paths", "pathName", "options"),
 				newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_InvalidOperation, "paths", "pathName", "head"),
 				newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_InvalidOperation, "paths", "pathName", "trace"),
