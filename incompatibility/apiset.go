@@ -14,22 +14,36 @@
 
 package incompatibility
 
+type intermediateReport struct {
+	countByClassification []int32
+	countBySeverity       []int32
+}
+
 // NewAnalysis initalizes and returns an apiset analysis object
 func NewAnalysis() *ApiSetIncompatibility {
+	var incompatibilityByClass []*IncompatibilityAnalysis = make([]*IncompatibilityAnalysis, len(IncompatibiltiyClassification_value))
+	for class, _ := range IncompatibiltiyClassification_name {
+		incompatibilityByClass[class] = &IncompatibilityAnalysis{
+			IncompatibilityClass: IncompatibiltiyClassification(class),
+			CountPerFile:         make(map[string]*FileIncompatibilityClassificationAnalysis),
+		}
+	}
 	return &ApiSetIncompatibility{
 		OpenApiFiles:               0,
 		IncompatibleFiles:          0,
-		AnalysisPerIncompatibility: make([]*IncompatibilityAnalysis, len(IncompatibiltiyClassification_value)),
+		AnalysisPerIncompatibility: incompatibilityByClass,
 	}
 }
 
-// TODO
 // AggregateAnalysis aggregates incompatibility information from multiple ApiSetIncompatibility
 // objects into one comprehensive ApiSetIncompatibility
 func AggregateAnalysis(analysis ...*ApiSetIncompatibility) *ApiSetIncompatibility {
 	aggAnalysis := NewAnalysis()
 	for _, analysisObj := range analysis {
 		aggAnalysis.OpenApiFiles += analysisObj.OpenApiFiles
+		aggAnalysis.IncompatibleFiles += analysisObj.IncompatibleFiles
+		aggAnalysis.AnalysisPerIncompatibility =
+			mergeIncompatibilityAnalysis(aggAnalysis.AnalysisPerIncompatibility, analysisObj.AnalysisPerIncompatibility)
 	}
 	return aggAnalysis
 }
@@ -38,13 +52,55 @@ func AggregateAnalysis(analysis ...*ApiSetIncompatibility) *ApiSetIncompatibilit
 func FormAnalysis(report *IncompatibilityReport, uniqueFilePath string) *ApiSetIncompatibility {
 	analysis := NewAnalysis()
 	analysis.OpenApiFiles++
+	intermedReport := countIncompatibilities(report.GetIncompatibilities()...)
+	for class, count := range intermedReport.countByClassification {
+		if count == 0 {
+			continue
+		}
+		fileOccurMap := analysis.AnalysisPerIncompatibility[class].CountPerFile
+		fileOccurMap[uniqueFilePath] =
+			&FileIncompatibilityClassificationAnalysis{
+				NumOccurrences: count}
+	}
+	failIncompatibilitiesCount := intermedReport.countBySeverity[Severity_FAIL]
+	if failIncompatibilitiesCount > 0 {
+		analysis.IncompatibleFiles++
+	}
 	return analysis
 }
 
-// TODO
-// AggregateIncompatiblities aggrates information from individual incompatibilities into an
-// existing analysis object
-func AggregateIncompatibilities(analysis *ApiSetIncompatibility, incompatibilities ...*Incompatibility) *ApiSetIncompatibility {
-	analysis.OpenApiFiles++
-	return analysis
+// merge incompatibily analysis by classification
+func mergeIncompatibilityAnalysis(a1, a2 []*IncompatibilityAnalysis) []*IncompatibilityAnalysis {
+	var a3 []*IncompatibilityAnalysis = make([]*IncompatibilityAnalysis, len(IncompatibiltiyClassification_name))
+	for _, class := range IncompatibiltiyClassification_value {
+		mapCount1 := a1[class].CountPerFile
+		mapCount2 := a2[class].CountPerFile
+		a3[class] = &IncompatibilityAnalysis{
+			IncompatibilityClass: IncompatibiltiyClassification(class),
+			CountPerFile:         appendFileInfomation(mapCount1, mapCount2),
+		}
+	}
+	return a3
+}
+
+// adds incompatibility counts by file in m2 to m1 each map should correspond to the same
+// incompatibility classification
+func appendFileInfomation(m1, m2 map[string]*FileIncompatibilityClassificationAnalysis) map[string]*FileIncompatibilityClassificationAnalysis {
+	for fileName, incompAnalysis := range m2 {
+		m1[fileName] = incompAnalysis
+	}
+	return m1
+}
+
+func countIncompatibilities(incompatibilities ...*Incompatibility) intermediateReport {
+	var countByClass []int32 = make([]int32, len(IncompatibiltiyClassification_value))
+	var countBySev []int32 = make([]int32, len(Severity_value))
+	for _, incomp := range incompatibilities {
+		countByClass[incomp.Classification]++
+		countBySev[incomp.Severity]++
+	}
+	return intermediateReport{
+		countByClassification: countByClass,
+		countBySeverity:       countBySev,
+	}
 }

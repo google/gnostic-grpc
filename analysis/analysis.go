@@ -27,6 +27,7 @@ import (
 
 	"github.com/googleapis/gnostic-grpc/incompatibility"
 	"github.com/googleapis/gnostic-grpc/utils"
+	"google.golang.org/protobuf/encoding/prototext"
 )
 
 // main function for aggreation tool
@@ -58,6 +59,7 @@ func generateAnalysis(dirPath string) *incompatibility.ApiSetIncompatibility {
 	if readingDirectoryErr != nil {
 		exitIfError(errors.New("unable to walk through directory"))
 	}
+	println(prototext.Format(analysisAggregation))
 	return analysisAggregation
 }
 
