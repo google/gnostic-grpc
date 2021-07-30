@@ -57,7 +57,7 @@ func generateAnalysis(dirPath string) *incompatibility.ApiSetIncompatibility {
 		return nil
 	})
 	if readingDirectoryErr != nil {
-		exitIfError(errors.New("unable to walk through directory"))
+		log.Println("unable to walk through directory")
 	}
 	println(prototext.Format(analysisAggregation))
 	return analysisAggregation

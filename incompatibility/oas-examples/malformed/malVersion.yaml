@@ -1,0 +1,7 @@
+openapi: "4.0"
+info:
+  version: 1.0.0
+  title: malformed
+servers:
+paths:
+components:
