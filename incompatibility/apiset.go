@@ -28,7 +28,6 @@ func NewAnalysis() *ApiSetIncompatibility {
 	}
 }
 
-// TODO
 // AggregateReports aggregates incompatibility information from IncomaptibiltyReports
 // into a new ApiSetIncompatiblity object.
 func AggregateReports(reports ...*IncompatibilityReport) *ApiSetIncompatibility {
@@ -39,7 +38,6 @@ func AggregateReports(reports ...*IncompatibilityReport) *ApiSetIncompatibility 
 	return analysis
 }
 
-// TODO
 // AggregateAnalysis aggregates incompatibility information from multiple ApiSetIncompatibility
 // objects into one comprehensive ApiSetIncompatibility
 func AggregateAnalysis(analysis ...*ApiSetIncompatibility) *ApiSetIncompatibility {
@@ -50,7 +48,6 @@ func AggregateAnalysis(analysis ...*ApiSetIncompatibility) *ApiSetIncompatibilit
 	return aggAnalysis
 }
 
-// TODO
 // AggregateIncompatiblities aggrates information from individual incompatibilities into an
 // existing analysis object
 func AggregateIncompatibilities(analysis *ApiSetIncompatibility, incompatibilities ...*Incompatibility) *ApiSetIncompatibility {
