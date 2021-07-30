@@ -44,8 +44,9 @@ func generateAnalysis(dirPath string) *incompatibility.ApiSetIncompatibility {
 	readingDirectoryErr := filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			log.Printf("walk error for file at %s", path)
+			return nil
 		}
-		if d == nil || d.IsDir() {
+		if d.IsDir() {
 			return nil
 		}
 		newAnalysis, analysisErr := fileHandler(path)
