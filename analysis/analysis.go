@@ -69,7 +69,7 @@ func fileHandler(path string) (*incompatibility.ApiSetIncompatibility, error) {
 	}
 	incompatibilityReport := incompatibility.ScanIncompatibilities(openAPIDoc)
 	log.Printf("created incompatibility report for file at %s\n", path)
-	return incompatibility.FormAnalysis(incompatibilityReport), nil
+	return incompatibility.FormAnalysis(incompatibilityReport, path), nil
 }
 
 func exitIfError(e error) {

@@ -16,27 +16,11 @@ package incompatibility
 
 // NewAnalysis initalizes and returns an apiset analysis object
 func NewAnalysis() *ApiSetIncompatibility {
-	incompatibilityMap := make(map[string]*IncompatibilityAnalysis)
-	for _, incompClassString := range IncompatibiltiyClassification_name {
-		incompatibilityMap[incompClassString] =
-			&IncompatibilityAnalysis{FilesWithIncompatibility: 0}
-	}
 	return &ApiSetIncompatibility{
 		OpenApiFiles:               0,
 		IncompatibleFiles:          0,
-		AnalysisPerIncompatibility: incompatibilityMap,
+		AnalysisPerIncompatibility: make([]*IncompatibilityAnalysis, len(IncompatibiltiyClassification_value)),
 	}
-}
-
-// TODO
-// AggregateReports aggregates incompatibility information from IncomaptibiltyReports
-// into a new ApiSetIncompatiblity object.
-func AggregateReports(reports ...*IncompatibilityReport) *ApiSetIncompatibility {
-	analysis := NewAnalysis()
-	for _, report := range reports {
-		analysis = AggregateAnalysis(analysis, FormAnalysis(report))
-	}
-	return analysis
 }
 
 // TODO
@@ -51,7 +35,7 @@ func AggregateAnalysis(analysis ...*ApiSetIncompatibility) *ApiSetIncompatibilit
 }
 
 // FormAnalysis creates an analysis object from a single IncompatibilityReport
-func FormAnalysis(report *IncompatibilityReport) *ApiSetIncompatibility {
+func FormAnalysis(report *IncompatibilityReport, uniqueFilePath string) *ApiSetIncompatibility {
 	analysis := NewAnalysis()
 	analysis.OpenApiFiles++
 	return analysis
