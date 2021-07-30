@@ -16,7 +16,6 @@ package incompatibility
 
 import (
 	"errors"
-	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -74,15 +73,6 @@ func trimSourceName(pathWithExtension string) string {
 		return fileNameWithExtension[:extInd]
 	}
 	return pathWithExtension
-}
-
-func incompatibilityReportString(rep *IncompatibilityReport) string {
-	var reportString string
-	reportString += fmt.Sprintf("Found %d incompatibilities\n", len(rep.GetIncompatibilities()))
-	for _, incomp := range rep.GetIncompatibilities() {
-		reportString += fmt.Sprintf("%+v\n", incomp)
-	}
-	return reportString
 }
 
 // Scan for incompatibilities in an OpenAPI document
