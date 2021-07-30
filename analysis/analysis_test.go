@@ -15,6 +15,7 @@ func TestProcessOpenAPIDocs(t *testing.T) {
 	}{
 		{"3Docs", "../incompatibility/oas-examples", 3},
 		{"0Docs", "../utils", 0},
+		{"NestDirectories", "../generator/testfiles/", 6},
 	}
 
 	for _, trial := range processOASTest {

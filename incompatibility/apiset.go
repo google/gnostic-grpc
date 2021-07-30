@@ -34,7 +34,7 @@ func NewAnalysis() *ApiSetIncompatibility {
 func AggregateReports(reports ...*IncompatibilityReport) *ApiSetIncompatibility {
 	analysis := NewAnalysis()
 	for _, report := range reports {
-		AggregateIncompatibilities(analysis, report.GetIncompatibilities()...)
+		analysis = AggregateAnalysis(analysis, FormAnalysis(report))
 	}
 	return analysis
 }
@@ -48,6 +48,13 @@ func AggregateAnalysis(analysis ...*ApiSetIncompatibility) *ApiSetIncompatibilit
 		aggAnalysis.OpenApiFiles += analysisObj.OpenApiFiles
 	}
 	return aggAnalysis
+}
+
+// FormAnalysis creates an analysis object from a single IncompatibilityReport
+func FormAnalysis(report *IncompatibilityReport) *ApiSetIncompatibility {
+	analysis := NewAnalysis()
+	analysis.OpenApiFiles++
+	return analysis
 }
 
 // TODO
