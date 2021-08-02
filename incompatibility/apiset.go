@@ -14,9 +14,10 @@
 
 package incompatibility
 
-type intermediateReport struct {
-	countByClassification []int32
-	countBySeverity       []int32
+// IntermediateReport counts the number of incompatibility occurrences
+type IntermediateReport struct {
+	CountByClassification []int32
+	CountBySeverity       []int32
 }
 
 // NewAnalysis initalizes and returns an apiset analysis object
@@ -52,8 +53,8 @@ func AggregateAnalysis(analysis ...*ApiSetIncompatibility) *ApiSetIncompatibilit
 func FormAnalysis(report *IncompatibilityReport, uniqueFilePath string) *ApiSetIncompatibility {
 	analysis := NewAnalysis()
 	analysis.OpenApiFiles++
-	intermedReport := countIncompatibilities(report.GetIncompatibilities()...)
-	for class, count := range intermedReport.countByClassification {
+	intermedReport := CountIncompatibilities(report.GetIncompatibilities()...)
+	for class, count := range intermedReport.CountByClassification {
 		if count == 0 {
 			continue
 		}
@@ -62,7 +63,7 @@ func FormAnalysis(report *IncompatibilityReport, uniqueFilePath string) *ApiSetI
 			&FileIncompatibilityClassificationAnalysis{
 				NumOccurrences: count}
 	}
-	failIncompatibilitiesCount := intermedReport.countBySeverity[Severity_FAIL]
+	failIncompatibilitiesCount := intermedReport.CountBySeverity[Severity_FAIL]
 	if failIncompatibilitiesCount > 0 {
 		analysis.IncompatibleFiles++
 	}
@@ -92,15 +93,15 @@ func appendFileInfomation(m1, m2 map[string]*FileIncompatibilityClassificationAn
 	return m1
 }
 
-func countIncompatibilities(incompatibilities ...*Incompatibility) intermediateReport {
+func CountIncompatibilities(incompatibilities ...*Incompatibility) IntermediateReport {
 	var countByClass []int32 = make([]int32, len(IncompatibiltiyClassification_value))
 	var countBySev []int32 = make([]int32, len(Severity_value))
 	for _, incomp := range incompatibilities {
 		countByClass[incomp.Classification]++
 		countBySev[incomp.Severity]++
 	}
-	return intermediateReport{
-		countByClassification: countByClass,
-		countBySeverity:       countBySev,
+	return IntermediateReport{
+		CountByClassification: countByClass,
+		CountBySeverity:       countBySev,
 	}
 }

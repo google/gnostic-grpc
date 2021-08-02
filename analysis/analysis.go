@@ -49,11 +49,12 @@ func generateAnalysis(dirPath string) *incompatibility.ApiSetIncompatibility {
 		if d.IsDir() {
 			return nil
 		}
-		newAnalysis, analysisErr := fileHandler(path)
+		incompatibilityReport, analysisErr := fileHandler(path)
 		if analysisErr != nil {
 			log.Printf("unable to produce analysis for file %s with error <%s>", path, analysisErr.Error())
 		} else {
-			analysisAggregation = incompatibility.AggregateAnalysis(analysisAggregation, newAnalysis)
+			analysisAggregation = incompatibility.AggregateAnalysis(analysisAggregation,
+				incompatibility.FormAnalysis(incompatibilityReport, path))
 		}
 		return nil
 	})
@@ -65,14 +66,14 @@ func generateAnalysis(dirPath string) *incompatibility.ApiSetIncompatibility {
 }
 
 // fileHander attempts to parse the file at path to then create an incompatibility report
-func fileHandler(path string) (*incompatibility.ApiSetIncompatibility, error) {
+func fileHandler(path string) (*incompatibility.IncompatibilityReport, error) {
 	openAPIDoc, err := utils.ParseOpenAPIDoc(path)
 	if err != nil {
 		return nil, err
 	}
 	incompatibilityReport := incompatibility.ScanIncompatibilities(openAPIDoc)
 	log.Printf("created incompatibility report for file at %s\n", path)
-	return incompatibility.FormAnalysis(incompatibilityReport, path), nil
+	return incompatibilityReport, nil
 }
 
 func exitIfError(e error) {
