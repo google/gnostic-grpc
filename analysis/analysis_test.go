@@ -67,7 +67,7 @@ func TestFileInformationIncluded(t *testing.T) {
 						continue
 					}
 					countFromAnalysis := getAnalysisIncompCount(setAnalysis, incompatibility.IncompatibiltiyClassification(class), oasFilePath)
-					if countFromAnalysis != 1 {
+					if countFromAnalysis != count {
 						tt.Errorf("getAnalysisIncompCount(..., %v, %s), got %d, wanted %d",
 							incompatibility.IncompatibiltiyClassification(class), oasFilePath, countFromAnalysis, count)
 					}
