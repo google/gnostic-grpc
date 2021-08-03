@@ -54,7 +54,7 @@ const (
 	TRACE
 )
 
-func makePathsObject(pathsName string, operationType ...InvalidOperationType) *openapiv3.Paths {
+func makeShallowPathsObject(pathsName string, operationType ...InvalidOperationType) *openapiv3.Paths {
 	var pathItem *openapiv3.PathItem = &openapiv3.PathItem{}
 	for _, opType := range operationType {
 		switch opType {
@@ -66,57 +66,313 @@ func makePathsObject(pathsName string, operationType ...InvalidOperationType) *o
 			pathItem.Trace = &openapiv3.Operation{}
 		}
 	}
+	pathItem.Summary = "Sudo Summary"
+	pathItem.Description = "Sudo Description"
 	return &openapiv3.Paths{Path: []*openapiv3.NamedPathItem{{Name: pathsName, Value: pathItem}}}
 }
 
-// Simple test for in-progress incompatibility chain coverage
-func TestReporterCoverage(t *testing.T) {
+func testIncompatibilityReports(t *testing.T, formattedError string, want, got *IncompatibilityReport) {
+	diff := cmp.Diff(want, got, ignoreUnexportedOption, incompatibilityOrderOption)
+	if diff != "" {
+		t.Errorf(formattedError+":\n+v", diff)
+	}
+}
 
-	var reporterTest = []struct {
-		givenDocument                 *openapiv3.Document
+func TestPathsSearch(t *testing.T) {
+	var pathTest = []struct {
+		testname                      string
+		documentWithPaths             *openapiv3.Document
 		expectedIncompatibilityReport *IncompatibilityReport
-		incompatibilityReporters      IncompatibilityReporter
 	}{
-		{&openapiv3.Document{}, &IncompatibilityReport{}, aggregateIncompatibilityReporters()},
-		{&openapiv3.Document{}, &IncompatibilityReport{}, aggregateIncompatibilityReporters(DocumentBaseSearch)},
-		{&openapiv3.Document{}, &IncompatibilityReport{}, aggregateIncompatibilityReporters(PathsSearch, DocumentBaseSearch)},
 		{
+			"EmptyPaths",
 			&openapiv3.Document{
-				Security: []*openapiv3.SecurityRequirement{{
-					AdditionalProperties: []*openapiv3.NamedStringArray{},
-				}}},
-			makeIncompatibilityReport(newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_Security, "security")),
-			aggregateIncompatibilityReporters(DocumentBaseSearch),
+				Paths: &openapiv3.Paths{}},
+			makeIncompatibilityReport(),
 		},
 		{
-			&openapiv3.Document{Security: []*openapiv3.SecurityRequirement{{
-				AdditionalProperties: []*openapiv3.NamedStringArray{},
-			}}},
-			makeIncompatibilityReport(), // only includes path
-			aggregateIncompatibilityReporters(PathsSearch),
+			"MetaDataInformation",
+			&openapiv3.Document{
+				Paths: makeShallowPathsObject("pathName")},
+			makeIncompatibilityReport(),
 		},
 		{
+			"AllInvalidOperationsInPaths",
 			&openapiv3.Document{
-				Security: []*openapiv3.SecurityRequirement{{
-					AdditionalProperties: []*openapiv3.NamedStringArray{},
-				}},
-				Paths: makePathsObject("pathName", OPTIONS, HEAD, TRACE)},
+				Paths: makeShallowPathsObject("pathName", OPTIONS, HEAD, TRACE)},
 			makeIncompatibilityReport(
-				newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_Security, "security"),
 				newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_InvalidOperation, "paths", "pathName", "options"),
 				newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_InvalidOperation, "paths", "pathName", "head"),
 				newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_InvalidOperation, "paths", "pathName", "trace"),
 			),
-			aggregateIncompatibilityReporters(DocumentBaseSearch, PathsSearch),
 		},
 	}
-	for ind, tt := range reporterTest {
-		testname := fmt.Sprintf("CoverageTest%d", ind)
-		t.Run(testname, func(t *testing.T) {
-			got := ReportOnDoc(tt.givenDocument, tt.incompatibilityReporters)
-			if diff := cmp.Diff(tt.expectedIncompatibilityReport, got, ignoreUnexportedOption, incompatibilityOrderOption); diff != "" {
-				t.Errorf("SearchChains(%v, %v): diff (-want +got):\n%v", tt.givenDocument, tt.incompatibilityReporters, diff)
-			}
+	for _, trial := range pathTest {
+		got := reportOnDoc(trial.documentWithPaths, PathsSearch)
+		t.Run(trial.testname, func(tt *testing.T) {
+			errorString := fmt.Sprintf("PathsSearch(%v): diff(-want +got):\n", trial.documentWithPaths)
+			testIncompatibilityReports(tt, errorString, trial.expectedIncompatibilityReport, got)
+		})
+	}
+}
+
+func TestComponentSearch(t *testing.T) {
+	var pathTest = []struct {
+		testname                      string
+		documentWithComponent         *openapiv3.Document
+		expectedIncompatibilityReport *IncompatibilityReport
+	}{
+		{
+			"emptycomponent",
+			&openapiv3.Document{
+				Components: &openapiv3.Components{}},
+			makeIncompatibilityReport(),
+		},
+		{
+			"MetaDataInformation",
+			&openapiv3.Document{
+				Components: &openapiv3.Components{
+					Examples: &openapiv3.ExamplesOrReferences{},
+					Links:    &openapiv3.LinksOrReferences{},
+				}},
+			makeIncompatibilityReport(),
+		},
+		{
+			"AllInvalidOperationsInPaths",
+			&openapiv3.Document{
+				Components: &openapiv3.Components{
+					Callbacks:       &openapiv3.CallbacksOrReferences{},
+					SecuritySchemes: &openapiv3.SecuritySchemesOrReferences{},
+				}},
+			makeIncompatibilityReport(
+				newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_ExternalTranscodingSupport, "components", "callbacks"),
+				newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_Security, "components", "securitySchemes"),
+			),
+		},
+	}
+	for _, trial := range pathTest {
+		got := ComponentsSearch(trial.documentWithComponent)
+		t.Run(trial.testname, func(tt *testing.T) {
+			errorString := fmt.Sprintf("componentsSearch(%v): diff(-want +got):\n", trial.documentWithComponent)
+			testIncompatibilityReports(tt, errorString, trial.expectedIncompatibilityReport,
+				&IncompatibilityReport{Incompatibilities: got})
+		})
+	}
+}
+
+func TestOperationSearch(t *testing.T) {
+	var operationSearchTest = []struct {
+		testname                      string
+		operation                     *openapiv3.Operation
+		expectedIncompatibilityReport *IncompatibilityReport
+	}{
+		{
+			"emptyoperation",
+			&openapiv3.Operation{},
+			makeIncompatibilityReport(),
+		},
+		{
+			"MetaDataFieldsandSupportedFields",
+			&openapiv3.Operation{
+				Deprecated:  true,
+				OperationId: "id",
+				Summary:     "sum",
+				Description: "description",
+			},
+			makeIncompatibilityReport(),
+		},
+		{
+			"InvalidFields",
+			&openapiv3.Operation{
+				Callbacks: &openapiv3.CallbacksOrReferences{},
+				Security:  []*openapiv3.SecurityRequirement{},
+			},
+			makeIncompatibilityReport(
+				newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_Security, "security"),
+				newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_ExternalTranscodingSupport, "callbacks"),
+			),
+		},
+	}
+	for _, trial := range operationSearchTest {
+		got := validOperationSearch(trial.operation, []string{})
+		t.Run(trial.testname, func(tt *testing.T) {
+			errorString := fmt.Sprintf("validOperationSearch(%v): diff(-want +got):\n", trial.operation)
+			testIncompatibilityReports(tt, errorString, trial.expectedIncompatibilityReport,
+				&IncompatibilityReport{Incompatibilities: got})
+		})
+	}
+}
+
+func TestParametersSearch(t *testing.T) {
+	var parameterSearchTest = []struct {
+		testname                      string
+		parameter                     *openapiv3.Parameter
+		expectedIncompatibilityReport *IncompatibilityReport
+	}{
+		{
+			"emptyparameter",
+			&openapiv3.Parameter{},
+			makeIncompatibilityReport(),
+		},
+		{
+			"MetaDataFieldsandSupportedFields",
+			&openapiv3.Parameter{
+				Name:     "name",
+				Required: true,
+			},
+			makeIncompatibilityReport(),
+		},
+		{
+			"InvalidFields",
+			&openapiv3.Parameter{
+				Style:           "sty",
+				Explode:         true,
+				AllowEmptyValue: true,
+				AllowReserved:   true,
+				Schema:          &openapiv3.SchemaOrReference{},
+			},
+			makeIncompatibilityReport(
+				newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_ParameterStyling, "style"),
+				newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_ParameterStyling, "explode"),
+				newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_ParameterStyling, "allowReserved"),
+				newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, "allowEmptyValue"),
+			),
+		},
+	}
+	for _, trial := range parameterSearchTest {
+		got := parametersSearch(trial.parameter, []string{})
+		t.Run(trial.testname, func(tt *testing.T) {
+			errorString := fmt.Sprintf("parametersSearch(%v): diff(-want +got):\n", trial.parameter)
+			testIncompatibilityReports(tt, errorString, trial.expectedIncompatibilityReport,
+				&IncompatibilityReport{Incompatibilities: got})
+		})
+	}
+}
+
+func TestSchemaSearch(t *testing.T) {
+	var schemaSearchTest = []struct {
+		testname                      string
+		schema                        *openapiv3.Schema
+		expectedIncompatibilityReport *IncompatibilityReport
+	}{
+		{
+			"emptyschema",
+			&openapiv3.Schema{},
+			makeIncompatibilityReport(),
+		},
+		{
+			"MetaDataFieldsandSupportedFields",
+			&openapiv3.Schema{
+				Title:         "title",
+				MaxProperties: 10,
+				Not:           &openapiv3.Schema{},
+				Type:          "type",
+				Default:       &openapiv3.DefaultType{},
+			},
+			makeIncompatibilityReport(),
+		},
+		{
+			"InvalidFields",
+			&openapiv3.Schema{
+				Nullable:         true,
+				Discriminator:    &openapiv3.Discriminator{},
+				ReadOnly:         true,
+				WriteOnly:        true,
+				MultipleOf:       11,
+				Maximum:          11,
+				ExclusiveMaximum: true,
+				Minimum:          11,
+				ExclusiveMinimum: true,
+				MaxLength:        11,
+				MinLength:        11,
+				Pattern:          "pattern",
+				MaxItems:         11,
+				MinItems:         11,
+				UniqueItems:      true,
+				AllOf:            make([]*openapiv3.SchemaOrReference, 2),
+				OneOf:            make([]*openapiv3.SchemaOrReference, 2),
+				AnyOf:            make([]*openapiv3.SchemaOrReference, 2),
+			},
+			makeIncompatibilityReport(
+				newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_InvalidDataState, "nullable"),
+				newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_Inheritance, "discriminator"),
+				newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_ParameterStyling, "readOnly"),
+				newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_ParameterStyling, "writeOnly"),
+				newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, "multipleOf"),
+				newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, "maximum"),
+				newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, "exclusiveMaximum"),
+				newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, "minimum"),
+				newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, "exclusiveMinimum"),
+				newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, "maxLength"),
+				newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, "minimum"),
+				newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, "pattern"),
+				newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, "maxItems"),
+				newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, "minItems"),
+				newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, "uniqueItems"),
+				newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_Inheritance, "allOf"),
+				newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_Inheritance, "oneOf"),
+				newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_Inheritance, "anyOf"),
+			),
+		},
+	}
+	for _, trial := range schemaSearchTest {
+		got := schemaSearch(trial.schema, []string{})
+		t.Run(trial.testname, func(tt *testing.T) {
+			errorString := fmt.Sprintf("schemaSearch(%v): diff(-want +got):\n", trial.schema)
+			testIncompatibilityReports(tt, errorString, trial.expectedIncompatibilityReport,
+				&IncompatibilityReport{Incompatibilities: got})
+		})
+	}
+}
+
+func TestResponseSearch(t *testing.T) {
+	var responseSearchTest = []struct {
+		testname                      string
+		response                      *openapiv3.Response
+		expectedIncompatibilityReport *IncompatibilityReport
+	}{
+		{
+			"emptyschema",
+			&openapiv3.Response{},
+			makeIncompatibilityReport(),
+		},
+		{
+			"MetaDataFieldsandSupportedFields",
+			&openapiv3.Response{
+				Description: "desc.",
+				Links:       &openapiv3.LinksOrReferences{},
+			},
+			makeIncompatibilityReport(),
+		},
+		{
+			"InvalidFields",
+			&openapiv3.Response{
+				Headers: &openapiv3.HeadersOrReferences{
+					AdditionalProperties: []*openapiv3.NamedHeaderOrReference{
+						{
+							Name: "header",
+							Value: &openapiv3.HeaderOrReference{
+								Oneof: &openapiv3.HeaderOrReference_Header{
+									Header: &openapiv3.Header{
+										Style: "style",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			makeIncompatibilityReport(
+				newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_ParameterStyling, "header", "style"),
+			),
+		},
+	}
+	for _, trial := range responseSearchTest {
+		got := responseSearch(trial.response, []string{})
+		t.Run(trial.testname, func(tt *testing.T) {
+			errorString := fmt.Sprintf("responseSearch(%v): diff(-want +got):\n", trial.response)
+			testIncompatibilityReports(tt, errorString, trial.expectedIncompatibilityReport,
+				&IncompatibilityReport{Incompatibilities: got})
 		})
 	}
 }

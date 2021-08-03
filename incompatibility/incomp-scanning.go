@@ -87,5 +87,5 @@ func incompatibilityReportString(rep *IncompatibilityReport) string {
 
 // Scan for incompatibilities in an OpenAPI document
 func ScanIncompatibilities(document *openapiv3.Document) *IncompatibilityReport {
-	return ReportOnDoc(document, IncompatibilityReporters...)
+	return reportOnDoc(document, IncompatibilityReporters...)
 }
