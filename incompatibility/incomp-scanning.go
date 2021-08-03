@@ -16,7 +16,6 @@ package incompatibility
 
 import (
 	"errors"
-	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -49,7 +48,7 @@ func CreateIncompReport(env *plugins.Environment, reportType Report) {
 		openAPIdocument := &openapiv3.Document{}
 		err := proto.Unmarshal(model.Value, openAPIdocument)
 		env.RespondAndExitIfError(err)
-		incompatibilityReport := ScanIncompatibilities(openAPIdocument)
+		incompatibilityReport := ScanIncompatibilities(openAPIdocument, env.Request.SourceName)
 		writeProtobufMessage(incompatibilityReport, env)
 		env.RespondAndExit()
 	}
@@ -76,18 +75,9 @@ func trimSourceName(pathWithExtension string) string {
 	return pathWithExtension
 }
 
-func incompatibilityReportString(rep *IncompatibilityReport) string {
-	var reportString string
-	reportString += fmt.Sprintf("Found %d incompatibilities\n", len(rep.GetIncompatibilities()))
-	for _, incomp := range rep.GetIncompatibilities() {
-		reportString += fmt.Sprintf("%+v\n", incomp)
-	}
-	return reportString
-}
-
 // Scan for incompatibilities in an OpenAPI document
-func ScanIncompatibilities(document *openapiv3.Document) *IncompatibilityReport {
-	return reportOnDoc(document, IncompatibilityReporters...)
+func ScanIncompatibilities(document *openapiv3.Document, reportIdentifier string) *IncompatibilityReport {
+	return ReportOnDoc(document, reportIdentifier, IncompatibilityReporters...)
 }
 
 func newIncompatibility(severity Severity, classification IncompatibiltiyClassification, path ...string) *Incompatibility {

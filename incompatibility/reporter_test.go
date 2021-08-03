@@ -108,7 +108,7 @@ func TestPathsSearch(t *testing.T) {
 		},
 	}
 	for _, trial := range pathTest {
-		got := reportOnDoc(trial.documentWithPaths, PathsSearch)
+		got := ReportOnDoc(trial.documentWithPaths, "", PathsSearch)
 		t.Run(trial.testname, func(tt *testing.T) {
 			errorString := fmt.Sprintf("PathsSearch(%v): diff(-want +got):\n", trial.documentWithPaths)
 			testIncompatibilityReports(tt, errorString, trial.expectedIncompatibilityReport, got)

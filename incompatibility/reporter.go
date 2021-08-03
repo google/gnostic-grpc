@@ -41,8 +41,10 @@ func aggregateIncompatibilityReporters(reporters ...IncompatibilityReporter) Inc
 }
 
 //ReportOnDoc applies the given reporters on the given doc to produce an Incompatibilty Report
-func reportOnDoc(doc *openapiv3.Document, reporters ...IncompatibilityReporter) *IncompatibilityReport {
-	return &IncompatibilityReport{Incompatibilities: aggregateIncompatibilityReporters(reporters...)(doc)}
+func ReportOnDoc(doc *openapiv3.Document, reportIdentifier string, reporters ...IncompatibilityReporter) *IncompatibilityReport {
+	return &IncompatibilityReport{
+		ReportIdentifier:  reportIdentifier,
+		Incompatibilities: aggregateIncompatibilityReporters(reporters...)(doc)}
 }
 
 // ======================== Defined Reporters  ====================== //
