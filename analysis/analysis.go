@@ -40,7 +40,7 @@ func main() {
 
 // runs analysis on given directory
 func generateAnalysis(dirPath string) *incompatibility.ApiSetIncompatibility {
-	analysisAggregation := incompatibility.NewAnalysis()
+	var reports []*incompatibility.IncompatibilityReport
 	readingDirectoryErr := filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			log.Printf("walk error for file at %s", path)
@@ -53,14 +53,14 @@ func generateAnalysis(dirPath string) *incompatibility.ApiSetIncompatibility {
 		if analysisErr != nil {
 			log.Printf("unable to produce analysis for file %s with error <%s>", path, analysisErr.Error())
 		} else {
-			analysisAggregation = incompatibility.AggregateAnalysis(analysisAggregation,
-				incompatibility.FormAnalysis(incompatibilityReport, path))
+			reports = append(reports, incompatibilityReport)
 		}
 		return nil
 	})
 	if readingDirectoryErr != nil {
 		log.Println("unable to walk through directory")
 	}
+	analysisAggregation := incompatibility.AggregateReports(reports...)
 	println(prototext.Format(analysisAggregation))
 	return analysisAggregation
 }
@@ -71,7 +71,7 @@ func fileHandler(path string) (*incompatibility.IncompatibilityReport, error) {
 	if err != nil {
 		return nil, err
 	}
-	incompatibilityReport := incompatibility.ScanIncompatibilities(openAPIDoc)
+	incompatibilityReport := incompatibility.ScanIncompatibilities(openAPIDoc, path)
 	log.Printf("created incompatibility report for file at %s\n", path)
 	return incompatibilityReport, nil
 }
