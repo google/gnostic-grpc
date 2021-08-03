@@ -28,6 +28,7 @@ type keyValue struct {
 	value *yaml.Node
 }
 
+// Parses filePath and attempts to create Node Object
 func MakeNode(filePath string) (*yaml.Node, error) {
 	var node yaml.Node
 	data, err := ioutil.ReadFile(filePath)
@@ -56,7 +57,7 @@ func FindNode(node *yaml.Node, path ...string) (*yaml.Node, error) {
 	if foundKeyVal, ok := mapKeyValuePairs(node.Content)[path[0]]; ok {
 		return resolveMatchingPath(foundKeyVal.key, foundKeyVal.value, path...)
 	}
-	return nil, errors.New(fmt.Sprintf("unable to find yaml node %s in %s", path[0], node.Value))
+	return nil, fmt.Errorf("unable to find yaml node %s in %s", path[0], node.Value)
 }
 
 func mapKeyValuePairs(content []*yaml.Node) map[string]keyValue {
