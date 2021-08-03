@@ -47,12 +47,16 @@ func groupIncompatibilities(incompatibilityReports []*IncompatibilityReport) []*
 	return allIncompatibilities
 }
 
+func createReport(t *testing.T, path string) *IncompatibilityReport {
+	return ScanIncompatibilities(generateDoc(t, path), path)
+}
+
 // TestIncompatibilityCount tests for transferring incompatibily counts from reports to set
 // analysis.
 func TestIncompatibilityCount(t *testing.T) {
-	var googleReport *IncompatibilityReport = ScanIncompatibilities(generateDoc(t, "oas-examples/openapi.yaml"), "oas-examples/openapi.yaml")
-	var petStoreReport *IncompatibilityReport = ScanIncompatibilities(generateDoc(t, "oas-examples/petstore.yaml"), "oas-examples/petstore.yaml")
-	var bookStoreReport *IncompatibilityReport = ScanIncompatibilities(generateDoc(t, "../examples/bookstore/bookstore.yaml"), "../examples/bookstore/bookstore.yaml")
+	var googleReport = createReport(t, "oas-examples/openapi.yaml")
+	var petStoreReport = createReport(t, "oas-examples/petstore.yaml")
+	var bookStoreReport = createReport(t, "../examples/bookstore/bookstore.yaml")
 
 	var countTest = []struct {
 		testName               string
@@ -86,9 +90,9 @@ func TestIncompatibilityCount(t *testing.T) {
 // TestAggregatingSameFileIncompatibility checks file associated information is not duplicated in set analysis
 // object.
 func TestAggregatingSameFileIncompatibility(t *testing.T) {
-	var googleReport *IncompatibilityReport = ScanIncompatibilities(generateDoc(t, "oas-examples/openapi.yaml"), "oas-examples/openapi.yaml")
-	var petStoreReport *IncompatibilityReport = ScanIncompatibilities(generateDoc(t, "oas-examples/petstore.yaml"), "oas-examples/petstore.yaml")
-	var bookStoreReport *IncompatibilityReport = ScanIncompatibilities(generateDoc(t, "../examples/bookstore/bookstore.yaml"), "../examples/bookstore/bookstore.yaml")
+	var googleReport = createReport(t, "oas-examples/openapi.yaml")
+	var petStoreReport = createReport(t, "oas-examples/petstore.yaml")
+	var bookStoreReport = createReport(t, "../examples/bookstore/bookstore.yaml")
 
 	var aggregationTest = []struct {
 		testName   string
