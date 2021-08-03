@@ -27,7 +27,6 @@ import (
 
 	"github.com/googleapis/gnostic-grpc/incompatibility"
 	"github.com/googleapis/gnostic-grpc/utils"
-	"google.golang.org/protobuf/encoding/prototext"
 )
 
 // main function for aggreation tool
@@ -35,7 +34,18 @@ func main() {
 	if len(os.Args) != 2 {
 		exitIfError(errors.New("argument should be a path to a directory"))
 	}
-	generateAnalysis(os.Args[1])
+	dir := os.Args[1]
+	analysis := generateAnalysis(dir)
+	writeAnalysis(dir, analysis)
+}
+
+func writeAnalysis(analysisName string, analysis *incompatibility.ApiSetIncompatibility) {
+	pbMessage, msgErr := utils.ProtoTextBytes(analysis)
+	exitIfError(msgErr)
+	dirName := filepath.Base(filepath.Dir(analysisName))
+	f, fileErr := os.Create(dirName + "_analysis.pb")
+	exitIfError(fileErr)
+	f.Write(pbMessage)
 }
 
 // runs analysis on given directory
@@ -61,7 +71,6 @@ func generateAnalysis(dirPath string) *incompatibility.ApiSetIncompatibility {
 		log.Println("unable to walk through directory")
 	}
 	analysisAggregation := incompatibility.AggregateReports(reports...)
-	println(prototext.Format(analysisAggregation))
 	return analysisAggregation
 }
 
