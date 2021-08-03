@@ -368,10 +368,6 @@ func requestBodySearch(req *openapiv3.RequestBody, path []string) []*Incompatibi
 	return incompatibilities
 }
 
-func newIncompatibility(severity Severity, classification IncompatibiltiyClassification, path ...string) *Incompatibility {
-	return &Incompatibility{TokenPath: path, Classification: classification, Severity: severity}
-}
-
 // extendPath adds string to end of a copy of path
 func extendPath(path []string, items ...string) (newPath []string) {
 	newPath = make([]string, len(path))

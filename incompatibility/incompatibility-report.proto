@@ -21,9 +21,10 @@ package incompatibility;
 
 // Severity level for an incompatibility
 enum Severity {
-    INFO = 0;
-    WARNING = 1;
-    FAIL = 2;
+    Severity_Default = 0;
+    INFO = 1;
+    WARNING = 2;
+    FAIL = 3;
 }
 
 enum IncompatibiltiyClassification{
