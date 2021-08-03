@@ -15,11 +15,10 @@
 package incompatibility
 
 import (
-	"fmt"
-	"io/ioutil"
 	"path/filepath"
 	"testing"
 
+	"github.com/googleapis/gnostic-grpc/search"
 	"github.com/googleapis/gnostic-grpc/utils"
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
 	"gopkg.in/yaml.v3"
@@ -63,6 +62,7 @@ func TestBasicSecurityIncompatibility(t *testing.T) {
 	}
 }
 
+//Assert that all reported incompatibility paths can be found when travering file
 func TestIncompatibilityExistence(t *testing.T) {
 
 	var existenceTest = []struct {
@@ -72,25 +72,32 @@ func TestIncompatibilityExistence(t *testing.T) {
 		{"oas-examples/petstore.json"},
 		{"../examples/bookstore/bookstore.yaml"},
 		{"oas-examples/openapi.yaml"},
+		{"oas-examples/adsense.yaml"},
 	}
 
 	for _, trial := range existenceTest {
-		var node yaml.Node
-		incompReport := ScanIncompatibilities(generateDoc(t, trial.path), trial.path)
-		data, _ := ioutil.ReadFile(trial.path)
-		marshErr := yaml.Unmarshal(data, &node)
-		if marshErr != nil {
-			t.Fatalf("Unable to marshal file<%s>", trial.path)
-		}
+		incompReport := createReport(t, trial.path)
+		baseNode := createNodeFromFile(incompReport.ReportIdentifier, t)
 		for _, incomp := range incompReport.GetIncompatibilities() {
 			t.Run(filepath.Base(trial.path)+"IncompExistence", func(tt *testing.T) {
-				_, searchErr :=
-					findNode(node.Content[0], incomp.GetTokenPath()...)
-				if searchErr != nil {
-					tt.Errorf(searchErr.Error(), fmt.Sprintf("%+v\n", incomp))
-				}
+				searchForIncompatibiltiy(baseNode, incomp, t)
 			})
 		}
 
+	}
+}
+
+func createNodeFromFile(filePath string, t *testing.T) *yaml.Node {
+	node, err := search.MakeNode(filePath)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	return node
+}
+
+func searchForIncompatibiltiy(node *yaml.Node, incomp *Incompatibility, t *testing.T) {
+	_, searchErr := search.FindNode(node.Content[0], incomp.TokenPath...)
+	if searchErr != nil {
+		t.Errorf(searchErr.Error())
 	}
 }

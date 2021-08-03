@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package incompatibility
+package search
 
 import (
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"strconv"
 
 	"gopkg.in/yaml.v3"
@@ -26,8 +28,18 @@ type keyValue struct {
 	value *yaml.Node
 }
 
+func MakeNode(filePath string) (*yaml.Node, error) {
+	var node yaml.Node
+	data, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+	marshErr := yaml.Unmarshal(data, &node)
+	return &node, marshErr
+}
+
 // Given a path in a yaml file return the node at the end of the path
-func findNode(node *yaml.Node, path ...string) (*yaml.Node, error) {
+func FindNode(node *yaml.Node, path ...string) (*yaml.Node, error) {
 	if len(path) == 0 {
 		return node, nil
 	}
@@ -37,17 +49,17 @@ func findNode(node *yaml.Node, path ...string) (*yaml.Node, error) {
 		if err != nil || ind >= len(node.Content) {
 			return nil, errors.New("invalid index parsed")
 		}
-		return findNode(node.Content[ind], path[1:]...)
+		return FindNode(node.Content[ind], path[1:]...)
 	}
 
 	//Look for matching key
-	if foundKeyVal, ok := MapKeyValuePairs(node.Content)[path[0]]; ok {
+	if foundKeyVal, ok := mapKeyValuePairs(node.Content)[path[0]]; ok {
 		return resolveMatchingPath(foundKeyVal.key, foundKeyVal.value, path...)
 	}
-	return nil, errors.New("unable to find yaml node")
+	return nil, errors.New(fmt.Sprintf("unable to find yaml node %s in %s", path[0], node.Value))
 }
 
-func MapKeyValuePairs(content []*yaml.Node) map[string]keyValue {
+func mapKeyValuePairs(content []*yaml.Node) map[string]keyValue {
 	var keyNodePair map[string]keyValue = make(map[string]keyValue)
 	for i := 0; i < len(content)-1; i += 2 {
 		ky, val := keyValuePairFromContent(content, i)
@@ -62,7 +74,7 @@ func resolveMatchingPath(key *yaml.Node, val *yaml.Node, path ...string) (*yaml.
 	if len(path) == 1 {
 		return key, nil
 	}
-	return findNode(val, path[1:]...)
+	return FindNode(val, path[1:]...)
 }
 
 // Get key and value nodes from content array, bounds chechking should be
