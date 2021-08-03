@@ -26,8 +26,8 @@ import (
 )
 
 // Helper Function to check for single incompatibilty
-func incompatibilityCheck(document *openapiv3.Document, path string, incompatibilityClass IncompatibiltiyClassification) bool {
-	for _, incompatibility := range ScanIncompatibilities(document, path).Incompatibilities {
+func incompatibilityCheck(document *openapiv3.Document, incompatibilityClass IncompatibiltiyClassification) bool {
+	for _, incompatibility := range ScanIncompatibilities(document).Incompatibilities {
 		if incompatibility.Classification == incompatibilityClass {
 			return true
 		}
@@ -56,7 +56,7 @@ func TestBasicSecurityIncompatibility(t *testing.T) {
 	}
 	for _, trial := range securityTest {
 		t.Run(filepath.Base(trial.path)+"SecurityCheck", func(tt *testing.T) {
-			if incompatibilityCheck(generateDoc(tt, trial.path), trial.path, IncompatibiltiyClassification_Security) != trial.expectSecurity {
+			if incompatibilityCheck(generateDoc(tt, trial.path), IncompatibiltiyClassification_Security) != trial.expectSecurity {
 				tt.Errorf("Incorrect security detection for file, got %t\n", trial.expectSecurity)
 			}
 		})
@@ -76,7 +76,7 @@ func TestIncompatibilityExistence(t *testing.T) {
 
 	for _, trial := range existenceTest {
 		var node yaml.Node
-		incompReport := ScanIncompatibilities(generateDoc(t, trial.path), trial.path)
+		incompReport := ScanIncompatibilities(generateDoc(t, trial.path))
 		data, _ := ioutil.ReadFile(trial.path)
 		marshErr := yaml.Unmarshal(data, &node)
 		if marshErr != nil {

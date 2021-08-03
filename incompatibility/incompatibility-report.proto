@@ -26,7 +26,7 @@ enum Severity {
     FAIL = 2;
 }
 
-enum IncompatibiltiyClassification {
+enum IncompatibiltiyClassification{
     IncompatibiltiyClassification_Default = 0;
     Security = 1;
     InvalidOperation = 2;
@@ -47,8 +47,7 @@ message Incompatibility {
 
 // Report of base incompatibilities
 message IncompatibilityReport {
-    string reportIdentifier = 1;
-    repeated Incompatibility incompatibilities = 2;
+    repeated Incompatibility incompatibilities = 1;
 }
 
 // Detailed structure of an incompatibility in a file
@@ -69,19 +68,14 @@ message IDReport {
     repeated IncompatibilityDescription incompatibilities = 1;
 }
 
-message FileIncompatibilityClassificationAnalysis {
-    int32 num_occurrences = 1;
-}
-
 // Aggregated information about an incompatibility in a set
-message IncompatibilityAnalysis {
-    IncompatibiltiyClassification incompatibility_class = 1;
-    map<string, FileIncompatibilityClassificationAnalysis> count_per_file = 2;
+message IncompatibilityAnalysis { 
+    int32 files_with_incompatibility = 1;
 }
 
 // Aggregation of incompatibility scanning across a set
 message ApiSetIncompatibility {
     int32 open_api_files = 1;
     int32 incompatible_files = 2;
-    repeated IncompatibilityAnalysis analysis_per_incompatibility = 3;
+    map<string, IncompatibilityAnalysis> analysis_per_incompatibility = 3;
 }

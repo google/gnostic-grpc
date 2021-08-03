@@ -27,7 +27,6 @@ import (
 
 	"github.com/googleapis/gnostic-grpc/incompatibility"
 	"github.com/googleapis/gnostic-grpc/utils"
-	"google.golang.org/protobuf/encoding/prototext"
 )
 
 // main function for aggreation tool
@@ -40,40 +39,56 @@ func main() {
 
 // runs analysis on given directory
 func generateAnalysis(dirPath string) *incompatibility.ApiSetIncompatibility {
-	var reports []*incompatibility.IncompatibilityReport
+	analysisAggregation := incompatibility.NewAnalysis()
 	readingDirectoryErr := filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			log.Printf("walk error for file at %s", path)
-			return nil
 		}
-		if d.IsDir() {
-			return nil
-		}
-		incompatibilityReport, analysisErr := fileHandler(path)
+		newAnalysis, analysisErr := router(dirPath, path, d)
 		if analysisErr != nil {
 			log.Printf("unable to produce analysis for file %s with error <%s>", path, analysisErr.Error())
 		} else {
-			reports = append(reports, incompatibilityReport)
+			analysisAggregation = incompatibility.AggregateAnalysis(analysisAggregation, newAnalysis)
 		}
 		return nil
 	})
 	if readingDirectoryErr != nil {
 		log.Println("unable to walk through directory")
 	}
-	analysisAggregation := incompatibility.AggregateReports(reports...)
-	println(prototext.Format(analysisAggregation))
 	return analysisAggregation
 }
 
-// fileHander attempts to parse the file at path to then create an incompatibility report
+// router directs logic for either a file or a directory to produce an analysis in either case
+func router(parentDir string, path string, d fs.DirEntry) (*incompatibility.ApiSetIncompatibility, error) {
+	if path == parentDir {
+		return incompatibility.NewAnalysis(), nil
+	}
+	if d.IsDir() {
+		return directoryHandler(path)
+	}
+	singleFileReport, reportErr := fileHandler(path)
+	if reportErr != nil {
+		return nil, reportErr
+	}
+	return incompatibility.AggregateReports(singleFileReport), nil
+}
+
+// fileHander attempts to parse the file at path and to then create an incompatibility report
 func fileHandler(path string) (*incompatibility.IncompatibilityReport, error) {
 	openAPIDoc, err := utils.ParseOpenAPIDoc(path)
 	if err != nil {
 		return nil, err
 	}
-	incompatibilityReport := incompatibility.ScanIncompatibilities(openAPIDoc, path)
+	incompatibilityReport := incompatibility.ScanIncompatibilities(openAPIDoc)
 	log.Printf("created incompatibility report for file at %s\n", path)
 	return incompatibilityReport, nil
+}
+
+// TODO
+// directoryHandler attempts to generate an ApiSetIncompatibilty object containing
+// incompatibility information of all openapi files in the given directory
+func directoryHandler(dirPath string) (*incompatibility.ApiSetIncompatibility, error) {
+	return nil, errors.New("unable to currently handle directories")
 }
 
 func exitIfError(e error) {
