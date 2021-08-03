@@ -17,7 +17,7 @@ func TestGenerateAnalysis(t *testing.T) {
 		{"falseDir", "fake", 0},
 		{"dirWSubDir", "../generator/testfiles", 6},
 		{"dirWMalFile", "../incompatibility/oas-examples/malformed", 0},
-		{"3Docs", "../incompatibility/oas-examples", 3},
+		{"3Docs", "../incompatibility/oas-examples", 4},
 		{"NoOpenAPIDocs", "../utils", 0},
 	}
 	for _, trial := range processOASTest {

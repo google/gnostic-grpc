@@ -79,3 +79,27 @@ func trimSourceName(pathWithExtension string) string {
 func ScanIncompatibilities(document *openapiv3.Document, reportIdentifier string) *IncompatibilityReport {
 	return ReportOnDoc(document, reportIdentifier, IncompatibilityReporters...)
 }
+
+func newIncompatibility(severity Severity, classification IncompatibiltiyClassification, path ...string) *Incompatibility {
+	return &Incompatibility{TokenPath: path, Classification: classification, Severity: classificationSeverity(classification)}
+}
+
+func classificationSeverity(classification IncompatibiltiyClassification) Severity {
+	var severityLevel Severity
+	switch classification {
+	case IncompatibiltiyClassification_IncompatibiltiyClassification_Default:
+		severityLevel = Severity_INFO
+	case IncompatibiltiyClassification_Security,
+		IncompatibiltiyClassification_ParameterStyling,
+		IncompatibiltiyClassification_DataValidation,
+		IncompatibiltiyClassification_ExternalTranscodingSupport:
+		severityLevel = Severity_WARNING
+	case IncompatibiltiyClassification_InvalidOperation,
+		IncompatibiltiyClassification_InvalidDataState,
+		IncompatibiltiyClassification_Inheritance:
+		severityLevel = Severity_FAIL
+	default:
+		severityLevel = Severity_Severity_Default
+	}
+	return severityLevel
+}

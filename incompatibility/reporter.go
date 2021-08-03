@@ -52,7 +52,7 @@ func ReportOnDoc(doc *openapiv3.Document, reportIdentifier string, reporters ...
 // DocumentBaseSearch is a reporter that scans for incompatibilities at the base of an OpenAPI doc
 func DocumentBaseSearch(doc *openapiv3.Document) []*Incompatibility {
 	var incompatibilities []*Incompatibility
-	if doc.Security == nil {
+	if doc.Security == nil || len(doc.Security) == 0 {
 		return incompatibilities
 	}
 	incompatibilities = append(incompatibilities,
@@ -165,7 +165,7 @@ func validOperationSearch(operation *openapiv3.Operation, path []string) []*Inco
 		incompatibilities = append(incompatibilities,
 			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_ExternalTranscodingSupport, extendPath(path, "callbacks")...))
 	}
-	if operation.Security != nil {
+	if operation.Security != nil || len(operation.Security) != 0 {
 		incompatibilities = append(incompatibilities,
 			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_Security, extendPath(path, "security")...))
 	}
@@ -271,15 +271,15 @@ func schemaSearch(schema *openapiv3.Schema, path []string) []*Incompatibility {
 		incompatibilities = append(incompatibilities,
 			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, extendPath(path, "uniqueItems")...))
 	}
-	if len(schema.AllOf) != 0 {
+	if schema.AllOf != nil || len(schema.AllOf) != 0 {
 		incompatibilities = append(incompatibilities,
 			newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_Inheritance, extendPath(path, "allOf")...))
 	}
-	if len(schema.OneOf) != 0 {
+	if schema.OneOf != nil || len(schema.OneOf) != 0 {
 		incompatibilities = append(incompatibilities,
 			newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_Inheritance, extendPath(path, "oneOf")...))
 	}
-	if len(schema.AnyOf) != 0 {
+	if schema.AnyOf != nil || len(schema.AnyOf) != 0 {
 		incompatibilities = append(incompatibilities,
 			newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_Inheritance, extendPath(path, "anyOf")...))
 	}
@@ -368,10 +368,6 @@ func requestBodySearch(req *openapiv3.RequestBody, path []string) []*Incompatibi
 		}
 	}
 	return incompatibilities
-}
-
-func newIncompatibility(severity Severity, classification IncompatibiltiyClassification, path ...string) *Incompatibility {
-	return &Incompatibility{TokenPath: path, Classification: classification, Severity: severity}
 }
 
 // extendPath adds string to end of a copy of path
