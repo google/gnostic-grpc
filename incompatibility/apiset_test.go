@@ -15,7 +15,6 @@
 package incompatibility
 
 import (
-	"strconv"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -39,16 +38,6 @@ func countIncompSetAnalysis(setAnalysis *ApiSetIncompatibility) []int32 {
 	return counts
 }
 
-// Treats each report as if they were created from a unique file
-// and creates an set analysis object
-func uniqueReportAnalysis(reports []*IncompatibilityReport) *ApiSetIncompatibility {
-	setAnalysis := NewAnalysis()
-	for ind, report := range reports {
-		setAnalysis = AggregateAnalysis(setAnalysis, FormAnalysis(report, strconv.Itoa(ind)))
-	}
-	return setAnalysis
-}
-
 // create a slice of incompatibilites populated from all given reports
 func groupIncompatibilities(incompatibilityReports []*IncompatibilityReport) []*Incompatibility {
 	var allIncompatibilities []*Incompatibility
@@ -58,31 +47,25 @@ func groupIncompatibilities(incompatibilityReports []*IncompatibilityReport) []*
 	return allIncompatibilities
 }
 
-// generate an set analysis from the given paths
-func genAnalysisFromFiles(t *testing.T, filepaths []string) *ApiSetIncompatibility {
-	setAnalysis := NewAnalysis()
-	for _, file := range filepaths {
-		setAnalysis = AggregateAnalysis(setAnalysis,
-			FormAnalysis(ScanIncompatibilities(generateDoc(t, file)), file))
-	}
-	return setAnalysis
-}
-
 // TestIncompatibilityCount tests for transferring incompatibily counts from reports to set
 // analysis.
 func TestIncompatibilityCount(t *testing.T) {
+	var googleReport *IncompatibilityReport = ScanIncompatibilities(generateDoc(t, "oas-examples/openapi.yaml"), "oas-examples/openapi.yaml")
+	var petStoreReport *IncompatibilityReport = ScanIncompatibilities(generateDoc(t, "oas-examples/petstore.yaml"), "oas-examples/petstore.yaml")
+	var bookStoreReport *IncompatibilityReport = ScanIncompatibilities(generateDoc(t, "../examples/bookstore/bookstore.yaml"), "../examples/bookstore/bookstore.yaml")
+
 	var countTest = []struct {
 		testName               string
 		incompatibilityReports []*IncompatibilityReport
 	}{
 		{"noIncompatibilities", make([]*IncompatibilityReport, 10)},
 		{"OneReport",
-			[]*IncompatibilityReport{ScanIncompatibilities(generateDoc(t, "oas-examples/openapi.yaml"))}},
+			[]*IncompatibilityReport{googleReport}},
 		{"MultipleReports",
 			[]*IncompatibilityReport{
-				ScanIncompatibilities(generateDoc(t, "oas-examples/openapi.yaml")),
-				ScanIncompatibilities(generateDoc(t, "oas-examples/petstore.yaml")),
-				ScanIncompatibilities(generateDoc(t, "../examples/bookstore/bookstore.yaml")),
+				googleReport,
+				petStoreReport,
+				bookStoreReport,
 			},
 		},
 	}
@@ -91,7 +74,7 @@ func TestIncompatibilityCount(t *testing.T) {
 			countFromReport := CountIncompatibilities(
 				groupIncompatibilities(trial.incompatibilityReports)...).GetCountByClass()
 			countFromAnalysis := countIncompSetAnalysis(
-				uniqueReportAnalysis(trial.incompatibilityReports))
+				AggregateReports(trial.incompatibilityReports...))
 			diff := cmp.Diff(countFromReport, countFromAnalysis)
 			if diff != "" {
 				tt.Errorf("IncompatibilityCount : diff (-want +got):\n %v", diff)
@@ -103,51 +86,55 @@ func TestIncompatibilityCount(t *testing.T) {
 // TestAggregatingSameFileIncompatibility checks file associated information is not duplicated in set analysis
 // object.
 func TestAggregatingSameFileIncompatibility(t *testing.T) {
+	var googleReport *IncompatibilityReport = ScanIncompatibilities(generateDoc(t, "oas-examples/openapi.yaml"), "oas-examples/openapi.yaml")
+	var petStoreReport *IncompatibilityReport = ScanIncompatibilities(generateDoc(t, "oas-examples/petstore.yaml"), "oas-examples/petstore.yaml")
+	var bookStoreReport *IncompatibilityReport = ScanIncompatibilities(generateDoc(t, "../examples/bookstore/bookstore.yaml"), "../examples/bookstore/bookstore.yaml")
+
 	var aggregationTest = []struct {
-		testName  string
-		filesetv1 []string // fileset v1 and v2 should have an intersection of core files
-		filesetv2 []string // their content can have repeated items from this intersection
+		testName   string
+		reportset1 []*IncompatibilityReport // fileset v1 and v2 should have an intersection of core files
+		reportset2 []*IncompatibilityReport // their content can have repeated items from this intersection
 	}{
-		{"Base1to1", []string{"oas-examples/openapi.yaml"}, []string{"oas-examples/openapi.yaml"}},
-		{"SingleRepeated", []string{"oas-examples/openapi.yaml", "oas-examples/openapi.yaml"}, []string{"oas-examples/openapi.yaml"}},
+		{"Base1to1", []*IncompatibilityReport{googleReport}, []*IncompatibilityReport{googleReport}},
+		{"SingleRepeated", []*IncompatibilityReport{googleReport, googleReport}, []*IncompatibilityReport{googleReport}},
 		{"MultipleRepeated",
-			[]string{
-				"../examples/bookstore/bookstore.yaml",
-				"oas-examples/openapi.yaml",
-				"../examples/bookstore/bookstore.yaml",
-				"../examples/petstore/petstore.yaml",
-				"oas-examples/openapi.yaml",
+			[]*IncompatibilityReport{
+				bookStoreReport,
+				googleReport,
+				petStoreReport,
+				bookStoreReport,
+				googleReport,
 			},
-			[]string{
-				"../examples/bookstore/bookstore.yaml",
-				"../examples/petstore/petstore.yaml",
-				"oas-examples/openapi.yaml",
+			[]*IncompatibilityReport{
+				bookStoreReport,
+				googleReport,
+				petStoreReport,
 			},
 		},
 		{"RepeatedRearranged",
-			[]string{
-				"../examples/bookstore/bookstore.yaml",
-				"../examples/petstore/petstore.yaml",
-				"oas-examples/openapi.yaml",
-				"oas-examples/openapi.yaml",
-				"../examples/petstore/petstore.yaml",
-				"../examples/bookstore/bookstore.yaml",
+			[]*IncompatibilityReport{
+				bookStoreReport,
+				googleReport,
+				petStoreReport,
+				petStoreReport,
+				googleReport,
+				bookStoreReport,
 			},
-			[]string{
-				"../examples/bookstore/bookstore.yaml",
-				"../examples/petstore/petstore.yaml",
-				"oas-examples/openapi.yaml",
-				"../examples/bookstore/bookstore.yaml",
-				"../examples/petstore/petstore.yaml",
-				"oas-examples/openapi.yaml",
+			[]*IncompatibilityReport{
+				bookStoreReport,
+				petStoreReport,
+				googleReport,
+				bookStoreReport,
+				petStoreReport,
+				googleReport,
 			},
 		},
 	}
 	for _, trial := range aggregationTest {
 		t.Run(trial.testName, func(tt *testing.T) {
 			diff := cmp.Diff(
-				genAnalysisFromFiles(tt, trial.filesetv1).AnalysisPerIncompatibility,
-				genAnalysisFromFiles(tt, trial.filesetv2).AnalysisPerIncompatibility,
+				AggregateReports(trial.reportset1...).AnalysisPerIncompatibility,
+				AggregateReports(trial.reportset2...).AnalysisPerIncompatibility,
 				ignoreUnexportedSetAnalysis,
 			)
 			if diff != "" {

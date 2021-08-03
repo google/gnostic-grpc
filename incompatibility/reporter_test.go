@@ -113,7 +113,7 @@ func TestReporterCoverage(t *testing.T) {
 	for ind, tt := range reporterTest {
 		testname := fmt.Sprintf("CoverageTest%d", ind)
 		t.Run(testname, func(t *testing.T) {
-			got := ReportOnDoc(tt.givenDocument, tt.incompatibilityReporters)
+			got := ReportOnDoc(tt.givenDocument, "", tt.incompatibilityReporters)
 			if diff := cmp.Diff(tt.expectedIncompatibilityReport, got, ignoreUnexportedOption, incompatibilityOrderOption); diff != "" {
 				t.Errorf("SearchChains(%v, %v): diff (-want +got):\n%v", tt.givenDocument, tt.incompatibilityReporters, diff)
 			}

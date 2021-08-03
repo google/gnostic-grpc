@@ -48,7 +48,7 @@ func CreateIncompReport(env *plugins.Environment, reportType Report) {
 		openAPIdocument := &openapiv3.Document{}
 		err := proto.Unmarshal(model.Value, openAPIdocument)
 		env.RespondAndExitIfError(err)
-		incompatibilityReport := ScanIncompatibilities(openAPIdocument)
+		incompatibilityReport := ScanIncompatibilities(openAPIdocument, env.Request.SourceName)
 		writeProtobufMessage(incompatibilityReport, env)
 		env.RespondAndExit()
 	}
@@ -76,6 +76,6 @@ func trimSourceName(pathWithExtension string) string {
 }
 
 // Scan for incompatibilities in an OpenAPI document
-func ScanIncompatibilities(document *openapiv3.Document) *IncompatibilityReport {
-	return ReportOnDoc(document, IncompatibilityReporters...)
+func ScanIncompatibilities(document *openapiv3.Document, reportIdentifier string) *IncompatibilityReport {
+	return ReportOnDoc(document, reportIdentifier, IncompatibilityReporters...)
 }

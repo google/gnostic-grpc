@@ -47,7 +47,8 @@ message Incompatibility {
 
 // Report of base incompatibilities
 message IncompatibilityReport {
-    repeated Incompatibility incompatibilities = 1;
+    string reportIdentifier = 1;
+    repeated Incompatibility incompatibilities = 2;
 }
 
 // Detailed structure of an incompatibility in a file

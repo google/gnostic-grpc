@@ -45,7 +45,7 @@ func NewAnalysis() *ApiSetIncompatibility {
 
 // AggregateAnalysis aggregates incompatibility information from multiple ApiSetIncompatibility
 // objects into one comprehensive ApiSetIncompatibility
-func AggregateAnalysis(analysis ...*ApiSetIncompatibility) *ApiSetIncompatibility {
+func aggregateAnalysis(analysis ...*ApiSetIncompatibility) *ApiSetIncompatibility {
 	aggAnalysis := NewAnalysis()
 	for _, analysisObj := range analysis {
 		aggAnalysis.OpenApiFiles += analysisObj.OpenApiFiles
@@ -57,7 +57,7 @@ func AggregateAnalysis(analysis ...*ApiSetIncompatibility) *ApiSetIncompatibilit
 }
 
 // FormAnalysis creates an analysis object from a single IncompatibilityReport
-func FormAnalysis(report *IncompatibilityReport, filePath string) *ApiSetIncompatibility {
+func formAnalysis(report *IncompatibilityReport) *ApiSetIncompatibility {
 	analysis := NewAnalysis()
 	analysis.OpenApiFiles++
 	intermedReport := CountIncompatibilities(report.GetIncompatibilities()...)
@@ -66,13 +66,21 @@ func FormAnalysis(report *IncompatibilityReport, filePath string) *ApiSetIncompa
 			continue
 		}
 		fileOccurMap := analysis.AnalysisPerIncompatibility[class].CountPerFile
-		fileOccurMap[filePath] =
+		fileOccurMap[report.ReportIdentifier] =
 			&FileIncompatibilityClassificationAnalysis{
 				NumOccurrences: count}
 	}
 	failIncompatibilitiesCount := intermedReport.countBySeverity[Severity_FAIL]
 	if failIncompatibilitiesCount > 0 {
 		analysis.IncompatibleFiles++
+	}
+	return analysis
+}
+
+func AggregateReports(reports ...*IncompatibilityReport) *ApiSetIncompatibility {
+	analysis := NewAnalysis()
+	for _, report := range reports {
+		analysis = aggregateAnalysis(analysis, formAnalysis(report))
 	}
 	return analysis
 }
