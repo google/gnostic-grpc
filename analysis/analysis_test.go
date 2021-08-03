@@ -61,11 +61,8 @@ func TestFileInformationIncluded(t *testing.T) {
 					tt.Fatalf(err.Error())
 				}
 				countFilePerClass :=
-					incompatibility.CountIncompatibilities(report.Incompatibilities...).CountByClassification
+					incompatibility.CountIncompatibilities(report.Incompatibilities...).GetCountByClass()
 				for class, count := range countFilePerClass {
-					if count == 0 {
-						continue
-					}
 					countFromAnalysis := getAnalysisIncompCount(setAnalysis, incompatibility.IncompatibiltiyClassification(class), oasFilePath)
 					if countFromAnalysis != count {
 						tt.Errorf("getAnalysisIncompCount(..., %v, %s), got %d, wanted %d",
@@ -80,6 +77,9 @@ func TestFileInformationIncluded(t *testing.T) {
 
 func getAnalysisIncompCount(setAnalysis *incompatibility.ApiSetIncompatibility, class incompatibility.IncompatibiltiyClassification, oasFilePath string) int32 {
 	classMapAnalysis := setAnalysis.AnalysisPerIncompatibility[class].CountPerFile
+	if _, ok := classMapAnalysis[oasFilePath]; !ok {
+		return 0
+	}
 	countFromAnalysis := classMapAnalysis[oasFilePath].NumOccurrences
 	return countFromAnalysis
 }

@@ -89,7 +89,7 @@ func TestIncompatibilityCount(t *testing.T) {
 	for _, trial := range countTest {
 		t.Run(trial.testName, func(tt *testing.T) {
 			countFromReport := CountIncompatibilities(
-				groupIncompatibilities(trial.incompatibilityReports)...).CountByClassification
+				groupIncompatibilities(trial.incompatibilityReports)...).GetCountByClass()
 			countFromAnalysis := countIncompSetAnalysis(
 				uniqueReportAnalysis(trial.incompatibilityReports))
 			diff := cmp.Diff(countFromReport, countFromAnalysis)

@@ -16,8 +16,15 @@ package incompatibility
 
 // IntermediateReport counts the number of incompatibility occurrences
 type IntermediateReport struct {
-	CountByClassification []int32
-	CountBySeverity       []int32
+	countByClassification []int32
+	countBySeverity       []int32
+}
+
+func (iReport IntermediateReport) GetCountByClass() []int32 {
+	return iReport.countByClassification
+}
+func (iReport IntermediateReport) GetCountBySeverity() []int32 {
+	return iReport.countBySeverity
 }
 
 // NewAnalysis initalizes and returns an apiset analysis object
@@ -50,20 +57,20 @@ func AggregateAnalysis(analysis ...*ApiSetIncompatibility) *ApiSetIncompatibilit
 }
 
 // FormAnalysis creates an analysis object from a single IncompatibilityReport
-func FormAnalysis(report *IncompatibilityReport, uniqueFilePath string) *ApiSetIncompatibility {
+func FormAnalysis(report *IncompatibilityReport, filePath string) *ApiSetIncompatibility {
 	analysis := NewAnalysis()
 	analysis.OpenApiFiles++
 	intermedReport := CountIncompatibilities(report.GetIncompatibilities()...)
-	for class, count := range intermedReport.CountByClassification {
+	for class, count := range intermedReport.countByClassification {
 		if count == 0 {
 			continue
 		}
 		fileOccurMap := analysis.AnalysisPerIncompatibility[class].CountPerFile
-		fileOccurMap[uniqueFilePath] =
+		fileOccurMap[filePath] =
 			&FileIncompatibilityClassificationAnalysis{
 				NumOccurrences: count}
 	}
-	failIncompatibilitiesCount := intermedReport.CountBySeverity[Severity_FAIL]
+	failIncompatibilitiesCount := intermedReport.countBySeverity[Severity_FAIL]
 	if failIncompatibilitiesCount > 0 {
 		analysis.IncompatibleFiles++
 	}
@@ -101,7 +108,7 @@ func CountIncompatibilities(incompatibilities ...*Incompatibility) IntermediateR
 		countBySev[incomp.Severity]++
 	}
 	return IntermediateReport{
-		CountByClassification: countByClass,
-		CountBySeverity:       countBySev,
+		countByClassification: countByClass,
+		countBySeverity:       countBySev,
 	}
 }
