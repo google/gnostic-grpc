@@ -19,10 +19,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/googleapis/gnostic-grpc/utils"
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
 	plugins "github.com/googleapis/gnostic/plugins"
-	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type Report int
@@ -55,14 +56,12 @@ func CreateIncompReport(env *plugins.Environment, reportType Report) {
 	env.RespondAndExitIfError(errors.New("no supported models for incompatibility reporting"))
 }
 
-func writeProtobufMessage(incompatibilityReport *IncompatibilityReport, env *plugins.Environment) {
-	incompatibilityReportBytes, err :=
-		prototext.MarshalOptions{Multiline: true, Indent: "    "}.
-			Marshal(incompatibilityReport)
+func writeProtobufMessage(m protoreflect.ProtoMessage, env *plugins.Environment) {
+	reportBytes, err := utils.ProtoTextBytes(m)
 	env.RespondAndExitIfError(err)
 	createdFile := &plugins.File{
 		Name: trimSourceName(env.Request.SourceName) + "_compatibility.pb",
-		Data: incompatibilityReportBytes,
+		Data: reportBytes,
 	}
 	env.Response.Files = append(env.Response.Files, createdFile)
 }

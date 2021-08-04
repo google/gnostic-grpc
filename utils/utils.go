@@ -18,7 +18,9 @@ import (
 	"os/exec"
 
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
+	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 func ParseOpenAPIDoc(input string) (*openapiv3.Document, error) {
@@ -41,4 +43,10 @@ func CreateOpenAPIDocFromGnosticOutput(binaryInput []byte) (*openapiv3.Document,
 		}
 	}
 	return document, nil
+}
+
+//Formats readable protobuf message
+func ProtoTextBytes(m protoreflect.ProtoMessage) ([]byte, error) {
+	return prototext.MarshalOptions{Multiline: true, Indent: "    "}.
+		Marshal(m)
 }
