@@ -173,7 +173,7 @@ func TestValueSearch(t *testing.T) {
 	}
 	for _, trial := range valueTest {
 		t.Run(trial.testName, func(tt *testing.T) {
-			foundNode := searchKey(tt, trial.baseNode, trial.path...)
+			foundNode := searchValue(tt, trial.baseNode, trial.path...)
 			if trial.expectedValue != foundNode.Value {
 				tt.Errorf("foundNode != lastToken, wanted: %s, got: %s", trial.expectedValue, foundNode.Value)
 			}
