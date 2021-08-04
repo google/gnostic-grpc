@@ -36,16 +36,22 @@ func main() {
 	}
 	dir := os.Args[1]
 	analysis := generateAnalysis(dir)
-	writeAnalysis(dir, analysis)
+	exitIfError(writeAnalysis(dir, analysis))
+	os.Exit(0)
 }
 
-func writeAnalysis(analysisName string, analysis *incompatibility.ApiSetIncompatibility) {
+func writeAnalysis(analysisName string, analysis *incompatibility.ApiSetIncompatibility) error {
 	pbMessage, msgErr := utils.ProtoTextBytes(analysis)
-	exitIfError(msgErr)
+	if msgErr != nil {
+		return msgErr
+	}
 	dirName := filepath.Base(filepath.Dir(analysisName))
 	f, fileErr := os.Create(dirName + "_analysis.pb")
-	exitIfError(fileErr)
+	if fileErr != nil {
+		return fileErr
+	}
 	f.Write(pbMessage)
+	return nil
 }
 
 // runs analysis on given directory
