@@ -79,7 +79,7 @@ func ScanIncompatibilities(document *openapiv3.Document, reportIdentifier string
 	return ReportOnDoc(document, reportIdentifier, IncompatibilityReporters...)
 }
 
-func newIncompatibility(severity Severity, classification IncompatibiltiyClassification, path ...string) *Incompatibility {
+func newIncompatibility(classification IncompatibiltiyClassification, path ...string) *Incompatibility {
 	return &Incompatibility{TokenPath: path, Classification: classification, Severity: classificationSeverity(classification)}
 }
 
