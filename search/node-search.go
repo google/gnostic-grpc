@@ -45,7 +45,7 @@ func MakeNode(filePath string) (*yaml.Node, error) {
 	return &node, marshErr
 }
 
-// Returns the key at the end of the search, valid for paths ending in key-value mappings
+// Returns the fileposition of the key at the end of path
 func FindKey(node *yaml.Node, path ...string) (line, col int, err error) {
 	node, searchErr := findComponent(node, path...)
 	if searchErr != nil {
