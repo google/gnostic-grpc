@@ -122,7 +122,7 @@ func createNodeFromFile(filePath string, t *testing.T) *yaml.Node {
 }
 
 func searchForIncompatibiltiy(node *yaml.Node, incomp *Incompatibility, t *testing.T) {
-	_, searchErr := search.FindNode(node.Content[0], incomp.TokenPath...)
+	_, _, searchErr := search.FindKey(node.Content[0], incomp.TokenPath...)
 	if searchErr != nil {
 		t.Errorf(searchErr.Error())
 	}

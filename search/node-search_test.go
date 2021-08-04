@@ -16,66 +16,145 @@ package search
 
 import (
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"gopkg.in/yaml.v3"
 )
 
-func performSearch(t *testing.T, filePath string, yamlPaths ...[]string) {
-	baseNode, parseNode := MakeNode(filePath)
-	if parseNode != nil {
-		t.Fatalf(parseNode.Error())
+type filePosition struct {
+	Line int
+	Col  int
+}
+
+func parseFile(t *testing.T, filePath string) *yaml.Node {
+	baseNode, parseErr := MakeNode(filePath)
+	if parseErr != nil {
+		t.Fatalf(parseErr.Error())
 	}
-	for _, yamlPath := range yamlPaths {
-		_, searchError := FindNode(baseNode.Content[0], yamlPath...)
-		if searchError != nil {
-			t.Errorf(searchError.Error())
-		}
+	return baseNode.Content[0]
+}
+
+func searchKey(t *testing.T, baseNode *yaml.Node, path ...string) (line, col int) {
+	line, col, searchError := FindKey(baseNode, path...)
+	if searchError != nil {
+		t.Fatalf(searchError.Error())
+	}
+	return line, col
+}
+
+// Assert keysearch results in correct file position
+func TestFindKey(t *testing.T) {
+
+	shallowYaml := parseFile(t, "node-examples/yaml1.yaml")
+	deepYaml := parseFile(t, "node-examples/yaml2.yaml")
+	shallowJson := parseFile(t, "node-examples/json1.json")
+	deepJson := parseFile(t, "node-examples/json2.json")
+
+	var keyTest = []struct {
+		testName             string
+		baseNode             *yaml.Node
+		path                 []string
+		expectedFilePosition filePosition
+	}{
+		{
+			"shallowYaml1",
+			shallowYaml,
+			[]string{"putting"},
+			filePosition{1, 1},
+		},
+		{
+			"shallowYaml2",
+			shallowYaml,
+			[]string{"trade", "poetry"},
+			filePosition{3, 3},
+		},
+		{
+			"deepYaml1",
+			deepYaml,
+			[]string{"0", "1", "neighbor", "1", "slightly", "group", "1", "development"},
+			filePosition{54, 15},
+		},
+		{
+			"deepYaml2",
+			deepYaml,
+			[]string{"0", "1", "neighbor", "1", "way"},
+			filePosition{4, 9},
+		},
+		{
+			"shallowjson1",
+			shallowJson,
+			[]string{"copper"},
+			filePosition{2, 5},
+		},
+		{
+			"deepjson2",
+			deepJson,
+			[]string{"0", "1", "0", "whole", "2", "1", "mistake"},
+			filePosition{12, 17},
+		},
+	}
+	for _, trial := range keyTest {
+		t.Run(trial.testName, func(tt *testing.T) {
+			foundLine, foundCol := searchKey(tt, trial.baseNode, trial.path...)
+			foundFilePos := filePosition{
+				Line: foundLine,
+				Col:  foundCol,
+			}
+			diff := cmp.Diff(foundFilePos,
+				trial.expectedFilePosition)
+			if diff != "" {
+				tt.Error("UnexpectedFilePosition: diff(-want +got):\n", diff)
+			}
+		})
 	}
 }
 
-// Assert that known paths are reported in Search
-func TestHardcodedPaths(t *testing.T) {
-	var pathTest = []struct {
-		testName  string
-		filePath  string
-		yamlPaths [][]string
+// Assert correct error reporting in FindKey
+func TestFindKeyErrors(t *testing.T) {
+
+	shallowYaml := parseFile(t, "node-examples/yaml1.yaml")
+	deepYaml := parseFile(t, "node-examples/yaml2.yaml")
+	shallowJson := parseFile(t, "node-examples/json1.json")
+	deepJson := parseFile(t, "node-examples/json2.json")
+
+	var keyTest = []struct {
+		testName            string
+		baseNode            *yaml.Node
+		path                []string
+		expectedErrorString string
 	}{
 		{
-			"shallowYaml",
-			"node-examples/yaml1.yaml",
-			[][]string{
-				{"putting"},
-				{"trade", "poetry"},
-				{"addition"},
-			},
+			"ExhaustiveSearch",
+			shallowYaml,
+			[]string{"putting", "invalidKey1"},
+			"unable to find yaml node invalidKey1",
 		},
 		{
-			"deepYaml",
-			"node-examples/yaml2.yaml",
-			[][]string{
-				{"2", "government"},
-				{"0", "1", "neighbor", "1", "way"},
-				{"0", "1", "neighbor", "1", "slightly", "group", "1", "development"},
-			},
+			"ExhaustiveSearch2",
+			deepJson,
+			[]string{"0", "1", "0", "whole", "2", "3", "invalidKey2"},
+			"unable to find yaml node invalidKey2",
 		},
 		{
-			"shallowjson",
-			"node-examples/json1.json",
-			[][]string{
-				{"copper"},
-				{"corn", "worth", "0"},
-			},
+			"InvalidIndex",
+			shallowJson,
+			[]string{"corn", "worth", "7"},
+			"invalid index parsed 7",
 		},
 		{
-			"deepjson",
-			"node-examples/json2.json",
-			[][]string{
-				{"0", "1", "0", "whole"},
-				{"0", "1", "0", "whole", "2", "1", "mistake"},
-			},
+			"InvalidIndex2",
+			deepYaml,
+			[]string{"0", "1", "neighbor", "1", "slightly", "group", "1", "development", "search", "-1"},
+			"invalid index parsed -1",
 		},
 	}
-	for _, trial := range pathTest {
+	for _, trial := range keyTest {
 		t.Run(trial.testName, func(tt *testing.T) {
-			performSearch(tt, trial.filePath, trial.yamlPaths...)
+			_, _, err := FindKey(trial.baseNode, trial.path...)
+			diff := cmp.Diff(trial.expectedErrorString, err.Error())
+			if diff != "" {
+				tt.Error("UnexpectedFilePosition: diff(-want +got):\n", diff)
+			}
 		})
 	}
 }

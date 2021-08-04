@@ -15,7 +15,6 @@
 package search
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"strconv"
@@ -23,9 +22,16 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type keyValue struct {
+type KeyValue struct {
 	key   *yaml.Node
 	value *yaml.Node
+}
+
+func newPair(ky, val *yaml.Node) *KeyValue {
+	return &KeyValue{
+		key:   ky,
+		value: val,
+	}
 }
 
 // Parses filePath and attempts to create Node Object
@@ -39,43 +45,56 @@ func MakeNode(filePath string) (*yaml.Node, error) {
 	return &node, marshErr
 }
 
-// Given a path in a yaml file return the node at the end of the path
-func FindNode(node *yaml.Node, path ...string) (*yaml.Node, error) {
+// Returns the fileposition of the key at the end of path
+func FindKey(node *yaml.Node, path ...string) (int, int, error) {
+	var line, col int
+	node, searchErr := findComponent(node, path...)
+	if searchErr != nil {
+		return line, col, searchErr
+	}
+	line = node.Line
+	col = node.Column
+	return line, col, nil
+}
+
+// Given a path in a yaml file return a pairing of nodes at the end of the path
+func findComponent(node *yaml.Node, path ...string) (*yaml.Node, error) {
 	if len(path) == 0 {
 		return node, nil
 	}
 	// Sequence Index
 	if node.Kind == yaml.SequenceNode {
 		ind, err := strconv.Atoi(path[0])
-		if err != nil || ind >= len(node.Content) {
-			return nil, errors.New("invalid index parsed")
+		if err != nil || ind >= len(node.Content) || ind < 0 {
+			return nil, fmt.Errorf("invalid index parsed %s", path[0])
 		}
-		return FindNode(node.Content[ind], path[1:]...)
+		return findComponent(node.Content[ind], path[1:]...)
 	}
 
 	//Look for matching key
 	if foundKeyVal, ok := mapKeyValuePairs(node.Content)[path[0]]; ok {
-		return resolveMatchingPath(foundKeyVal.key, foundKeyVal.value, path...)
+		return resolveMatchingPath(foundKeyVal, path...)
 	}
-	return nil, fmt.Errorf("unable to find yaml node %s in %s", path[0], node.Value)
+
+	return nil, fmt.Errorf("unable to find yaml node %s", path[0])
 }
 
-func mapKeyValuePairs(content []*yaml.Node) map[string]keyValue {
-	var keyNodePair map[string]keyValue = make(map[string]keyValue)
+func mapKeyValuePairs(content []*yaml.Node) map[string]*KeyValue {
+	var keyNodePair map[string]*KeyValue = make(map[string]*KeyValue)
 	for i := 0; i < len(content)-1; i += 2 {
 		ky, val := keyValuePairFromContent(content, i)
-		keyNodePair[ky.Value] = keyValue{key: ky, value: val}
+		keyNodePair[ky.Value] = newPair(ky, val)
 	}
 	return keyNodePair
 }
 
 // Helper in which path aligns with matching key node and needs
-// further to determine further traversal
-func resolveMatchingPath(key *yaml.Node, val *yaml.Node, path ...string) (*yaml.Node, error) {
-	if len(path) == 1 {
-		return key, nil
+// to determine further traversal
+func resolveMatchingPath(keyVal *KeyValue, path ...string) (*yaml.Node, error) {
+	if len(path) == 1 { // Key last item in path so return key
+		return keyVal.key, nil
 	}
-	return FindNode(val, path[1:]...)
+	return findComponent(keyVal.value, path[1:]...)
 }
 
 // Get key and value nodes from content array, bounds chechking should be

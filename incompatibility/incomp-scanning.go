@@ -22,9 +22,9 @@ import (
 	"strings"
 
 	"github.com/googleapis/gnostic-grpc/search"
+	"github.com/googleapis/gnostic-grpc/utils"
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
 	plugins "github.com/googleapis/gnostic/plugins"
-	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -71,15 +71,12 @@ func CreateIncompReport(env *plugins.Environment, reportType Report) {
 	env.RespondAndExitIfError(errors.New("no supported models for incompatibility reporting"))
 }
 
-// func writeProtobufMessage(incompatibilityReport *IncompatibilityReport, env *plugins.Environment) {
-func writeProtobufMessage(incompatibilityReport protoreflect.ProtoMessage, env *plugins.Environment) {
-	incompatibilityReportBytes, err :=
-		prototext.MarshalOptions{Multiline: true, Indent: "    "}.
-			Marshal(incompatibilityReport)
+func writeProtobufMessage(m protoreflect.ProtoMessage, env *plugins.Environment) {
+	reportBytes, err := utils.ProtoTextBytes(m)
 	env.RespondAndExitIfError(err)
 	createdFile := &plugins.File{
 		Name: trimSourceName(env.Request.SourceName) + "_compatibility.pb",
-		Data: incompatibilityReportBytes,
+		Data: reportBytes,
 	}
 	env.Response.Files = append(env.Response.Files, createdFile)
 }
@@ -94,13 +91,13 @@ func detailReport(incompatibilityReport *IncompatibilityReport) *IDReport {
 		return nil
 	}
 	for _, baseincomp := range incompatibilityReport.Incompatibilities {
-		foundNode, searchErr := search.FindNode(fileNode.Content[0], baseincomp.TokenPath...)
+		line, col, searchErr := search.FindKey(fileNode.Content[0], baseincomp.TokenPath...)
 		if searchErr != nil {
 			log.Printf("Warning: Unable to find incompatibilty %s", searchErr.Error())
 		}
 		lastTokenInPath := baseincomp.TokenPath[len(baseincomp.TokenPath)-1]
 		incompatibilities = append(incompatibilities,
-			newIncompatibilityDescription(foundNode.Line, foundNode.Column, baseincomp.Classification, lastTokenInPath))
+			newIncompatibilityDescription(line, col, baseincomp.Classification, lastTokenInPath))
 	}
 	idReport = newIDReport(incompatibilityReport.ReportIdentifier, incompatibilities)
 	return idReport
@@ -127,7 +124,7 @@ func newIDReport(reportIdentifier string, incompDescriptions []*IncompatibilityD
 	}
 }
 
-func newIncompatibility(severity Severity, classification IncompatibiltiyClassification, path ...string) *Incompatibility {
+func newIncompatibility(classification IncompatibiltiyClassification, path ...string) *Incompatibility {
 	return &Incompatibility{
 		TokenPath:      path,
 		Classification: classification,
