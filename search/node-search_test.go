@@ -59,7 +59,7 @@ func validateIndex(sequenceNode *yaml.Node, ind int) error {
 	return nil
 }
 
-// Assert that from key value pairs, keys are returned
+// Assert that from key value pairs, keys are returned in keysearch
 func TestKeySearch(t *testing.T) {
 
 	shallowYaml := parseFile(t, "node-examples/yaml1.yaml")
@@ -120,7 +120,8 @@ func TestKeySearch(t *testing.T) {
 	}
 }
 
-// Assert values
+// Assert values from valuesearch correctly return values in key-value pairs
+// and values from single objects
 func TestValueSearch(t *testing.T) {
 	shallowYaml := parseFile(t, "node-examples/yaml1.yaml")
 	deepYaml := parseFile(t, "node-examples/yaml2.yaml")
@@ -134,7 +135,7 @@ func TestValueSearch(t *testing.T) {
 		expectedValue string
 	}{
 		{
-			"shallowYaml1",
+			"shallowYaml",
 			shallowYaml,
 			[]string{"putting"},
 			"false",
