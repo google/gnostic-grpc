@@ -29,7 +29,7 @@ func main() {
 	case 1:
 		resolveModeFromParameters(env)
 	default:
-		exitWithMessage(env, "This plugin only supports at most one parameter during an invocation")
+		exitWithMessage(env, "This plugin supports at most one parameter during an invocation")
 	}
 }
 
@@ -38,9 +38,9 @@ func resolveModeFromParameters(env *plugins.Environment) {
 		exitWithMessage(env, "unsupported parameter name")
 	}
 	switch env.Request.Parameters[0].Value {
-	case "incomp": // Base incompatibility scanning
+	case "1": // Base incompatibility scanning
 		incompatibility.CreateIncompReport(env, incompatibility.BaseIncompatibility_Report)
-	case "detailed-incomp": //Detailed incompatibility scanning
+	case "2": //Detailed incompatibility scanning
 		incompatibility.CreateIncompReport(env, incompatibility.ID_Report)
 	default:
 		exitWithMessage(env, "unsupported parameter value")
