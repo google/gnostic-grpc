@@ -23,18 +23,31 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type keyValue struct {
+type Component struct {
 	key   *yaml.Node
 	value *yaml.Node
 }
 
-type Seeking int
+func (comp *Component) getKey() (*yaml.Node, error) {
+	if comp.key == nil {
+		return nil, errors.New("invalid key")
+	}
+	return comp.key, nil
+}
 
-// Indicates to search what component of key-value pairing findcomponent should return
-const (
-	KEY = iota
-	VALUE
-)
+func (comp *Component) getValue() (*yaml.Node, error) {
+	if comp.value == nil {
+		return nil, errors.New("invalid value")
+	}
+	return comp.value, nil
+}
+
+func newComponent(ky, val *yaml.Node) *Component {
+	return &Component{
+		key:   ky,
+		value: val,
+	}
+}
 
 // Parses filePath and attempts to create Node Object
 func MakeNode(filePath string) (*yaml.Node, error) {
@@ -47,14 +60,29 @@ func MakeNode(filePath string) (*yaml.Node, error) {
 	return &node, marshErr
 }
 
+// Returns the key at the end of the search, valid for paths ending in key-value mappings
 func FindKey(node *yaml.Node, path ...string) (*yaml.Node, error) {
-	return findComponent(node, KEY, path...)
+	comp, err := findComponent(node, path...)
+	if err != nil {
+		return nil, err
+	}
+	return comp.getKey()
 }
 
-// Given a path in a yaml file return the node at the end of the path
-func findComponent(node *yaml.Node, seeking Seeking, path ...string) (*yaml.Node, error) {
+// Returns the value at the end of the search, valid for paths ending in
+// sequence items, single objects, values of ke
+func FindValue(node *yaml.Node, path ...string) (*yaml.Node, error) {
+	comp, err := findComponent(node, path...)
+	if err != nil {
+		return nil, err
+	}
+	return comp.getValue()
+}
+
+// Given a path in a yaml file return a pairing of nodes at the end of the path
+func findComponent(node *yaml.Node, path ...string) (*Component, error) {
 	if len(path) == 0 {
-		return node, nil
+		return newComponent(nil, node), nil
 	}
 	// Sequence Index
 	if node.Kind == yaml.SequenceNode {
@@ -62,37 +90,36 @@ func findComponent(node *yaml.Node, seeking Seeking, path ...string) (*yaml.Node
 		if err != nil || ind >= len(node.Content) {
 			return nil, errors.New("invalid index parsed")
 		}
-		return findComponent(node.Content[ind], seeking, path[1:]...)
+		return findComponent(node.Content[ind], path[1:]...)
 	}
 
 	//Look for matching key
 	if foundKeyVal, ok := mapKeyValuePairs(node.Content)[path[0]]; ok {
-		return resolveMatchingPath(foundKeyVal.key, foundKeyVal.value, seeking, path...)
+		return resolveMatchingPath(foundKeyVal, path...)
 	}
 	return nil, fmt.Errorf("unable to find yaml node %s in %s", path[0], node.Value)
 }
 
-func mapKeyValuePairs(content []*yaml.Node) map[string]keyValue {
-	var keyNodePair map[string]keyValue = make(map[string]keyValue)
+func mapKeyValuePairs(content []*yaml.Node) map[string]*Component {
+	var keyNodePair map[string]*Component = make(map[string]*Component)
 	for i := 0; i < len(content)-1; i += 2 {
 		ky, val := keyValuePairFromContent(content, i)
-		keyNodePair[ky.Value] = keyValue{key: ky, value: val}
+		keyNodePair[ky.Value] = newComponent(ky, val)
 	}
 	return keyNodePair
 }
 
 // Helper in which path aligns with matching key node and needs
 // further to determine further traversal
-func resolveMatchingPath(key *yaml.Node, val *yaml.Node, seeking Seeking, path ...string) (*yaml.Node, error) {
+func resolveMatchingPath(keyVal *Component, path ...string) (*Component, error) {
 	if len(path) == 1 {
-		switch seeking {
-		case VALUE:
-			return val, nil
-		default:
-			return key, nil
-		}
+		return keyVal, nil
 	}
-	return findComponent(val, seeking, path[1:]...)
+	val, valExistsError := keyVal.getValue()
+	if valExistsError != nil {
+		return nil, valExistsError
+	}
+	return findComponent(val, path[1:]...)
 }
 
 // Get key and value nodes from content array, bounds chechking should be
