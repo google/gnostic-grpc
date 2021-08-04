@@ -45,6 +45,14 @@ func CreateOpenAPIDocFromGnosticOutput(binaryInput []byte) (*openapiv3.Document,
 	return document, nil
 }
 
+// extendPath adds string to end of a copy of path
+func ExtendPath(path []string, items ...string) (newPath []string) {
+	newPath = make([]string, len(path))
+	copy(newPath, path)
+	newPath = append(newPath, items...)
+	return newPath
+}
+
 //Formats readable protobuf message
 func ProtoTextBytes(m protoreflect.ProtoMessage) ([]byte, error) {
 	return prototext.MarshalOptions{Multiline: true, Indent: "    "}.

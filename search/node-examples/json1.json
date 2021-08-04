@@ -1,0 +1,22 @@
+{
+    "copper": false,
+    "noise": false,
+    "corn": {
+      "beneath": "liquid",
+      "halfway": true,
+      "worth": [
+        true,
+        -1419338814.2683568,
+        false,
+        1424505489.065998,
+        -287017491,
+        false
+      ],
+      "help": true,
+      "whether": false,
+      "adjective": false
+    },
+    "hill": "cutting",
+    "frog": 709053339,
+    "face": false
+  }
