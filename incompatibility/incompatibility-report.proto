@@ -55,11 +55,11 @@ message IncompatibilityReport {
 // Detailed structure of an incompatibility in a file
 message IncompatibilityDescription {
     // File position
-    int32 line = 2;
-    int32 column = 3;
+    int32 line = 1;
+    int32 column = 2;
 
     //string token
-    string token = 4;
+    string token = 3;
 
     //classification
     IncompatibiltiyClassification class = 5;

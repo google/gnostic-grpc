@@ -26,6 +26,7 @@ import (
 	plugins "github.com/googleapis/gnostic/plugins"
 	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type Report int
@@ -62,15 +63,16 @@ func CreateIncompReport(env *plugins.Environment, reportType Report) {
 			writeProtobufMessage(incompatibilityReport, env)
 		case ID_Report:
 			//TODO once branches are merged
-			// idReport := detailReport(incompatibilityReport)
-			// writeProtobufMessage(idReport, env)
+			idReport := detailReport(incompatibilityReport)
+			writeProtobufMessage(idReport, env)
 		}
 		env.RespondAndExit()
 	}
 	env.RespondAndExitIfError(errors.New("no supported models for incompatibility reporting"))
 }
 
-func writeProtobufMessage(incompatibilityReport *IncompatibilityReport, env *plugins.Environment) {
+// func writeProtobufMessage(incompatibilityReport *IncompatibilityReport, env *plugins.Environment) {
+func writeProtobufMessage(incompatibilityReport protoreflect.ProtoMessage, env *plugins.Environment) {
 	incompatibilityReportBytes, err :=
 		prototext.MarshalOptions{Multiline: true, Indent: "    "}.
 			Marshal(incompatibilityReport)
@@ -166,6 +168,41 @@ func classificationSeverity(classification IncompatibiltiyClassification) Severi
 
 // returns a hint based the given classification
 func classificationHint(classification IncompatibiltiyClassification) string {
-	hint := fmt.Sprintf("%s incompatibilities occur as a result of ", classification.Enum().String())
-	return hint
+	rootHint := fmt.Sprintf("%s incompatibilities occur as a result of ",
+		classification.Enum().String())
+	var reason string
+	switch classification {
+	case IncompatibiltiyClassification_Security:
+		reason = "gRPC HTTP/JSON transcoding not concerned with auth information."
+	case IncompatibiltiyClassification_ParameterStyling:
+		reason = "parameter styling not representable in .proto files."
+	case IncompatibiltiyClassification_DataValidation:
+		reason = "dataValidation (regex, array limits, etc.) not natively supported in .proto files."
+	case IncompatibiltiyClassification_ExternalTranscodingSupport:
+		reason = "the need for external transcoding support outside of .proto files"
+	case IncompatibiltiyClassification_InvalidOperation:
+		reason = "unstandard operation not fundamentally and truly supported in .proto represenation."
+	case IncompatibiltiyClassification_InvalidDataState:
+		reason = "data state(nullable) not representable in .proto files."
+	case IncompatibiltiyClassification_Inheritance:
+		reason = "Inheritance not supported in .proto files."
+	default:
+		return "No hint for " + classification.Enum().String()
+	}
+	severityRoot := fmt.Sprintf(" %s implies ",
+		classificationSeverity(classification).Enum().String())
+	var implication string
+	switch classificationSeverity(classification) {
+	case Severity_INFO:
+		implication = "information not important to core api representation."
+	case Severity_WARNING:
+		implication = "exclusion of this feature in .proto representation removes component of api " +
+			"reprsentation but lack of this feature in .proto file does not solely imply " +
+			"inability of a functional transcoding environment."
+	case Severity_FAIL:
+		implication = "fundamental api representation feature lacks support in .proto files."
+	default:
+		return "No hint for " + classification.Enum().String()
+	}
+	return rootHint + reason + severityRoot + implication
 }
