@@ -56,7 +56,7 @@ func DocumentBaseSearch(doc *openapiv3.Document) []*Incompatibility {
 		return incompatibilities
 	}
 	incompatibilities = append(incompatibilities,
-		newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_Security, "security"))
+		newIncompatibility(IncompatibiltiyClassification_Security, "security"))
 	return incompatibilities
 }
 
@@ -72,15 +72,15 @@ func PathsSearch(doc *openapiv3.Document) []*Incompatibility {
 		path := pathItem.Value
 		if path.Head != nil {
 			incompatibilities = append(incompatibilities,
-				newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_InvalidOperation, extendPath(pathKey, "head")...))
+				newIncompatibility(IncompatibiltiyClassification_InvalidOperation, extendPath(pathKey, "head")...))
 		}
 		if path.Options != nil {
 			incompatibilities = append(incompatibilities,
-				newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_InvalidOperation, extendPath(pathKey, "options")...))
+				newIncompatibility(IncompatibiltiyClassification_InvalidOperation, extendPath(pathKey, "options")...))
 		}
 		if path.Trace != nil {
 			incompatibilities = append(incompatibilities,
-				newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_InvalidOperation, extendPath(pathKey, "trace")...))
+				newIncompatibility(IncompatibiltiyClassification_InvalidOperation, extendPath(pathKey, "trace")...))
 		}
 		incompatibilities = append(incompatibilities,
 			validOperationSearch(path.Get, extendPath(pathKey, "get"))...)
@@ -111,7 +111,7 @@ func ComponentsSearch(doc *openapiv3.Document) []*Incompatibility {
 
 	if doc.Components.Callbacks != nil {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_ExternalTranscodingSupport, extendPath(path, "callbacks")...))
+			newIncompatibility(IncompatibiltiyClassification_ExternalTranscodingSupport, extendPath(path, "callbacks")...))
 	}
 	if doc.Components.Schemas != nil {
 		for _, schemaRef := range doc.Components.Schemas.GetAdditionalProperties() {
@@ -147,7 +147,7 @@ func ComponentsSearch(doc *openapiv3.Document) []*Incompatibility {
 		}
 	}
 	if doc.Components.SecuritySchemes != nil {
-		incompatibilities = append(incompatibilities, newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_Security, extendPath(path, "securitySchemes")...))
+		incompatibilities = append(incompatibilities, newIncompatibility(IncompatibiltiyClassification_Security, extendPath(path, "securitySchemes")...))
 	}
 
 	return incompatibilities
@@ -163,11 +163,11 @@ func validOperationSearch(operation *openapiv3.Operation, path []string) []*Inco
 	}
 	if operation.Callbacks != nil {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_ExternalTranscodingSupport, extendPath(path, "callbacks")...))
+			newIncompatibility(IncompatibiltiyClassification_ExternalTranscodingSupport, extendPath(path, "callbacks")...))
 	}
 	if operation.Security != nil || len(operation.Security) != 0 {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_Security, extendPath(path, "security")...))
+			newIncompatibility(IncompatibiltiyClassification_Security, extendPath(path, "security")...))
 	}
 	for ind, paramOrRef := range operation.Parameters {
 		incompatibilities = append(incompatibilities, parametersSearch(paramOrRef.GetParameter(), extendPath(path, "parameters", strconv.Itoa(ind)))...)
@@ -184,19 +184,19 @@ func parametersSearch(param *openapiv3.Parameter, path []string) []*Incompatibil
 	}
 	if param.Style != "" {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_ParameterStyling, extendPath(path, "style")...))
+			newIncompatibility(IncompatibiltiyClassification_ParameterStyling, extendPath(path, "style")...))
 	}
 	if param.Explode {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_ParameterStyling, extendPath(path, "explode")...))
+			newIncompatibility(IncompatibiltiyClassification_ParameterStyling, extendPath(path, "explode")...))
 	}
 	if param.AllowReserved {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_ParameterStyling, extendPath(path, "allowReserved")...))
+			newIncompatibility(IncompatibiltiyClassification_ParameterStyling, extendPath(path, "allowReserved")...))
 	}
 	if param.AllowEmptyValue {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, extendPath(path, "allowEmptyValue")...))
+			newIncompatibility(IncompatibiltiyClassification_DataValidation, extendPath(path, "allowEmptyValue")...))
 	}
 	if param.Schema != nil {
 		incompatibilities = append(incompatibilities,
@@ -213,75 +213,75 @@ func schemaSearch(schema *openapiv3.Schema, path []string) []*Incompatibility {
 	}
 	if schema.Nullable {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_InvalidDataState, extendPath(path, "nullable")...))
+			newIncompatibility(IncompatibiltiyClassification_InvalidDataState, extendPath(path, "nullable")...))
 	}
 	if schema.Discriminator != nil {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_Inheritance, extendPath(path, "discriminator")...))
+			newIncompatibility(IncompatibiltiyClassification_Inheritance, extendPath(path, "discriminator")...))
 	}
 	if schema.ReadOnly {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_ParameterStyling, extendPath(path, "readOnly")...))
+			newIncompatibility(IncompatibiltiyClassification_ParameterStyling, extendPath(path, "readOnly")...))
 	}
 	if schema.WriteOnly {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_ParameterStyling, extendPath(path, "writeOnly")...))
+			newIncompatibility(IncompatibiltiyClassification_ParameterStyling, extendPath(path, "writeOnly")...))
 	}
 	if schema.MultipleOf != 0 {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, extendPath(path, "multipleOf")...))
+			newIncompatibility(IncompatibiltiyClassification_DataValidation, extendPath(path, "multipleOf")...))
 	}
 	if schema.Maximum != 0 {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, extendPath(path, "maximum")...))
+			newIncompatibility(IncompatibiltiyClassification_DataValidation, extendPath(path, "maximum")...))
 	}
 	if schema.ExclusiveMaximum {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, extendPath(path, "exclusiveMaximum")...))
+			newIncompatibility(IncompatibiltiyClassification_DataValidation, extendPath(path, "exclusiveMaximum")...))
 	}
 	if schema.Minimum != 0 {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, extendPath(path, "minimum")...))
+			newIncompatibility(IncompatibiltiyClassification_DataValidation, extendPath(path, "minimum")...))
 	}
 	if schema.ExclusiveMinimum {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, extendPath(path, "exclusiveMinimum")...))
+			newIncompatibility(IncompatibiltiyClassification_DataValidation, extendPath(path, "exclusiveMinimum")...))
 	}
 	if schema.MaxLength != 0 {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, extendPath(path, "maxLength")...))
+			newIncompatibility(IncompatibiltiyClassification_DataValidation, extendPath(path, "maxLength")...))
 	}
 	if schema.MinLength != 0 {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, extendPath(path, "minimum")...))
+			newIncompatibility(IncompatibiltiyClassification_DataValidation, extendPath(path, "minimum")...))
 	}
 	if schema.Pattern != "" {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, extendPath(path, "pattern")...))
+			newIncompatibility(IncompatibiltiyClassification_DataValidation, extendPath(path, "pattern")...))
 	}
 	if schema.MaxItems != 0 {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, extendPath(path, "maxItems")...))
+			newIncompatibility(IncompatibiltiyClassification_DataValidation, extendPath(path, "maxItems")...))
 	}
 	if schema.MinItems != 0 {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, extendPath(path, "minItems")...))
+			newIncompatibility(IncompatibiltiyClassification_DataValidation, extendPath(path, "minItems")...))
 	}
 	if schema.UniqueItems {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_DataValidation, extendPath(path, "uniqueItems")...))
+			newIncompatibility(IncompatibiltiyClassification_DataValidation, extendPath(path, "uniqueItems")...))
 	}
 	if schema.AllOf != nil || len(schema.AllOf) != 0 {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_Inheritance, extendPath(path, "allOf")...))
+			newIncompatibility(IncompatibiltiyClassification_Inheritance, extendPath(path, "allOf")...))
 	}
 	if schema.OneOf != nil || len(schema.OneOf) != 0 {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_Inheritance, extendPath(path, "oneOf")...))
+			newIncompatibility(IncompatibiltiyClassification_Inheritance, extendPath(path, "oneOf")...))
 	}
 	if schema.AnyOf != nil || len(schema.AnyOf) != 0 {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_FAIL, IncompatibiltiyClassification_Inheritance, extendPath(path, "anyOf")...))
+			newIncompatibility(IncompatibiltiyClassification_Inheritance, extendPath(path, "anyOf")...))
 	}
 	if schema.Items != nil {
 		for ind, item := range schema.Items.SchemaOrReference {
@@ -344,7 +344,7 @@ func contentSearch(media *openapiv3.MediaType, path []string) []*Incompatibility
 	}
 	if media.Encoding != nil {
 		incompatibilities = append(incompatibilities,
-			newIncompatibility(Severity_WARNING, IncompatibiltiyClassification_ParameterStyling, extendPath(path, "encoding")...))
+			newIncompatibility(IncompatibiltiyClassification_ParameterStyling, extendPath(path, "encoding")...))
 	}
 	if media.Schema != nil {
 		incompatibilities = append(incompatibilities,
