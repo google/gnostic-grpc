@@ -55,19 +55,23 @@ message IncompatibilityReport {
 // Detailed structure of an incompatibility in a file
 message IncompatibilityDescription {
     // File position
-    int32 line = 1;
-    int32 column = 2;
+    int32 line = 2;
+    int32 column = 3;
 
-    // string path to incompatibility
-    repeated string token_path = 3;
+    //string token
+    string token = 4;
+
+    //classification
+    IncompatibiltiyClassification class = 5;
 
     // hint to describe incompatibility
-    repeated string hint = 4;
+    string hint = 6;
 }
 
 // Report of incompatibility descriptions
 message IDReport {
-    repeated IncompatibilityDescription incompatibilities = 1;
+    string reportIdentifier = 1;
+    repeated IncompatibilityDescription incompatibilities = 2;
 }
 
 message FileIncompatibilityClassificationAnalysis {

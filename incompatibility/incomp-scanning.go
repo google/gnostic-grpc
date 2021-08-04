@@ -16,9 +16,12 @@ package incompatibility
 
 import (
 	"errors"
+	"fmt"
+	"log"
 	"path/filepath"
 	"strings"
 
+	"github.com/googleapis/gnostic-grpc/search"
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
 	plugins "github.com/googleapis/gnostic/plugins"
 	"google.golang.org/protobuf/encoding/prototext"
@@ -45,11 +48,23 @@ func CreateIncompReport(env *plugins.Environment, reportType Report) {
 		if model.TypeUrl != "openapi.v3.Document" {
 			continue
 		}
+		//Parse openapidoc
 		openAPIdocument := &openapiv3.Document{}
 		err := proto.Unmarshal(model.Value, openAPIdocument)
 		env.RespondAndExitIfError(err)
+
+		//Generate Base Incompatibility Report
 		incompatibilityReport := ScanIncompatibilities(openAPIdocument, env.Request.SourceName)
-		writeProtobufMessage(incompatibilityReport, env)
+
+		//Write Report to File
+		switch reportType {
+		case BaseIncompatibility_Report:
+			writeProtobufMessage(incompatibilityReport, env)
+		case ID_Report:
+			//TODO once branches are merged
+			// idReport := detailReport(incompatibilityReport)
+			// writeProtobufMessage(idReport, env)
+		}
 		env.RespondAndExit()
 	}
 	env.RespondAndExitIfError(errors.New("no supported models for incompatibility reporting"))
@@ -67,6 +82,29 @@ func writeProtobufMessage(incompatibilityReport *IncompatibilityReport, env *plu
 	env.Response.Files = append(env.Response.Files, createdFile)
 }
 
+// creates an IDReport from a base report
+func detailReport(incompatibilityReport *IncompatibilityReport) *IDReport {
+	var idReport *IDReport
+	var incompatibilities []*IncompatibilityDescription
+	fileNode, parseErr := search.MakeNode(incompatibilityReport.ReportIdentifier)
+	if parseErr != nil {
+		log.Printf("FATAL: unable to parse file at %s with error %s", incompatibilityReport.ReportIdentifier, parseErr)
+		return nil
+	}
+	for _, baseincomp := range incompatibilityReport.Incompatibilities {
+		foundNode, searchErr := search.FindNode(fileNode.Content[0], baseincomp.TokenPath...)
+		if searchErr != nil {
+			log.Printf("Warning: Unable to find incompatibilty %s", searchErr.Error())
+		}
+		lastTokenInPath := baseincomp.TokenPath[len(baseincomp.TokenPath)-1]
+		incompatibilities = append(incompatibilities,
+			newIncompatibilityDescription(foundNode.Line, foundNode.Column, baseincomp.Classification, lastTokenInPath))
+	}
+	idReport = newIDReport(incompatibilityReport.ReportIdentifier, incompatibilities)
+	return idReport
+}
+
+// leaves base file name without any extenstions
 func trimSourceName(pathWithExtension string) string {
 	fileNameWithExtension := filepath.Base(pathWithExtension)
 	if extInd := strings.IndexByte(fileNameWithExtension, '.'); extInd != -1 {
@@ -80,10 +118,32 @@ func ScanIncompatibilities(document *openapiv3.Document, reportIdentifier string
 	return ReportOnDoc(document, reportIdentifier, IncompatibilityReporters...)
 }
 
-func newIncompatibility(severity Severity, classification IncompatibiltiyClassification, path ...string) *Incompatibility {
-	return &Incompatibility{TokenPath: path, Classification: classification, Severity: classificationSeverity(classification)}
+func newIDReport(reportIdentifier string, incompDescriptions []*IncompatibilityDescription) *IDReport {
+	return &IDReport{
+		ReportIdentifier:  reportIdentifier,
+		Incompatibilities: incompDescriptions,
+	}
 }
 
+func newIncompatibility(severity Severity, classification IncompatibiltiyClassification, path ...string) *Incompatibility {
+	return &Incompatibility{
+		TokenPath:      path,
+		Classification: classification,
+		Severity:       classificationSeverity(classification),
+	}
+}
+
+func newIncompatibilityDescription(line int, column int, class IncompatibiltiyClassification, lastToken string) *IncompatibilityDescription {
+	return &IncompatibilityDescription{
+		Line:   int32(line),
+		Column: int32(column),
+		Hint:   classificationHint(class),
+		Class:  class,
+		Token:  lastToken,
+	}
+}
+
+// returns a severity level based on the given classification
 func classificationSeverity(classification IncompatibiltiyClassification) Severity {
 	var severityLevel Severity
 	switch classification {
@@ -102,4 +162,10 @@ func classificationSeverity(classification IncompatibiltiyClassification) Severi
 		severityLevel = Severity_Severity_Default
 	}
 	return severityLevel
+}
+
+// returns a hint based the given classification
+func classificationHint(classification IncompatibiltiyClassification) string {
+	hint := fmt.Sprintf("%s incompatibilities occur as a result of ", classification.Enum().String())
+	return hint
 }

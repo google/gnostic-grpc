@@ -62,7 +62,7 @@ func TestBasicSecurityIncompatibility(t *testing.T) {
 	}
 }
 
-//Assert that all reported incompatibility paths can be found when travering file
+// Assert that all reported incompatibility paths can be found when travering file
 func TestIncompatibilityExistence(t *testing.T) {
 
 	var existenceTest = []struct {
@@ -84,6 +84,32 @@ func TestIncompatibilityExistence(t *testing.T) {
 			})
 		}
 
+	}
+}
+
+// Test verifying detailing proces of an incompatibility report
+func TestDetailing(t *testing.T) {
+	var detailingTest = []struct {
+		baseReport *IncompatibilityReport
+	}{
+		{createReport(t, "../examples/petstore/petstore.yaml")},
+		{createReport(t, "oas-examples/petstore.json")},
+		{createReport(t, "../examples/bookstore/bookstore.yaml")},
+		{createReport(t, "oas-examples/openapi.yaml")},
+		{createReport(t, "oas-examples/adsense.yaml")},
+	}
+
+	for _, trial := range detailingTest {
+		t.Run(trial.baseReport.ReportIdentifier, func(tt *testing.T) {
+			numIncompatibilitiesBaseReport := len(trial.baseReport.Incompatibilities)
+			numIncompatibilitiesIDReport := len(detailReport(trial.baseReport).Incompatibilities)
+			if numIncompatibilitiesBaseReport != numIncompatibilitiesIDReport {
+				t.Errorf("len(IDReport(%s)): got: %d wanted: %d", trial.baseReport.ReportIdentifier,
+					numIncompatibilitiesIDReport,
+					numIncompatibilitiesBaseReport,
+				)
+			}
+		})
 	}
 }
 
