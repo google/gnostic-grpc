@@ -28,6 +28,14 @@ type keyValue struct {
 	value *yaml.Node
 }
 
+type Seeking int
+
+// Indicates to node what component of key-value pairing findcomponent should return
+const (
+	KEY = iota
+	VALUE
+)
+
 // Parses filePath and attempts to create Node Object
 func MakeNode(filePath string) (*yaml.Node, error) {
 	var node yaml.Node
@@ -39,8 +47,12 @@ func MakeNode(filePath string) (*yaml.Node, error) {
 	return &node, marshErr
 }
 
+func FindKey(node *yaml.Node, path ...string) (*yaml.Node, error) {
+	return findComponent(node, KEY, path...)
+}
+
 // Given a path in a yaml file return the node at the end of the path
-func FindNode(node *yaml.Node, path ...string) (*yaml.Node, error) {
+func findComponent(node *yaml.Node, seeking Seeking, path ...string) (*yaml.Node, error) {
 	if len(path) == 0 {
 		return node, nil
 	}
@@ -50,12 +62,12 @@ func FindNode(node *yaml.Node, path ...string) (*yaml.Node, error) {
 		if err != nil || ind >= len(node.Content) {
 			return nil, errors.New("invalid index parsed")
 		}
-		return FindNode(node.Content[ind], path[1:]...)
+		return findComponent(node.Content[ind], seeking, path[1:]...)
 	}
 
 	//Look for matching key
 	if foundKeyVal, ok := mapKeyValuePairs(node.Content)[path[0]]; ok {
-		return resolveMatchingPath(foundKeyVal.key, foundKeyVal.value, path...)
+		return resolveMatchingPath(foundKeyVal.key, foundKeyVal.value, seeking, path...)
 	}
 	return nil, fmt.Errorf("unable to find yaml node %s in %s", path[0], node.Value)
 }
@@ -71,11 +83,16 @@ func mapKeyValuePairs(content []*yaml.Node) map[string]keyValue {
 
 // Helper in which path aligns with matching key node and needs
 // further to determine further traversal
-func resolveMatchingPath(key *yaml.Node, val *yaml.Node, path ...string) (*yaml.Node, error) {
+func resolveMatchingPath(key *yaml.Node, val *yaml.Node, seeking Seeking, path ...string) (*yaml.Node, error) {
 	if len(path) == 1 {
-		return key, nil
+		switch seeking {
+		case VALUE:
+			return val, nil
+		default:
+			return key, nil
+		}
 	}
-	return FindNode(val, path[1:]...)
+	return findComponent(val, seeking, path[1:]...)
 }
 
 // Get key and value nodes from content array, bounds chechking should be
