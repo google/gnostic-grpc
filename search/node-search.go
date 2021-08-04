@@ -30,7 +30,7 @@ type keyValue struct {
 
 type Seeking int
 
-// Indicates to node what component of key-value pairing findcomponent should return
+// Indicates to search what component of key-value pairing findcomponent should return
 const (
 	KEY = iota
 	VALUE
