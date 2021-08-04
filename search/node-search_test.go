@@ -43,7 +43,7 @@ func searchKey(t *testing.T, baseNode *yaml.Node, path ...string) (line, col int
 }
 
 // Assert keysearch results in correct file position
-func TestFilePosition(t *testing.T) {
+func TestFindKey(t *testing.T) {
 
 	shallowYaml := parseFile(t, "node-examples/yaml1.yaml")
 	deepYaml := parseFile(t, "node-examples/yaml2.yaml")
@@ -109,7 +109,8 @@ func TestFilePosition(t *testing.T) {
 	}
 }
 
-func TestErrorConditions(t *testing.T) {
+// Assert correct error reporting in FindKey
+func TestFindKeyErrors(t *testing.T) {
 
 	shallowYaml := parseFile(t, "node-examples/yaml1.yaml")
 	deepYaml := parseFile(t, "node-examples/yaml2.yaml")

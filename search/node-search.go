@@ -46,14 +46,15 @@ func MakeNode(filePath string) (*yaml.Node, error) {
 }
 
 // Returns the fileposition of the key at the end of path
-func FindKey(node *yaml.Node, path ...string) (line, col int, err error) {
+func FindKey(node *yaml.Node, path ...string) (int, int, error) {
+	var line, col int
 	node, searchErr := findComponent(node, path...)
 	if searchErr != nil {
 		return line, col, searchErr
 	}
 	line = node.Line
 	col = node.Column
-	return line, col, err
+	return line, col, nil
 }
 
 // Given a path in a yaml file return a pairing of nodes at the end of the path
