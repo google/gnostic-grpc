@@ -15,14 +15,16 @@
 package search
 
 import (
-	"errors"
-	"strconv"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/googleapis/gnostic-grpc/utils"
 	"gopkg.in/yaml.v3"
 )
+
+type filePosition struct {
+	Line int
+	Col  int
+}
 
 func parseFile(t *testing.T, filePath string) *yaml.Node {
 	baseNode, parseErr := MakeNode(filePath)
@@ -32,35 +34,16 @@ func parseFile(t *testing.T, filePath string) *yaml.Node {
 	return baseNode.Content[0]
 }
 
-func searchKey(t *testing.T, baseNode *yaml.Node, path ...string) *yaml.Node {
-	node, searchError := FindKey(baseNode, path...)
+func searchKey(t *testing.T, baseNode *yaml.Node, path ...string) (line, col int) {
+	line, col, searchError := FindKey(baseNode, path...)
 	if searchError != nil {
 		t.Fatalf(searchError.Error())
 	}
-	return node
+	return line, col
 }
 
-func searchValue(t *testing.T, baseNode *yaml.Node, path ...string) *yaml.Node {
-	node, searchError := FindValue(baseNode, path...)
-	if searchError != nil {
-		t.Fatalf(searchError.Error())
-	}
-	return node
-}
-
-func validateIndex(sequenceNode *yaml.Node, ind int) error {
-	if sequenceNode.Kind != yaml.SequenceNode {
-		println(sequenceNode.Value)
-		return errors.New("not a sequence node")
-	}
-	if ind < 0 || ind >= len(sequenceNode.Content) {
-		return errors.New("not in sequence bounds")
-	}
-	return nil
-}
-
-// Assert that from key value pairs, keys are returned in keysearch
-func TestKeySearch(t *testing.T) {
+// Assert keysearch results in correct file position
+func TestFilePosition(t *testing.T) {
 
 	shallowYaml := parseFile(t, "node-examples/yaml1.yaml")
 	deepYaml := parseFile(t, "node-examples/yaml2.yaml")
@@ -68,171 +51,108 @@ func TestKeySearch(t *testing.T) {
 	deepJson := parseFile(t, "node-examples/json2.json")
 
 	var keyTest = []struct {
-		testName    string
-		baseNode    *yaml.Node
-		path        []string
-		expectedKey string
+		testName             string
+		baseNode             *yaml.Node
+		path                 []string
+		expectedFilePosition filePosition
 	}{
 		{
 			"shallowYaml1",
 			shallowYaml,
 			[]string{"putting"},
-			"putting",
+			filePosition{1, 1},
 		},
 		{
 			"shallowYaml2",
 			shallowYaml,
 			[]string{"trade", "poetry"},
-			"poetry",
+			filePosition{3, 3},
 		},
 		{
 			"deepYaml1",
 			deepYaml,
 			[]string{"0", "1", "neighbor", "1", "slightly", "group", "1", "development"},
-			"development",
+			filePosition{54, 15},
 		},
 		{
 			"deepYaml2",
 			deepYaml,
 			[]string{"0", "1", "neighbor", "1", "way"},
-			"way",
+			filePosition{4, 9},
 		},
 		{
 			"shallowjson1",
 			shallowJson,
 			[]string{"copper"},
-			"copper",
+			filePosition{2, 5},
 		},
 		{
 			"deepjson2",
 			deepJson,
 			[]string{"0", "1", "0", "whole", "2", "1", "mistake"},
-			"mistake",
+			filePosition{12, 17},
 		},
 	}
 	for _, trial := range keyTest {
 		t.Run(trial.testName, func(tt *testing.T) {
-			foundNode := searchKey(tt, trial.baseNode, trial.path...)
-			if trial.expectedKey != foundNode.Value {
-				tt.Errorf("foundNode != lastToken, wanted: %s, got: %s", trial.expectedKey, foundNode.Value)
+			foundLine, foundCol := searchKey(tt, trial.baseNode, trial.path...)
+			foundFilePos := filePosition{
+				Line: foundLine,
+				Col:  foundCol,
+			}
+			diff := cmp.Diff(foundFilePos,
+				trial.expectedFilePosition)
+			if diff != "" {
+				tt.Error("UnexpectedFilePosition: diff(-want +got):\n", diff)
 			}
 		})
 	}
 }
 
-// Assert values from valuesearch correctly return values in key-value pairs
-// and values from single objects
-func TestValueSearch(t *testing.T) {
+func TestErrorConditions(t *testing.T) {
+
 	shallowYaml := parseFile(t, "node-examples/yaml1.yaml")
 	deepYaml := parseFile(t, "node-examples/yaml2.yaml")
 	shallowJson := parseFile(t, "node-examples/json1.json")
 	deepJson := parseFile(t, "node-examples/json2.json")
 
-	var valueTest = []struct {
-		testName      string
-		baseNode      *yaml.Node
-		path          []string
-		expectedValue string
+	var keyTest = []struct {
+		testName            string
+		baseNode            *yaml.Node
+		path                []string
+		expectedErrorString string
 	}{
 		{
-			"shallowYaml",
+			"ExhaustiveSearch",
 			shallowYaml,
-			[]string{"putting"},
-			"false",
+			[]string{"putting", "invalidKey1"},
+			"unable to find yaml node invalidKey1",
 		},
 		{
-			"shallowYaml2",
-			shallowYaml,
-			[]string{"trade", "poetry"},
-			"below",
+			"ExhaustiveSearch2",
+			deepJson,
+			[]string{"0", "1", "0", "whole", "2", "3", "invalidKey2"},
+			"unable to find yaml node invalidKey2",
 		},
 		{
-			"deepYaml1",
-			deepYaml,
-			[]string{"0", "1", "neighbor", "1", "slightly", "group", "1", "view"},
-			"gate",
-		},
-		{
-			"deepYaml2",
-			deepYaml,
-			[]string{"0", "1", "neighbor", "0"},
-			"1577599595",
-		},
-		{
-			"shallowjson1",
+			"InvalidIndex",
 			shallowJson,
-			[]string{"copper"},
-			"false",
+			[]string{"corn", "worth", "7"},
+			"invalid index parsed 7",
 		},
 		{
-			"deepjson2",
-			deepJson,
-			[]string{"0", "1", "0", "whole", "2", "1", "mistake"},
-			"-1611512731",
+			"InvalidIndex2",
+			deepYaml,
+			[]string{"0", "1", "neighbor", "1", "slightly", "group", "1", "development", "search", "-1"},
+			"invalid index parsed -1",
 		},
 	}
-	for _, trial := range valueTest {
+	for _, trial := range keyTest {
 		t.Run(trial.testName, func(tt *testing.T) {
-			foundNode := searchValue(tt, trial.baseNode, trial.path...)
-			if trial.expectedValue != foundNode.Value {
-				tt.Errorf("foundNode != lastToken, wanted: %s, got: %s", trial.expectedValue, foundNode.Value)
-			}
-		})
-	}
-}
-
-// Assert that paths ending in sequence indexes are valid
-// in the sequence nodes
-func TestSequenceValidation(t *testing.T) {
-	shallowJson := parseFile(t, "node-examples/json1.json")
-	deepJson := parseFile(t, "node-examples/json2.json")
-
-	var pathTest = []struct {
-		testName             string
-		baseNode             *yaml.Node
-		pathToSequence       []string
-		knownLengthOfSequnce int
-	}{
-		{
-			"shallowJson",
-			shallowJson,
-			[]string{"corn", "worth"},
-			6,
-		},
-		{
-			"deepJson",
-			deepJson,
-			[]string{"0", "1"},
-			6,
-		},
-		{
-			"deepJson2",
-			deepJson,
-			[]string{"0", "1", "0", "whole"},
-			6,
-		},
-	}
-	for _, trial := range pathTest {
-		t.Run(trial.testName, func(tt *testing.T) {
-			foundSequenceNode := searchValue(tt, trial.baseNode, trial.pathToSequence...)
-			for i := 0; i < trial.knownLengthOfSequnce; i++ {
-				//Validate Index
-				if validationError := validateIndex(foundSequenceNode, i); validationError != nil {
-					tt.Error(validationError.Error())
-				}
-
-				//Check expected sequence entry vs recomputed sequence entry
-				expectedSequenceEntry := foundSequenceNode.Content[i]
-				pathToSequenceEntry := utils.ExtendPath(trial.pathToSequence, strconv.Itoa(i))
-				foundSequenceEntry := searchValue(t, trial.baseNode, pathToSequenceEntry...)
-
-				diff := cmp.Diff(expectedSequenceEntry, foundSequenceEntry)
-				if diff != "" {
-					tt.Error("expectedSequenceEntry != reComputedSequenceEntry: diff(-want +got):\n", diff)
-				}
-			}
-			if err := validateIndex(foundSequenceNode, trial.knownLengthOfSequnce); err.Error() != "not in sequence bounds" {
-				tt.Errorf("Expected out of bounds error, got %v", err)
+			_, _, err := FindKey(trial.baseNode, trial.path...)
+			diff := cmp.Diff(trial.expectedErrorString, err.Error())
+			if diff != "" {
+				tt.Error("UnexpectedFilePosition: diff(-want +got):\n", diff)
 			}
 		})
 	}
