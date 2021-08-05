@@ -119,7 +119,7 @@ func TestDetailing(t *testing.T) {
 // Test process of writing an incompatibility report to plugin
 // file object and then extract from object back to incompatibility
 // report
-func TestCreateBaseIncompReport(t *testing.T) {
+func TestCreateIncompReports(t *testing.T) {
 	var detailingTest = []struct {
 		oasFilePath string
 	}{

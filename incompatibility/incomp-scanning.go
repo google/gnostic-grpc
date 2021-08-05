@@ -57,7 +57,7 @@ func GnosticIncompatibiltyScanning(env *plugins.Environment, reportType Report) 
 	env.RespondAndExitIfError(errors.New("no supported models for incompatibility reporting"))
 }
 
-// Creates and formats a specificted incompatibility report under plugin.file object
+// Creates and formats a specified incompatibility report under plugin.file object
 func createIncompReport(doc *openapiv3.Document, filePath string, reportType Report) (*plugins.File, error) {
 	//Generate Base Incompatibility Report
 	BaseReport := ScanIncompatibilities(doc, filePath)
@@ -84,7 +84,7 @@ func writeProtobufMessage(m protoreflect.ProtoMessage, filePath string) (*plugin
 
 // creates an *FileDescriptiveReport from a base report
 func detailReport(incompatibilityReport *IncompatibilityReport) *FileDescriptiveReport {
-	var idReport *FileDescriptiveReport
+	var descReport *FileDescriptiveReport
 	var incompatibilities []*IncompatibilityDescription
 
 	fileNode, parseErr := search.MakeNode(incompatibilityReport.ReportIdentifier)
@@ -102,8 +102,8 @@ func detailReport(incompatibilityReport *IncompatibilityReport) *FileDescriptive
 		incompatibilities = append(incompatibilities,
 			newIncompatibilityDescription(line, col, baseincomp.Classification, lastTokenInPath))
 	}
-	idReport = newDescriptiveReport(incompatibilityReport.ReportIdentifier, incompatibilities)
-	return idReport
+	descReport = newDescriptiveReport(incompatibilityReport.ReportIdentifier, incompatibilities)
+	return descReport
 }
 
 // leaves base file name without any extenstions
