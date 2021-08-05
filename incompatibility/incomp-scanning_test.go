@@ -24,18 +24,10 @@ import (
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
 	plugins "github.com/googleapis/gnostic/plugins"
 	"google.golang.org/protobuf/encoding/prototext"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 	"gopkg.in/yaml.v3"
 )
-
-// Helper Function to check for single incompatibilty
-func incompatibilityCheck(document *openapiv3.Document, path string, incompatibilityClass IncompatibiltiyClassification) bool {
-	for _, incompatibility := range ScanIncompatibilities(document, path).Incompatibilities {
-		if incompatibility.Classification == incompatibilityClass {
-			return true
-		}
-	}
-	return false
-}
 
 // Helper Test Function generate OpenAPI representation or Error
 func generateDoc(t *testing.T, path string) *openapiv3.Document {
@@ -44,25 +36,6 @@ func generateDoc(t *testing.T, path string) *openapiv3.Document {
 		t.Fatalf("Error while parsing input file: %s\n", path)
 	}
 	return document
-}
-
-// Simple test for security incompatibility
-func TestBasicSecurityIncompatibility(t *testing.T) {
-
-	var securityTest = []struct {
-		path           string
-		expectSecurity bool
-	}{
-		{"../generator/testfiles/other.yaml", false},
-		{"../examples/petstore/petstore.yaml", true},
-	}
-	for _, trial := range securityTest {
-		t.Run(filepath.Base(trial.path)+"SecurityCheck", func(tt *testing.T) {
-			if incompatibilityCheck(generateDoc(tt, trial.path), trial.path, IncompatibiltiyClassification_Security) != trial.expectSecurity {
-				tt.Errorf("Incorrect security detection for file, got %t\n", trial.expectSecurity)
-			}
-		})
-	}
 }
 
 // Assert that all reported incompatibility paths can be found when travering file
@@ -95,11 +68,11 @@ func TestDetailing(t *testing.T) {
 	var detailingTest = []struct {
 		baseReport *IncompatibilityReport
 	}{
-		{createReport(t, "../examples/petstore/petstore.yaml")},
-		{createReport(t, "oas-examples/petstore.json")},
-		{createReport(t, "../examples/bookstore/bookstore.yaml")},
-		{createReport(t, "oas-examples/openapi.yaml")},
-		{createReport(t, "oas-examples/adsense.yaml")},
+		{sudoGnosticFlowBaseReport(t, "../examples/petstore/petstore.yaml")},
+		{sudoGnosticFlowBaseReport(t, "oas-examples/petstore.json")},
+		{sudoGnosticFlowBaseReport(t, "../examples/bookstore/bookstore.yaml")},
+		{sudoGnosticFlowBaseReport(t, "oas-examples/openapi.yaml")},
+		{sudoGnosticFlowBaseReport(t, "oas-examples/adsense.yaml")},
 	}
 
 	for _, trial := range detailingTest {
@@ -118,7 +91,7 @@ func TestDetailing(t *testing.T) {
 
 // Test process of writing an incompatibility report to plugin
 // file object and then extract from object back to incompatibility
-// report
+// report, also trests
 func TestCreateIncompReports(t *testing.T) {
 	var detailingTest = []struct {
 		oasFilePath string
@@ -131,26 +104,10 @@ func TestCreateIncompReports(t *testing.T) {
 	}
 
 	for _, trial := range detailingTest {
-		doc := generateDoc(t, trial.oasFilePath)
 		t.Run(trial.oasFilePath, func(tt *testing.T) {
-			// testing base report
-			var baseReportFromFile IncompatibilityReport
-			baseReportFileObj := reportFileFormat(doc, trial.oasFilePath, tt, BaseIncompatibility_Report)
-			if unmarshalErr := prototext.Unmarshal(baseReportFileObj.Data, &baseReportFromFile); unmarshalErr != nil {
-				tt.Fatal("unable to unmarshal basereport error: ", unmarshalErr.Error())
-			}
-			baseDiff := cmp.Diff(createReport(t, trial.oasFilePath), &baseReportFromFile, ignoreUnexportedOption)
-			if baseDiff != "" {
-				tt.Error("CreateIncompReport(...) : diff(-want +got)\n", baseDiff)
-			}
-
-			// testing descriptive file report
-			var descriptiveReportFromFile FileDescriptiveReport
-			descriptiveReportFileObj := reportFileFormat(doc, trial.oasFilePath, tt, FileDescriptive_Report)
-			if unmarshalErr := prototext.Unmarshal(descriptiveReportFileObj.Data, &descriptiveReportFromFile); unmarshalErr != nil {
-				tt.Fatal("unable to unmarshal desc. report error: ", unmarshalErr.Error())
-			}
-			descDiff := cmp.Diff(detailReport(createReport(t, trial.oasFilePath)), &descriptiveReportFromFile, ignoreUnexportedOption)
+			baseReportFromGnosticFlow := sudoGnosticFlowBaseReport(tt, trial.oasFilePath)
+			descriptiveReportFromGnosticFlow := sudoGnosticFlowFDReport(tt, trial.oasFilePath)
+			descDiff := cmp.Diff(detailReport(baseReportFromGnosticFlow), descriptiveReportFromGnosticFlow, ignoreUnexportedOption)
 			if descDiff != "" {
 				tt.Error("DetailIncompReport(...) : diff(-want +got)\n", descDiff)
 			}
@@ -159,14 +116,58 @@ func TestCreateIncompReports(t *testing.T) {
 	}
 }
 
-// Error handling for createIncompReport
-func reportFileFormat(doc *openapiv3.Document, oasFilePath string, t *testing.T, reportType Report) *plugins.File {
-	baseReportFileObj, reportErr :=
-		createIncompReport(doc, oasFilePath, reportType)
-	if reportErr != nil {
-		t.Fatalf(reportErr.Error())
+// Creates a sudo environment for incompatibility testing
+func createSudoEnvironment(t *testing.T, filePath string) *plugins.Environment {
+	doc, parseError := utils.ParseOpenAPIDoc(filePath)
+	if parseError != nil {
+		t.Fatal("parse error")
 	}
-	return baseReportFileObj
+	docBytes, marshalErr := proto.Marshal(doc)
+	if marshalErr != nil {
+		t.Fatal("unable to create sudo environment from marshal error")
+	}
+	sudoEnvironment := &plugins.Environment{
+		Request: &plugins.Request{
+			SourceName: filePath,
+			Models: []*anypb.Any{
+				{TypeUrl: "openapi.v3.Document", Value: docBytes},
+			},
+		},
+		Response: &plugins.Response{
+			Files: make([]*plugins.File, 0),
+		},
+	}
+	return sudoEnvironment
+}
+
+// Formatting and ErrorHandling for Base Report creation GnosticIncompatibiltyScanning
+func sudoGnosticFlowBaseReport(t *testing.T, filePath string) *IncompatibilityReport {
+	var baseReport IncompatibilityReport
+	sudoEnvironment := createSudoEnvironment(t, filePath)
+	GnosticIncompatibiltyScanning(sudoEnvironment, BaseIncompatibility_Report)
+	if len(sudoEnvironment.Response.Files) != 1 {
+		t.Fatalf("Did not store singular base incompatibility report")
+	}
+	binData := sudoEnvironment.Response.Files[0].Data
+	if prototext.Unmarshal(binData, &baseReport) != nil {
+		t.Fatalf("Failed to create fd reoprt from gnostic")
+	}
+	return &baseReport
+}
+
+// Formatting and ErrorHandling for FileDescriptive Report creation in GnosticIncompatibiltyScanning
+func sudoGnosticFlowFDReport(t *testing.T, filePath string) *FileDescriptiveReport {
+	var fdReport FileDescriptiveReport
+	sudoEnvironment := createSudoEnvironment(t, filePath)
+	GnosticIncompatibiltyScanning(sudoEnvironment, FileDescriptive_Report)
+	binData := sudoEnvironment.Response.Files[0].Data
+	if len(sudoEnvironment.Response.Files) != 1 {
+		t.Fatalf("Did not store singular base incompatibility report")
+	}
+	if prototext.Unmarshal(binData, &fdReport) != nil {
+		t.Fatalf("Failed to create fd report from gnostic")
+	}
+	return &fdReport
 }
 
 // Error handling for makeNode

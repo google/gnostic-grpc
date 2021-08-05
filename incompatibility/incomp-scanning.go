@@ -42,32 +42,28 @@ func GnosticIncompatibiltyScanning(env *plugins.Environment, reportType Report) 
 		if model.TypeUrl != "openapi.v3.Document" {
 			continue
 		}
-
 		// Format into digestable object
 		openAPIdocument := &openapiv3.Document{}
 		err := proto.Unmarshal(model.Value, openAPIdocument)
 		env.RespondAndExitIfError(err)
 
-		createdFile, reportErr := createIncompReport(openAPIdocument, env.Request.SourceName, reportType)
+		createdFile, reportErr := createAndFormatReport(openAPIdocument, env.Request.SourceName, reportType)
 		env.RespondAndExitIfError(reportErr)
 		env.Response.Files = append(env.Response.Files, createdFile)
-
-		env.RespondAndExit()
 	}
-	env.RespondAndExitIfError(errors.New("no supported models for incompatibility reporting"))
 }
 
 // Creates and formats a specified incompatibility report under plugin.file object
-func createIncompReport(doc *openapiv3.Document, filePath string, reportType Report) (*plugins.File, error) {
+func createAndFormatReport(doc *openapiv3.Document, filePath string, reportType Report) (*plugins.File, error) {
 	//Generate Base Incompatibility Report
-	BaseReport := ScanIncompatibilities(doc, filePath)
+	report := ScanIncompatibilities(doc, filePath)
 
 	//Write Report to File
 	switch reportType {
 	case BaseIncompatibility_Report:
-		return writeProtobufMessage(BaseReport, filePath)
+		return writeProtobufMessage(report, filePath)
 	case FileDescriptive_Report:
-		return writeProtobufMessage(detailReport(BaseReport), filePath)
+		return writeProtobufMessage(detailReport(report), filePath)
 	}
 
 	return nil, errors.New("unable to format report type")
@@ -124,14 +120,6 @@ func newDescriptiveReport(reportIdentifier string, incompDescriptions []*Incompa
 	return &FileDescriptiveReport{
 		ReportIdentifier:  reportIdentifier,
 		Incompatibilities: incompDescriptions,
-	}
-}
-
-func newIncompatibility(classification IncompatibiltiyClassification, path ...string) *Incompatibility {
-	return &Incompatibility{
-		TokenPath:      path,
-		Classification: classification,
-		Severity:       classificationSeverity(classification),
 	}
 }
 
