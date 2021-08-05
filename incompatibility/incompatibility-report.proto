@@ -69,7 +69,7 @@ message IncompatibilityDescription {
 }
 
 // Report of incompatibility descriptions
-message IDReport {
+message FileDescriptiveReport {
     string reportIdentifier = 1;
     repeated IncompatibilityDescription incompatibilities = 2;
 }

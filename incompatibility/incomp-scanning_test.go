@@ -18,9 +18,12 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/googleapis/gnostic-grpc/search"
 	"github.com/googleapis/gnostic-grpc/utils"
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
+	plugins "github.com/googleapis/gnostic/plugins"
+	"google.golang.org/protobuf/encoding/prototext"
 	"gopkg.in/yaml.v3"
 )
 
@@ -113,6 +116,60 @@ func TestDetailing(t *testing.T) {
 	}
 }
 
+// Test process of writing an incompatibility report to plugin
+// file object and then extract from object back to incompatibility
+// report
+func TestCreateBaseIncompReport(t *testing.T) {
+	var detailingTest = []struct {
+		oasFilePath string
+	}{
+		{"../examples/petstore/petstore.yaml"},
+		{"oas-examples/petstore.json"},
+		{"../examples/bookstore/bookstore.yaml"},
+		{"oas-examples/openapi.yaml"},
+		{"oas-examples/adsense.yaml"},
+	}
+
+	for _, trial := range detailingTest {
+		doc := generateDoc(t, trial.oasFilePath)
+		t.Run(trial.oasFilePath, func(tt *testing.T) {
+			// testing base report
+			var baseReportFromFile IncompatibilityReport
+			baseReportFileObj := reportFileFormat(doc, trial.oasFilePath, tt, BaseIncompatibility_Report)
+			if unmarshalErr := prototext.Unmarshal(baseReportFileObj.Data, &baseReportFromFile); unmarshalErr != nil {
+				tt.Fatal("unable to unmarshal basereport error: ", unmarshalErr.Error())
+			}
+			baseDiff := cmp.Diff(createReport(t, trial.oasFilePath), &baseReportFromFile, ignoreUnexportedOption)
+			if baseDiff != "" {
+				tt.Error("CreateIncompReport(...) : diff(-want +got)\n", baseDiff)
+			}
+
+			// testing descriptive file report
+			var descriptiveReportFromFile FileDescriptiveReport
+			descriptiveReportFileObj := reportFileFormat(doc, trial.oasFilePath, tt, FileDescriptive_Report)
+			if unmarshalErr := prototext.Unmarshal(descriptiveReportFileObj.Data, &descriptiveReportFromFile); unmarshalErr != nil {
+				tt.Fatal("unable to unmarshal desc. report error: ", unmarshalErr.Error())
+			}
+			descDiff := cmp.Diff(detailReport(createReport(t, trial.oasFilePath)), &descriptiveReportFromFile, ignoreUnexportedOption)
+			if descDiff != "" {
+				tt.Error("DetailIncompReport(...) : diff(-want +got)\n", descDiff)
+			}
+
+		})
+	}
+}
+
+// Error handling for createIncompReport
+func reportFileFormat(doc *openapiv3.Document, oasFilePath string, t *testing.T, reportType Report) *plugins.File {
+	baseReportFileObj, reportErr :=
+		createIncompReport(doc, oasFilePath, reportType)
+	if reportErr != nil {
+		t.Fatalf(reportErr.Error())
+	}
+	return baseReportFileObj
+}
+
+// Error handling for makeNode
 func createNodeFromFile(filePath string, t *testing.T) *yaml.Node {
 	node, err := search.MakeNode(filePath)
 	if err != nil {
@@ -121,6 +178,7 @@ func createNodeFromFile(filePath string, t *testing.T) *yaml.Node {
 	return node
 }
 
+// Error handling for findKey
 func searchForIncompatibiltiy(node *yaml.Node, incomp *Incompatibility, t *testing.T) {
 	_, _, searchErr := search.FindKey(node.Content[0], incomp.TokenPath...)
 	if searchErr != nil {

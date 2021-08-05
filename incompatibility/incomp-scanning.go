@@ -33,63 +33,66 @@ type Report int
 
 const (
 	BaseIncompatibility_Report = iota
-	ID_Report
+	FileDescriptive_Report
 )
 
-// Create a report of incompatibilities, write protobuf message to
-// environment, bool indicates if detailed incompatibility report is
-// desired.
-func CreateIncompReport(env *plugins.Environment, reportType Report) {
-
-	// Generate Base Incompatibility Report
-
-	// If indicated by report type associate incompatibilities with line
-	// references, etc. and generate an ID_REPORT
+// Runs incompatibility scanning under gnostic envirionment
+func GnosticIncompatibiltyScanning(env *plugins.Environment, reportType Report) {
 	for _, model := range env.Request.Models {
 		if model.TypeUrl != "openapi.v3.Document" {
 			continue
 		}
-		//Parse openapidoc
+
+		// Format into digestable object
 		openAPIdocument := &openapiv3.Document{}
 		err := proto.Unmarshal(model.Value, openAPIdocument)
 		env.RespondAndExitIfError(err)
 
-		//Generate Base Incompatibility Report
-		incompatibilityReport := ScanIncompatibilities(openAPIdocument, env.Request.SourceName)
+		createdFile, reportErr := createIncompReport(openAPIdocument, env.Request.SourceName, reportType)
+		env.RespondAndExitIfError(reportErr)
+		env.Response.Files = append(env.Response.Files, createdFile)
 
-		//Write Report to File
-		switch reportType {
-		case BaseIncompatibility_Report:
-			writeProtobufMessage(incompatibilityReport, env)
-		case ID_Report:
-			//TODO once branches are merged
-			idReport := detailReport(incompatibilityReport)
-			writeProtobufMessage(idReport, env)
-		}
 		env.RespondAndExit()
 	}
 	env.RespondAndExitIfError(errors.New("no supported models for incompatibility reporting"))
 }
 
-func writeProtobufMessage(m protoreflect.ProtoMessage, env *plugins.Environment) {
-	reportBytes, err := utils.ProtoTextBytes(m)
-	env.RespondAndExitIfError(err)
-	createdFile := &plugins.File{
-		Name: trimSourceName(env.Request.SourceName) + "_compatibility.pb",
-		Data: reportBytes,
+// Creates and formats a specificted incompatibility report under plugin.file object
+func createIncompReport(doc *openapiv3.Document, filePath string, reportType Report) (*plugins.File, error) {
+	//Generate Base Incompatibility Report
+	BaseReport := ScanIncompatibilities(doc, filePath)
+
+	//Write Report to File
+	switch reportType {
+	case BaseIncompatibility_Report:
+		return writeProtobufMessage(BaseReport, filePath)
+	case FileDescriptive_Report:
+		return writeProtobufMessage(detailReport(BaseReport), filePath)
 	}
-	env.Response.Files = append(env.Response.Files, createdFile)
+
+	return nil, errors.New("unable to format report type")
 }
 
-// creates an IDReport from a base report
-func detailReport(incompatibilityReport *IncompatibilityReport) *IDReport {
-	var idReport *IDReport
+func writeProtobufMessage(m protoreflect.ProtoMessage, filePath string) (*plugins.File, error) {
+	reportBytes, err := utils.ProtoTextBytes(m)
+	createdFile := &plugins.File{
+		Name: trimSourceName(filePath) + "_compatibility.pb",
+		Data: reportBytes,
+	}
+	return createdFile, err
+}
+
+// creates an *FileDescriptiveReport from a base report
+func detailReport(incompatibilityReport *IncompatibilityReport) *FileDescriptiveReport {
+	var idReport *FileDescriptiveReport
 	var incompatibilities []*IncompatibilityDescription
+
 	fileNode, parseErr := search.MakeNode(incompatibilityReport.ReportIdentifier)
 	if parseErr != nil {
 		log.Printf("FATAL: unable to parse file at %s with error %s", incompatibilityReport.ReportIdentifier, parseErr)
 		return nil
 	}
+
 	for _, baseincomp := range incompatibilityReport.Incompatibilities {
 		line, col, searchErr := search.FindKey(fileNode.Content[0], baseincomp.TokenPath...)
 		if searchErr != nil {
@@ -99,7 +102,7 @@ func detailReport(incompatibilityReport *IncompatibilityReport) *IDReport {
 		incompatibilities = append(incompatibilities,
 			newIncompatibilityDescription(line, col, baseincomp.Classification, lastTokenInPath))
 	}
-	idReport = newIDReport(incompatibilityReport.ReportIdentifier, incompatibilities)
+	idReport = newDescriptiveReport(incompatibilityReport.ReportIdentifier, incompatibilities)
 	return idReport
 }
 
@@ -117,8 +120,8 @@ func ScanIncompatibilities(document *openapiv3.Document, reportIdentifier string
 	return ReportOnDoc(document, reportIdentifier, IncompatibilityReporters...)
 }
 
-func newIDReport(reportIdentifier string, incompDescriptions []*IncompatibilityDescription) *IDReport {
-	return &IDReport{
+func newDescriptiveReport(reportIdentifier string, incompDescriptions []*IncompatibilityDescription) *FileDescriptiveReport {
+	return &FileDescriptiveReport{
 		ReportIdentifier:  reportIdentifier,
 		Incompatibilities: incompDescriptions,
 	}
@@ -132,13 +135,13 @@ func newIncompatibility(classification IncompatibiltiyClassification, path ...st
 	}
 }
 
-func newIncompatibilityDescription(line int, column int, class IncompatibiltiyClassification, lastToken string) *IncompatibilityDescription {
+func newIncompatibilityDescription(line int, column int, class IncompatibiltiyClassification, token string) *IncompatibilityDescription {
 	return &IncompatibilityDescription{
 		Line:   int32(line),
 		Column: int32(column),
 		Hint:   classificationHint(class),
 		Class:  class,
-		Token:  lastToken,
+		Token:  token,
 	}
 }
 
