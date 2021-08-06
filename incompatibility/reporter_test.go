@@ -29,7 +29,7 @@ func makeIncompatibilityReport(incompatiblities ...*Incompatibility) *Incompatib
 	return &IncompatibilityReport{Incompatibilities: incompatiblities}
 }
 
-var ignoreUnexportedOption = cmpopts.IgnoreUnexported(IncompatibilityReport{}, Incompatibility{})
+var ignoreUnexportedOption = cmpopts.IgnoreUnexported(IncompatibilityReport{}, Incompatibility{}, IncompatibilityDescription{}, FileDescriptiveReport{})
 var incompatibilityOrderOption = cmpopts.SortSlices(func(l, r *Incompatibility) bool {
 	if l.Classification != r.Classification {
 		return l.Classification < r.Classification
