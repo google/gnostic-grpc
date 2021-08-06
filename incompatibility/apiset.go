@@ -30,7 +30,7 @@ func (iReport IntermediateReport) GetCountBySeverity() []int32 {
 // NewAnalysis initalizes and returns an apiset analysis object
 func NewAnalysis() *ApiSetIncompatibility {
 	var incompatibilityByClass []*IncompatibilityAnalysis = make([]*IncompatibilityAnalysis, len(IncompatibiltiyClassification_value))
-	for class, _ := range IncompatibiltiyClassification_name {
+	for class := range IncompatibiltiyClassification_name {
 		incompatibilityByClass[class] = &IncompatibilityAnalysis{
 			IncompatibilityClass: IncompatibiltiyClassification(class),
 			CountPerFile:         make(map[string]*FileIncompatibilityClassificationAnalysis),

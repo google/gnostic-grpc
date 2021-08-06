@@ -15,6 +15,8 @@
 package main
 
 import (
+	"errors"
+
 	"github.com/googleapis/gnostic-grpc/generator"
 	"github.com/googleapis/gnostic-grpc/incompatibility"
 	plugins "github.com/googleapis/gnostic/plugins"
@@ -39,11 +41,14 @@ func resolveModeFromParameters(env *plugins.Environment) {
 	}
 	switch env.Request.Parameters[0].Value {
 	case "1": // Base incompatibility scanning
-		incompatibility.CreateIncompReport(env, incompatibility.BaseIncompatibility_Report)
+		incompatibility.GnosticIncompatibiltyScanning(env, incompatibility.BaseIncompatibility_Report)
 	case "2": //Detailed incompatibility scanning
-		incompatibility.CreateIncompReport(env, incompatibility.ID_Report)
+		incompatibility.GnosticIncompatibiltyScanning(env, incompatibility.FileDescriptive_Report)
 	default:
 		exitWithMessage(env, "unsupported parameter value")
+	}
+	if len(env.Response.Files) == 0 {
+		env.RespondAndExitIfError(errors.New("no supported models for incompatibility reporting"))
 	}
 }
 
