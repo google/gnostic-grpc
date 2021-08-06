@@ -50,6 +50,7 @@ func resolveModeFromParameters(env *plugins.Environment) {
 	if len(env.Response.Files) == 0 {
 		env.RespondAndExitIfError(errors.New("no supported models for incompatibility reporting"))
 	}
+	env.RespondAndExit()
 }
 
 func exitWithMessage(env *plugins.Environment, errMsg string) {
