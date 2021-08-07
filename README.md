@@ -3,6 +3,11 @@
 [![Test Coverage](https://codecov.io/gh/google/gnostic-grpc/branch/master/graph/badge.svg)](https://codecov.io/gh/google)
 
 # gnostic gRPC plugin
+
+## Incompatibility Scanning
+In addition, support has been added to scan OpenAPI v3 documents for equivalent gRPC service incompatibilites. For simple per file incompatibility scanning see the readme file in the [directory](https://github.com/google/gnostic-grpc/tree/master/incompatibility). For analysis over a set of OpenAPI documents see the readme file in the [directory](https://github.com/google/gnostic-grpc/tree/master/analysis).
+
+
 [GSoC 2019 project](https://summerofcode.withgoogle.com/archive/2019/projects/5019228334194688/)
 
 This tool converts an OpenAPI v3.0 API description into a description of a gRPC
