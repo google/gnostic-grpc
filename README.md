@@ -4,14 +4,12 @@
 
 # gnostic gRPC plugin
 
-## Incompatibility Scanning
-In addition, support has been added to scan OpenAPI v3 documents for equivalent gRPC service incompatibilites. For simple per file incompatibility scanning see the readme file in the [directory](https://github.com/google/gnostic-grpc/tree/master/incompatibility). For analysis over a set of OpenAPI documents see the readme file in the [directory](https://github.com/google/gnostic-grpc/tree/master/analysis).
-
-
-[GSoC 2019 project](https://summerofcode.withgoogle.com/archive/2019/projects/5019228334194688/)
-
-This tool converts an OpenAPI v3.0 API description into a description of a gRPC
-service that can be used to implement that API using [gRPC-JSON Transcoding](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/grpc_json_transcoder_filter). gRPC services are described using the [Protocol Buffers](https://developers.google.com/protocol-buffers/) language.
+This plugin has two functionalities:
+- Conversion of an OpenAPI v3.0 API description into a description of a gRPC
+service that can be used to implement that API using [gRPC-JSON Transcoding](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/grpc_json_transcoder_filter). 
+gRPC services are described using the [Protocol Buffers](https://developers.google.com/protocol-buffers/) language.
+Continue reading this README for more information.
+- Scanning OpenAPI v3 documents for equivalent gRPC service incompatibilities. For simple per file incompatibility scanning see the README file in the [directory](https://github.com/google/gnostic-grpc/tree/master/incompatibility). For analysis over a set of OpenAPI documents see the README file in the [directory](https://github.com/google/gnostic-grpc/tree/master/analysis).
 
 OpenAPI descriptions are read and processed with
 [gnostic](https://github.com/google/gnostic), and this tool runs as a
