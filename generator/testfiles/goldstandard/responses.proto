@@ -8,6 +8,8 @@ import "google/protobuf/descriptor.proto";
 
 import "google/protobuf/empty.proto";
 
+option go_package = ".;responses";
+
 message Error {
   int32 code = 1;
 

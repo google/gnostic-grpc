@@ -88,6 +88,9 @@ func (renderer *Renderer) runFileDescriptorSetGenerator() (fdSet *dpb.FileDescri
 	dependencyNames := getNamesOfDependenciesThatWillBeImported(dependencies, renderer.Model.Methods)
 	protoToBeRendered.Dependency = dependencyNames
 
+	fileOptions := renderer.buildFileOptions()
+	protoToBeRendered.Options = fileOptions
+
 	allFileDescriptors := append(symbolicReferenceDependencies, dependencies...)
 	allFileDescriptors = append(allFileDescriptors, protoToBeRendered)
 	fdSet = &dpb.FileDescriptorSet{
@@ -95,6 +98,14 @@ func (renderer *Renderer) runFileDescriptorSetGenerator() (fdSet *dpb.FileDescri
 	}
 
 	return fdSet, err
+}
+
+func (renderer *Renderer) buildFileOptions() *dpb.FileOptions {
+	goPackage := ".;" + renderer.Package
+	fileOptions := &dpb.FileOptions{
+		GoPackage: &goPackage,
+	}
+	return fileOptions
 }
 
 // buildAllMessageDescriptors builds protobuf messages from the surface model types. If the type is a RPC request parameter

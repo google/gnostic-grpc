@@ -12,6 +12,8 @@ import "parameters.proto";
 
 import "responses.proto";
 
+option go_package = ".;other";
+
 message Person {
   int64 id = 1;
 
