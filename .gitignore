@@ -12,5 +12,8 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+# # Proto compiled go files
+*.pb.go
+
 # IDEs
 .idea/*

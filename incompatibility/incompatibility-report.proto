@@ -1,0 +1,92 @@
+
+// Copyright 2021 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+option go_package = "../incompatibility";
+
+package incompatibility;
+
+// Severity level for an incompatibility
+enum Severity {
+    Severity_Default = 0;
+    INFO = 1;
+    WARNING = 2;
+    FAIL = 3;
+}
+
+enum IncompatibiltiyClassification {
+    IncompatibiltiyClassification_Default = 0;
+    Security = 1;
+    InvalidOperation = 2;
+    ParameterStyling = 3;
+    DataValidation = 4;
+    InvalidDataState = 5;
+    Inheritance = 6;
+    ExternalTranscodingSupport = 7;
+
+}
+
+// Base incompatibility structure in a file
+message Incompatibility {
+    repeated string token_path = 1; //unique path to incompatibility
+    IncompatibiltiyClassification classification = 2; // incomaptibility class.
+    Severity severity = 3;
+}
+
+// Report of base incompatibilities
+message IncompatibilityReport {
+    string reportIdentifier = 1;
+    repeated Incompatibility incompatibilities = 2;
+}
+
+// Detailed structure of an incompatibility in a file
+message IncompatibilityDescription {
+    // File position
+    int32 line = 1;
+    int32 column = 2;
+
+    //string token
+    string token = 3;
+
+    //classification
+    IncompatibiltiyClassification class = 5;
+
+    // hint to describe incompatibility
+    string hint = 6;
+}
+
+// Report of incompatibility descriptions
+message FileDescriptiveReport {
+    string reportIdentifier = 1;
+    repeated IncompatibilityDescription incompatibilities = 2;
+}
+
+message FileIncompatibilityClassificationAnalysis {
+    int32 num_occurrences = 1;
+}
+
+// Aggregated information about an incompatibility in a set
+message IncompatibilityAnalysis {
+    IncompatibiltiyClassification incompatibility_class = 1;
+    map<string, FileIncompatibilityClassificationAnalysis> count_per_file = 2;
+}
+
+// Aggregation of incompatibility scanning across a set
+message ApiSetIncompatibility {
+    int32 open_api_files = 1;
+    int32 incompatible_files = 2;
+    repeated IncompatibilityAnalysis analysis_per_incompatibility = 3;
+}

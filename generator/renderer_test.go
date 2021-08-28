@@ -15,13 +15,15 @@
 package generator
 
 import (
-	surface "github.com/googleapis/gnostic/surface"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/googleapis/gnostic-grpc/utils"
+	surface "github.com/googleapis/gnostic/surface"
 )
 
 const (
@@ -111,7 +113,7 @@ func runGeneratorWithoutPluginEnvironment(input string, packageName string) ([]b
 }
 
 func buildSurfaceModel(input string) (*surface.Model, error) {
-	documentv3, err := ParseOpenAPIDoc(input)
+	documentv3, err := utils.ParseOpenAPIDoc(input)
 	if err != nil {
 		return nil, err
 	}
