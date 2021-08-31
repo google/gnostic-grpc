@@ -83,8 +83,39 @@ paths:
                       type: number
                     name:
                       type: string
+  /testOneOf:
+    get:
+      operationId: testOneOf
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestOneOfApiResponse"
+  /testAnyOf:
+    get:
+      operationId: testAnyOf
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestAnyOfApiResponse"
 components:
   schemas:
+    TestOneOfApiResponse:
+      oneOf:
+        - $ref: "#/components/schemas/Person"
+        - $ref: "#/components/schemas/Order"
+    TestAnyOfApiResponse:
+      anyOf:
+        - $ref: "#/components/schemas/Person"
+        - type: object
+          properties:
+            someInlineProperty:
+              type: number
     Person:
       type: object
       required:
@@ -115,3 +146,27 @@ components:
         iq:
           type: number
           format: float
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        petId:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+        shipDate:
+          type: string
+          format: date-time
+        status:
+          type: string
+          description: Order Status
+          enum:
+            - placed
+            - approved
+            - delivered
+        complete:
+          type: boolean

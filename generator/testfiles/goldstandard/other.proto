@@ -30,6 +30,82 @@ message Person {
   float iq = 7;
 }
 
+message Order {
+  int64 id = 1;
+
+  int64 pet_id = 2;
+
+  int32 quantity = 3;
+
+  string ship_date = 4;
+
+  Status status = 5;
+
+  bool complete = 6;
+
+  enum Status {
+    PLACED = 0;
+
+    APPROVED = 1;
+
+    DELIVERED = 2;
+  }
+}
+
+message TestOneOfApiResponse {
+  int64 id = 1;
+
+  int64 age = 2;
+
+  string name = 3;
+
+  repeated string photo_urls = 4;
+
+  float height = 5;
+
+  double cash = 6;
+
+  float iq = 7;
+
+  int64 id = 8;
+
+  int64 pet_id = 9;
+
+  int32 quantity = 10;
+
+  string ship_date = 11;
+
+  Status status = 12;
+
+  bool complete = 13;
+
+  enum Status {
+    PLACED = 0;
+
+    APPROVED = 1;
+
+    DELIVERED = 2;
+  }
+}
+
+message TestAnyOfApiResponse {
+  int64 id = 1;
+
+  int64 age = 2;
+
+  string name = 3;
+
+  repeated string photo_urls = 4;
+
+  float height = 5;
+
+  double cash = 6;
+
+  float iq = 7;
+
+  float some_inline_property = 8;
+}
+
 //TestExernalReference2Parameters holds parameters to TestExernalReference2
 message TestExernalReference2Request {
   parameters.Parameter2 parameter2 = 1;
@@ -79,6 +155,14 @@ service Other {
 
   rpc TestAdditionalPropertiesObject ( google.protobuf.Empty ) returns ( TestAdditionalPropertiesObjectOK ) {
     option (google.api.http) = { get:"/testAdditionalPropertiesObject"  };
+  }
+
+  rpc TestOneOf ( google.protobuf.Empty ) returns ( TestOneOfApiResponse ) {
+    option (google.api.http) = { get:"/testOneOf"  };
+  }
+
+  rpc TestAnyOf ( google.protobuf.Empty ) returns ( TestAnyOfApiResponse ) {
+    option (google.api.http) = { get:"/testAnyOf"  };
   }
 }
 
