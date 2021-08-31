@@ -67,6 +67,22 @@ paths:
                   items:
                     type: integer
                     format: int32
+  /testAdditionalPropertiesObject:
+    get:
+      operationId: testAdditionalPropertiesObject
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  properties:
+                    id:
+                      type: number
+                    name:
+                      type: string
 components:
   schemas:
     Person:

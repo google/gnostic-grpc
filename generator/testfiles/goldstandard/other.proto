@@ -46,6 +46,16 @@ message TestAdditionalPropertiesReferenceOK {
 message TestAdditionalPropertiesArrayOK {
 }
 
+message TestAdditionalPropertiesObjectOKAdditionalProperties {
+  float id = 1;
+
+  string name = 2;
+}
+
+message TestAdditionalPropertiesObjectOK {
+  map<string, TestAdditionalPropertiesObjectOKAdditionalProperties> additional_properties = 1;
+}
+
 service Other {
   rpc TestExternalReference ( google.protobuf.Empty ) returns ( google.protobuf.Empty ) {
     option (google.api.http) = { get:"/testExternalReference"  };
@@ -65,6 +75,10 @@ service Other {
 
   rpc TestAdditionalPropertiesArray ( google.protobuf.Empty ) returns ( TestAdditionalPropertiesArrayOK ) {
     option (google.api.http) = { get:"/testAdditionalPropertiesArray"  };
+  }
+
+  rpc TestAdditionalPropertiesObject ( google.protobuf.Empty ) returns ( TestAdditionalPropertiesObjectOK ) {
+    option (google.api.http) = { get:"/testAdditionalPropertiesObject"  };
   }
 }
 
