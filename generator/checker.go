@@ -240,12 +240,6 @@ func (c *GrpcChecker) analyzeSchema(identifier string, schemaOrReference *openap
 			c.messages = append(c.messages, &msg)
 		}
 
-		if enum := schema.Enum; enum != nil {
-			text := "Field: 'enum' is not generated as enum in .proto for the schema: " + identifier
-			msg2 := constructInfoMessage("SCHEMAFIELDS", text, append(copyKeys(currentKeys), "enum"))
-			c.messages = append(c.messages, &msg2)
-		}
-
 		// Check for this: https://github.com/LorenzHW/gnostic-grpc-deprecated/issues/3#issuecomment-509348357
 		if additionalProperties := schema.AdditionalProperties; additionalProperties != nil {
 			if schema := additionalProperties.GetSchemaOrReference().GetSchema(); schema != nil {
@@ -462,16 +456,6 @@ func getNotSupportedSchemaFields(schema *openapiv3.Schema) []string {
 	}
 	if schema.Required != nil {
 		fields = append(fields, "required")
-	}
-	if schema.AllOf != nil {
-		fields = append(fields, "allOf")
-	}
-	if schema.OneOf != nil {
-		fields = append(fields, "oneOf")
-	}
-
-	if schema.AnyOf != nil {
-		fields = append(fields, "anyOf")
 	}
 	if schema.Not != nil {
 		fields = append(fields, "not")

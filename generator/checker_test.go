@@ -34,9 +34,7 @@ func TestNewFeatureCheckerParameters(t *testing.T) {
 	expectedMessageKeys := [][]string{
 		{"paths", "/testParameterQueryEnum", "get", "parameters", "explode"},
 		{"paths", "/testParameterQueryEnum", "get", "parameters", "schema", "items", "default"},
-		{"paths", "/testParameterQueryEnum", "get", "parameters", "schema", "items", "enum"},
 		{"paths", "/testParameterPathEnum/{param1}", "get", "parameters", "schema", "default"},
-		{"paths", "/testParameterPathEnum/{param1}", "get", "parameters", "schema", "enum"},
 	}
 	validateKeys(t, expectedMessageKeys, messages)
 }
