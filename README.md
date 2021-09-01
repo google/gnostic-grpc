@@ -22,15 +22,13 @@ Under the hood the plugin first creates a FileDescriptorSet (`bookststore.descr`
 data. Then [protoreflect](https://github.com/jhump/protoreflect/) is used to print the output file. 
 
 ## How to use: 
-Install gnostic and the plugin -
-
-### Before Go 1.17
+Install gnostic and the plugin before Go 1.17:
 
     go get -u github.com/googleapis/gnostic
     go get -u github.com/googleapis/gnostic-grpc
     
 
-### Wtih Go >= 1.17    
+with Go >= 1.17:
 
     go install github.com/googleapis/gnostic@latest
     go install github.com/googleapis/gnostic-grpc@latest
