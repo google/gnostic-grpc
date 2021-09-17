@@ -8,6 +8,8 @@ import "google/protobuf/descriptor.proto";
 
 import "google/protobuf/empty.proto";
 
+option go_package = ".;petstore";
+
 message Order {
   int64 id = 1;
 

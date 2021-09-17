@@ -58,3 +58,13 @@ func ProtoTextBytes(m protoreflect.ProtoMessage) ([]byte, error) {
 	return prototext.MarshalOptions{Multiline: true, Indent: "    "}.
 		Marshal(m)
 }
+
+// Contains returns true if 's' is inside 'ss'.
+func Contains(ss []string, s string) bool {
+	for _, s2 := range ss {
+		if s == s2 {
+			return true
+		}
+	}
+	return false
+}
