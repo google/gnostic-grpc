@@ -59,8 +59,8 @@ func ProtoTextBytes(m protoreflect.ProtoMessage) ([]byte, error) {
 		Marshal(m)
 }
 
-// IsDuplicate returns true if 's' is inside 'ss'.
-func IsDuplicate(ss []string, s string) bool {
+// Contains returns true if 's' is inside 'ss'.
+func Contains(ss []string, s string) bool {
 	for _, s2 := range ss {
 		if s == s2 {
 			return true

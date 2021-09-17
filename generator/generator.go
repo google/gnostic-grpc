@@ -238,14 +238,14 @@ func shouldAddEmptyDependency(methods []*surface_v1.Method) bool {
 
 // trimAndRemoveDuplicates returns a list of URLs that are not duplicates (considering only the part until the first '#')
 func trimAndRemoveDuplicates(urls []string) []string {
-	result := make([]string, 0)
+	uniqueAndTrimmedUrls := make([]string, 0)
 	for _, url := range urls {
 		parts := strings.Split(url, "#")
-		if !utils.IsDuplicate(result, parts[0]) {
-			result = append(result, parts[0])
+		if !utils.Contains(uniqueAndTrimmedUrls, parts[0]) {
+			uniqueAndTrimmedUrls = append(uniqueAndTrimmedUrls, parts[0])
 		}
 	}
-	return result
+	return uniqueAndTrimmedUrls
 }
 
 // getLast returns the last FileDescriptorProto of the array 'protos'.
