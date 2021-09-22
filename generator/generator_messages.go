@@ -112,9 +112,9 @@ func getFieldDescriptorType(nativeType string, enumValues []string) *dpb.FieldDe
 // descriptor or enum. Otherwise it is nil. Names are set according to the protocol buffer style guide for message names:
 // https://developers.google.com/protocol-buffers/docs/style#message-and-field-names
 func getFieldDescriptorTypeName(fieldDescriptorType descriptorpb.FieldDescriptorProto_Type, field *surface_v1.Field, packageName string) *string {
-	// Check whether we generated this message already inside of another dependency. If so we will use that name instead.
-	if n, ok := generatedMessages[field.NativeType]; ok {
-		return &n
+	if fieldHasAReferenceToAMessageInAnotherDependency(field, fieldDescriptorType) {
+		t := generatedMessages[field.NativeType]
+		return &t
 	}
 
 	typeName := ""
@@ -125,6 +125,13 @@ func getFieldDescriptorTypeName(fieldDescriptorType descriptorpb.FieldDescriptor
 		typeName = field.NativeType
 	}
 	return &typeName
+}
+
+// fieldHasAReferenceToAMessageInAnotherDependency check whether we generated this message already inside of another
+// dependency. If so we will use that name instead.
+func fieldHasAReferenceToAMessageInAnotherDependency(field *surface_v1.Field, fieldDescriptorType descriptorpb.FieldDescriptorProto_Type) bool {
+	_, messageExists := generatedMessages[field.NativeType]
+	return fieldDescriptorType == dpb.FieldDescriptorProto_TYPE_MESSAGE && messageExists
 }
 
 // getFieldDescriptorLabel returns the label for the descriptor based on the information in he surface field.
