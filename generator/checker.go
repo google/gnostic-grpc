@@ -15,8 +15,8 @@
 package generator
 
 import (
-	openapiv3 "github.com/googleapis/gnostic/openapiv3"
-	plugins "github.com/googleapis/gnostic/plugins"
+	openapiv3 "github.com/google/gnostic/openapiv3"
+	plugins "github.com/google/gnostic/plugins"
 )
 
 type GrpcChecker struct {

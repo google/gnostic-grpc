@@ -18,7 +18,7 @@ import (
 	"strconv"
 	"strings"
 
-	surface_v1 "github.com/googleapis/gnostic/surface"
+	surface_v1 "github.com/google/gnostic/surface"
 )
 
 type ProtoLanguageModel struct{}

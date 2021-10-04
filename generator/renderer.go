@@ -17,8 +17,8 @@ package generator
 import (
 	"github.com/golang/protobuf/proto"
 	dpb "github.com/golang/protobuf/protoc-gen-go/descriptor"
-	plugins "github.com/googleapis/gnostic/plugins"
-	surface "github.com/googleapis/gnostic/surface"
+	plugins "github.com/google/gnostic/plugins"
+	surface "github.com/google/gnostic/surface"
 	prDesc "github.com/jhump/protoreflect/desc"
 	prPrint "github.com/jhump/protoreflect/desc/protoprint"
 )
