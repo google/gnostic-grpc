@@ -16,7 +16,7 @@ paths:
       operationId: testExternalReference
       responses:
         200:
-          # TODO: Due to https://github.com/googleapis/gnostic-grpc/pull/12 this response won't get rendered any more. This is because when we render responses.proto the 'Response' message
+          # TODO: Due to https://github.com/google/gnostic-grpc/pull/12 this response won't get rendered any more. This is because when we render responses.proto the 'Response' message
           # TODO: is not generated anymore. Therefore, we can't import it anymore. Fix this if someone complains. For parameters it apparently works.
           $ref: https://raw.githubusercontent.com/googleapis/gnostic-grpc/master/generator/testfiles/responses.yaml#/components/responses/Response
   /testExternalReference2:

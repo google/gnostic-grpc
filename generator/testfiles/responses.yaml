@@ -16,7 +16,7 @@ paths:
   /testResponseNative:
     get:
       operationId: testResponseNative
-      # TODO: Due to https://github.com/googleapis/gnostic-grpc/pull/12 this response won't get rendered any more. Fix this if someone complains
+      # TODO: Due to https://github.com/google/gnostic-grpc/pull/12 this response won't get rendered any more. Fix this if someone complains
       responses:
         200:
           description: succes

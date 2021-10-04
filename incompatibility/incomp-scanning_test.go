@@ -19,8 +19,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/googleapis/gnostic-grpc/search"
-	"github.com/googleapis/gnostic-grpc/utils"
+	"github.com/google/gnostic-grpc/search"
+	"github.com/google/gnostic-grpc/utils"
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
 	plugins "github.com/googleapis/gnostic/plugins"
 	"google.golang.org/protobuf/encoding/prototext"

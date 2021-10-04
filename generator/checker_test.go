@@ -17,7 +17,7 @@ package generator
 import (
 	"testing"
 
-	"github.com/googleapis/gnostic-grpc/utils"
+	"github.com/google/gnostic-grpc/utils"
 	plugins "github.com/googleapis/gnostic/plugins"
 )
 

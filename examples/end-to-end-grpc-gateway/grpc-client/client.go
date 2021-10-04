@@ -19,7 +19,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/googleapis/gnostic-grpc/examples/end-to-end-grpc-gateway/bookstore"
+	"github.com/google/gnostic-grpc/examples/end-to-end-grpc-gateway/bookstore"
 	"google.golang.org/grpc"
 	"log"
 	"time"
