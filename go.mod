@@ -5,8 +5,8 @@ go 1.17
 require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/protobuf v1.5.2
+	github.com/google/gnostic v0.5.5
 	github.com/google/go-cmp v0.5.6
-	github.com/googleapis/gnostic v0.5.5
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
 	github.com/jhump/protoreflect v1.10.0
 	golang.org/x/net v0.0.0-20200822124328-c89045814202
@@ -21,3 +21,6 @@ require (
 	golang.org/x/text v0.3.0 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 )
+
+// until google/gnostic release new version
+replace github.com/google/gnostic v0.5.5 => github.com/google/gnostic v0.5.6-0.20210930170106-c7a5e4fe8b37
