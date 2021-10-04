@@ -24,9 +24,10 @@ import (
 	"github.com/golang/protobuf/descriptor"
 	dpb "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/google/gnostic-grpc/utils"
 	surface_v1 "github.com/googleapis/gnostic/surface"
 	"google.golang.org/genproto/googleapis/api/annotations"
+
+	"github.com/google/gnostic-grpc/utils"
 )
 
 // Gathers all symbolic references we generated in recursive calls.

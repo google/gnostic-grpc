@@ -21,7 +21,6 @@ import (
 	surface "github.com/googleapis/gnostic/surface"
 	prDesc "github.com/jhump/protoreflect/desc"
 	prPrint "github.com/jhump/protoreflect/desc/protoprint"
-	_ "os"
 )
 
 // Renderer generates a .proto file based on the information inside Model.

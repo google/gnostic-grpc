@@ -19,14 +19,15 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/gnostic-grpc/search"
-	"github.com/google/gnostic-grpc/utils"
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
 	plugins "github.com/googleapis/gnostic/plugins"
 	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"gopkg.in/yaml.v3"
+
+	"github.com/google/gnostic-grpc/search"
+	"github.com/google/gnostic-grpc/utils"
 )
 
 // Helper Test Function generate OpenAPI representation or Error
