@@ -33,8 +33,8 @@ jobs:
         chmod +x COMPILE-PROTOS.sh
         ./COMPILE-PROTOS.sh
      
-    - name: Test
-      run: make test
+    - name: Run Test
+      run: go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic
     
     - name: Run bash
       run: bash <(curl -s https://codecov.io/bash)
