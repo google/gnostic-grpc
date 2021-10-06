@@ -2,12 +2,13 @@ name: Go
 
 on:
   push:
-    branches: [ master ]
+    branches: 
+    - master
   pull_request:
-    branches: [ master ]
+    branches: 
+    - master
 
 jobs:
-
   build:
     name: Build
     runs-on: ubuntu-14.04
