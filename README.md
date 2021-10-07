@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/google/gnostic-grpc.svg?branch=master)](https://travis-ci.org/google/gnostic-grpc)
+[![Go Actions Status](https://github.com/google/gnostic-grpc/workflows/Go/badge.svg)](https://github.com/google/gnostic-grpc/actions)
 [![Go Report Card](https://goreportcard.com/badge/github.com/google/gnostic-grpc)](https://goreportcard.com/report/github.com/google/gnostic-grpc)
 [![Test Coverage](https://codecov.io/gh/google/gnostic-grpc/branch/master/graph/badge.svg)](https://codecov.io/gh/google)
 

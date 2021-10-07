@@ -1,0 +1,41 @@
+name: Go
+
+on:
+  push:
+    branches: 
+    - master
+  pull_request:
+    branches: 
+    - master
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-14.04
+    steps:
+
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.16
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+      
+    - name: Get protobuf-compiler
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y protobuf-compiler
+        protoc --version
+        go get github.com/googleapis/gnostic@v0.5.1
+  
+    - name: Compile Protos
+      run: |
+        chmod +x COMPILE-PROTOS.sh
+        ./COMPILE-PROTOS.sh
+     
+    - name: Run Test
+      run: go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic
+    
+    - name: Run bash
+      run: bash <(curl -s https://codecov.io/bash)
