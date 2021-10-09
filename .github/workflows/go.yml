@@ -11,7 +11,7 @@ on:
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-14.04
+    runs-on: ubuntu-18.04
     steps:
 
     - name: Set up Go 1.x
