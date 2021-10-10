@@ -17,7 +17,7 @@ package main
 import (
 	"errors"
 
-	plugins "github.com/googleapis/gnostic/plugins"
+	plugins "github.com/google/gnostic/plugins"
 
 	"github.com/google/gnostic-grpc/generator"
 	"github.com/google/gnostic-grpc/incompatibility"

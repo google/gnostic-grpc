@@ -1,6 +1,9 @@
 #!/bin/sh
-go get github.com/golang/protobuf@v1.4.2
-go get ./...
-go install github.com/google/gnostic-grpc/search
-go install github.com/golang/protobuf/protoc-gen-go
-protoc --go_out=incompatibility/ incompatibility/incompatibility-report.proto
+
+TMP_GOBIN=$(mktemp -d -t gnostic-grpc.XXXXXXXXXX)
+
+GOBIN=${TMP_GOBIN} go install ./search
+GOBIN=${TMP_GOBIN} go install -mod=mod github.com/golang/protobuf/protoc-gen-go@v1.5.2
+PATH="$TMP_GOBIN:$PATH" protoc --go_out=incompatibility/ ./incompatibility/incompatibility-report.proto
+
+rm -rf "${TMP_GOBIN}"

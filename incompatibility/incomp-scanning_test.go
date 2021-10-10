@@ -18,9 +18,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	openapiv3 "github.com/google/gnostic/openapiv3"
+	plugins "github.com/google/gnostic/plugins"
 	"github.com/google/go-cmp/cmp"
-	openapiv3 "github.com/googleapis/gnostic/openapiv3"
-	plugins "github.com/googleapis/gnostic/plugins"
 	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"

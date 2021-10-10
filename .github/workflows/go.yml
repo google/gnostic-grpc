@@ -27,11 +27,11 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y protobuf-compiler
         protoc --version
-        go get github.com/googleapis/gnostic@v0.5.1
+        # until google/gnostic release new version
+        go install github.com/google/gnostic@v0.5.6-0.20210930170106-c7a5e4fe8b37
   
     - name: Compile Protos
       run: |
-        chmod +x COMPILE-PROTOS.sh
         ./COMPILE-PROTOS.sh
      
     - name: Run Test

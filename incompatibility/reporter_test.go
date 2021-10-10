@@ -20,9 +20,9 @@ import (
 	"strings"
 	"testing"
 
+	openapiv3 "github.com/google/gnostic/openapiv3"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	openapiv3 "github.com/googleapis/gnostic/openapiv3"
 )
 
 func makeIncompatibilityReport(incompatiblities ...*Incompatibility) *IncompatibilityReport {

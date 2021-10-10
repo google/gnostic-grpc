@@ -17,7 +17,7 @@ package utils
 import (
 	"os/exec"
 
-	openapiv3 "github.com/googleapis/gnostic/openapiv3"
+	openapiv3 "github.com/google/gnostic/openapiv3"
 	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"

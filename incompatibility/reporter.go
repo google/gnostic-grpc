@@ -17,7 +17,7 @@ package incompatibility
 import (
 	"strconv"
 
-	openapiv3 "github.com/googleapis/gnostic/openapiv3"
+	openapiv3 "github.com/google/gnostic/openapiv3"
 )
 
 // Collection of defined incompatibility reporters

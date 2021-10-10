@@ -22,7 +22,7 @@ import (
 	"strings"
 	"testing"
 
-	surface "github.com/googleapis/gnostic/surface"
+	surface "github.com/google/gnostic/surface"
 
 	"github.com/google/gnostic-grpc/utils"
 )
