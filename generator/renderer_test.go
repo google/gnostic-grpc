@@ -22,8 +22,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/googleapis/gnostic-grpc/utils"
 	surface "github.com/googleapis/gnostic/surface"
+
+	"github.com/google/gnostic-grpc/utils"
 )
 
 const (

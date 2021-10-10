@@ -24,9 +24,10 @@ import (
 	"github.com/golang/protobuf/descriptor"
 	dpb "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/googleapis/gnostic-grpc/utils"
 	surface_v1 "github.com/googleapis/gnostic/surface"
 	"google.golang.org/genproto/googleapis/api/annotations"
+
+	"github.com/google/gnostic-grpc/utils"
 )
 
 // Gathers all symbolic references we generated in recursive calls.
@@ -210,7 +211,7 @@ func getNamesOfDependenciesThatWillBeImported(dependencies []*dpb.FileDescriptor
 	// At last, we need to add the dependencies to the FileDescriptorProto in order to get them rendered.
 	for _, fd := range dependencies {
 		if isEmptyDependency(*fd.Name) && shouldAddEmptyDependency(methods) {
-			// Reference: https://github.com/googleapis/gnostic-grpc/issues/8
+			// Reference: https://github.com/google/gnostic-grpc/issues/8
 			names = append(names, *fd.Name)
 			continue
 		}

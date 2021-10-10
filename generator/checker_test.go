@@ -17,8 +17,9 @@ package generator
 import (
 	"testing"
 
-	"github.com/googleapis/gnostic-grpc/utils"
 	plugins "github.com/googleapis/gnostic/plugins"
+
+	"github.com/google/gnostic-grpc/utils"
 )
 
 func TestNewFeatureCheckerParameters(t *testing.T) {

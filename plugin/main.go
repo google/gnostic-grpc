@@ -17,9 +17,10 @@ package main
 import (
 	"errors"
 
-	"github.com/googleapis/gnostic-grpc/generator"
-	"github.com/googleapis/gnostic-grpc/incompatibility"
 	plugins "github.com/googleapis/gnostic/plugins"
+
+	"github.com/google/gnostic-grpc/generator"
+	"github.com/google/gnostic-grpc/incompatibility"
 )
 
 func main() {

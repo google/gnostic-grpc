@@ -21,12 +21,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/googleapis/gnostic-grpc/search"
-	"github.com/googleapis/gnostic-grpc/utils"
 	openapiv3 "github.com/googleapis/gnostic/openapiv3"
 	plugins "github.com/googleapis/gnostic/plugins"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
+
+	"github.com/google/gnostic-grpc/search"
+	"github.com/google/gnostic-grpc/utils"
 )
 
 type Report int
