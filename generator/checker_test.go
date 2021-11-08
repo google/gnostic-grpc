@@ -19,7 +19,7 @@ import (
 
 	plugins "github.com/google/gnostic/plugins"
 
-	"github.com/google/gnostic-grpc/utils"
+	"github.com/karim42benhammou/gnostic-grpc/utils"
 )
 
 func TestNewFeatureCheckerParameters(t *testing.T) {

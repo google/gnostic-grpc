@@ -24,7 +24,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/grpc"
 
-	"github.com/google/gnostic-grpc/examples/end-to-end/bookstore"
+	"github.com/karim42benhammou/gnostic-grpc/examples/end-to-end/bookstore"
 )
 
 var (

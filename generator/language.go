@@ -271,7 +271,7 @@ func protoFieldName(originalName string, t string) string {
 	if len(name) == 0 {
 		name = CleanName(t)
 	}
-	name = toSnakeCase(name)
+	//name = toSnakeCase(name)
 	return name
 }
 

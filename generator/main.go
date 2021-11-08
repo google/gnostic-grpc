@@ -31,6 +31,7 @@ func RunProtoGenerator(env *plugins.Environment) {
 	fileName := getFilenameWithoutFileExtension(env)
 	packageName, err := resolvePackageName(fileName)
 	env.RespondAndExitIfError(err)
+	packageName = "api"
 
 	inputDocumentType := env.Request.Models[0].TypeUrl
 	for _, model := range env.Request.Models {
@@ -55,7 +56,7 @@ func RunProtoGenerator(env *plugins.Environment) {
 				renderer.Package = packageName
 
 				// Run the renderer to generate files and add them to the response object.
-				err = renderer.Render(env.Response, packageName+".proto")
+				err = renderer.Render(env.Response, "apid.proto")
 				env.RespondAndExitIfError(err)
 				// Return with success.
 				env.RespondAndExit()

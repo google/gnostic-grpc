@@ -27,7 +27,7 @@ import (
 	surface_v1 "github.com/google/gnostic/surface"
 	"google.golang.org/genproto/googleapis/api/annotations"
 
-	"github.com/google/gnostic-grpc/utils"
+	"github.com/karim42benhammou/gnostic-grpc/utils"
 )
 
 // Gathers all symbolic references we generated in recursive calls.
@@ -255,7 +255,7 @@ func getLast(protos []*dpb.FileDescriptorProto) *dpb.FileDescriptorProto {
 }
 
 func (renderer *Renderer) buildFileOptions() *dpb.FileOptions {
-	goPackage := ".;" + renderer.Package
+	goPackage := "42p/" + renderer.Package
 	fileOptions := &dpb.FileOptions{
 		GoPackage: &goPackage,
 	}

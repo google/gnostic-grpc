@@ -22,15 +22,30 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 		message.Name = &surfaceType.TypeName
 
 		for i, surfaceField := range surfaceType.Fields {
+			format := ""
 			if strings.Contains(surfaceField.NativeType, "map[string][]") {
 				// Not supported for now: https://github.com/LorenzHW/gnostic-grpc-deprecated/issues/3#issuecomment-509348357
 				continue
 			}
 			if isRequestParameter(surfaceType) {
-				validateRequestParameter(surfaceField)
+				if !validateRequestParameter(surfaceField) {
+					format = surfaceField.Type
+					surfaceField.Format = "string"
+					surfaceField.Type = "string"
+					surfaceField.NativeType = "string"
+				}
+			}
+			if strings.HasPrefix(surfaceField.Type, "sec-") {
+				format = surfaceField.Type
+				surfaceField.Format = "string"
+				surfaceField.Type = "string"
+				surfaceField.NativeType = "string"
+			}
+			if surfaceField.Type == "uuid" {
+				format = "sec-uuid"
 			}
 
-			addFieldDescriptor(message, surfaceField, i, renderer.Package)
+			addFieldDescriptor(message, surfaceField, i, renderer.Package, format)
 			addEnumDescriptorIfNecessary(message, surfaceField)
 		}
 		messageDescriptors = append(messageDescriptors, message)
@@ -47,30 +62,33 @@ func isRequestParameter(sufaceType *surface_v1.Type) bool {
 	return false
 }
 
-func validateRequestParameter(field *surface_v1.Field) {
+func validateRequestParameter(field *surface_v1.Field) bool {
 	if field.Position == surface_v1.Position_PATH {
-		validatePathParameter(field)
+		return validatePathParameter(field)
 	}
 
 	if field.Position == surface_v1.Position_QUERY {
-		validateQueryParameter(field)
+		return validateQueryParameter(field)
 	}
+	return true
 }
 
 // validatePathParameter validates if the path parameter has the requested structure.
 // This is necessary according to: https://github.com/googleapis/googleapis/blob/master/google/api/http.proto#L62
-func validatePathParameter(field *surface_v1.Field) {
+func validatePathParameter(field *surface_v1.Field) bool {
 	if field.Kind != surface_v1.FieldKind_SCALAR {
 		log.Println("The path parameter with the Name " + field.Name + " is invalid. " +
 			"The path template may refer to one or more fields in the gRPC request message, as" +
 			" long as each field is a non-repeated field with a primitive (non-message) type. " +
 			"See: https://github.com/googleapis/googleapis/blob/master/google/api/http.proto#L62 for more information.")
+		return false
 	}
+	return true
 }
 
 // validateQueryParameter validates if the query parameter has the requested structure.
 // This is necessary according to: https://github.com/googleapis/googleapis/blob/master/google/api/http.proto#L118
-func validateQueryParameter(field *surface_v1.Field) {
+func validateQueryParameter(field *surface_v1.Field) bool {
 	_, isScalar := protoBufScalarTypes[field.NativeType]
 	if !(field.Kind == surface_v1.FieldKind_SCALAR ||
 		(field.Kind == surface_v1.FieldKind_ARRAY && isScalar) ||
@@ -79,17 +97,30 @@ func validateQueryParameter(field *surface_v1.Field) {
 			"Note that fields which are mapped to URL query parameters must have a primitive type or" +
 			" a repeated primitive type or a non-repeated message type. " +
 			"See: https://github.com/googleapis/googleapis/blob/master/google/api/http.proto#L118 for more information.")
+		return false
 	}
-
+	return true
 }
 
-func addFieldDescriptor(message *dpb.DescriptorProto, surfaceField *surface_v1.Field, idx int, packageName string) {
+func addFieldDescriptor(message *dpb.DescriptorProto, surfaceField *surface_v1.Field, idx int, packageName, format string) {
+	log.Println("sf: ", surfaceField)
 	count := int32(idx + 1)
 	fieldDescriptor := &dpb.FieldDescriptorProto{Number: &count, Name: &surfaceField.FieldName}
 	fieldDescriptor.Type = getFieldDescriptorType(surfaceField.NativeType, surfaceField.EnumValues)
 	fieldDescriptor.Label = getFieldDescriptorLabel(surfaceField)
 	fieldDescriptor.TypeName = getFieldDescriptorTypeName(*fieldDescriptor.Type, surfaceField, packageName)
-
+	if format != "" {
+		fieldDescriptor.Options = &dpb.FieldOptions{
+			UninterpretedOption: []*dpb.UninterpretedOption{
+				{
+					Name: []*dpb.UninterpretedOption_NamePart{
+						{NamePart: ptr("json_name")},
+					},
+					AggregateValue: ptr(`"` + surfaceField.FieldName + `"]; // @gotags: valid:"` + format + `" `),
+				},
+			},
+		}
+	}
 	addMapDescriptorIfNecessary(surfaceField, fieldDescriptor, message)
 
 	message.Field = append(message.Field, fieldDescriptor)
@@ -151,6 +182,10 @@ func addMapDescriptorIfNecessary(f *surface_v1.Field, fieldDescriptor *dpb.Field
 		fieldDescriptor.TypeName = mapDescriptor.Name
 		message.NestedType = append(message.NestedType, mapDescriptor)
 	}
+}
+
+func ptr(s string) *string {
+	return &s
 }
 
 // buildMapDescriptor builds the necessary descriptor to render a map. (https://developers.google.com/protocol-buffers/docs/proto3#maps)
