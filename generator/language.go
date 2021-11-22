@@ -81,7 +81,14 @@ func findNativeType(fType string, fFormat string) string {
 	case "object":
 		return "message"
 	case "string":
-		return "string"
+		switch fFormat {
+		case "string":
+			return "string"
+		case "bytes":
+			return "bytes"
+		default:
+			return "string"
+		}
 	case "date":
 		return "string"
 	case "date-time":
