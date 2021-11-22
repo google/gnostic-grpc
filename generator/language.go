@@ -84,7 +84,7 @@ func findNativeType(fType string, fFormat string) string {
 		switch fFormat {
 		case "string":
 			return "string"
-		case "bytes":
+		case "byte":
 			return "bytes"
 		default:
 			return "string"
