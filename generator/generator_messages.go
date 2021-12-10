@@ -37,8 +37,7 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 				if surfaceField.Position == surface_v1.Position_QUERY {
 					for _, ts := range renderer.Model.Types {
 						if ts.TypeName == surfaceField.Type {
-							surfaceField.Name = ts.Fields[0].Name
-							surfaceField.FieldName = ts.Fields[0].Name
+							surfaceField = ts.Fields[0]
 							format = ts.Fields[0].Format
 						}
 					}
