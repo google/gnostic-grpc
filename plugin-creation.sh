@@ -1,4 +1,4 @@
 #!/bin/bash
-gopath=$(go env GOPATH)
+gobin=$(go env GOBIN)
 ./COMPILE-PROTOS.sh
-go build -o ${gopath}/bin/gnostic-grpc
+go build -o ${gobin}/gnostic-grpc

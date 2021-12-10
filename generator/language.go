@@ -96,7 +96,7 @@ func findNativeType(fType string, fFormat string) string {
 	case "password":
 		return "string"
 	case "binary":
-		return "string"
+		return "bytes"
 	case "email":
 		return "string"
 	case "uuid":

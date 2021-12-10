@@ -34,15 +34,15 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 					surfaceField.Type = "string"
 					surfaceField.NativeType = "string"
 				}
-			}
-			if strings.HasPrefix(surfaceField.Type, "sec-") {
-				format = surfaceField.Type
-				surfaceField.Format = "string"
-				surfaceField.Type = "string"
-				surfaceField.NativeType = "string"
-			}
-			if surfaceField.Type == "uuid" {
-				format = "sec-uuid"
+				if surfaceField.Position == surface_v1.Position_QUERY {
+					for _, ts := range renderer.Model.Types {
+						if ts.TypeName == surfaceField.Type {
+							surfaceField.Name = ts.Fields[0].Name
+							surfaceField.FieldName = ts.Fields[0].Name
+							format = ts.Fields[0].Format
+						}
+					}
+				}
 			}
 
 			addFieldDescriptor(message, surfaceField, i, renderer.Package, format)
@@ -103,7 +103,7 @@ func validateQueryParameter(field *surface_v1.Field) bool {
 }
 
 func addFieldDescriptor(message *dpb.DescriptorProto, surfaceField *surface_v1.Field, idx int, packageName, format string) {
-	log.Println("sf: ", surfaceField)
+	//log.Println("sf: ", surfaceField)
 	count := int32(idx + 1)
 	fieldDescriptor := &dpb.FieldDescriptorProto{Number: &count, Name: &surfaceField.FieldName}
 	fieldDescriptor.Type = getFieldDescriptorType(surfaceField.NativeType, surfaceField.EnumValues)
