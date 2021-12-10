@@ -39,6 +39,8 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 						if ts.TypeName == surfaceField.Type {
 							surfaceField.Name = ts.Fields[0].Name
 							surfaceField.FieldName = ts.Fields[0].FieldName
+
+							ts.Fields[0].FieldName = "value"
 							format = ts.Fields[0].Format
 						}
 					}
