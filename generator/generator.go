@@ -25,9 +25,9 @@ import (
 	dpb "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/golang/protobuf/ptypes/empty"
 	surface_v1 "github.com/google/gnostic/surface"
-	"google.golang.org/genproto/googleapis/api/annotations"
-
 	"github.com/karim42benhammou/gnostic-grpc/utils"
+	"google.golang.org/genproto/googleapis/api/annotations"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // Gathers all symbolic references we generated in recursive calls.
@@ -196,12 +196,16 @@ func buildDependencies() (dependencies []*dpb.FileDescriptorProto) {
 	fd.Name = &n                                                              // 2. Problem
 	fd.Dependency = append(fd.Dependency, "google/protobuf/descriptor.proto") //3.rd Problem
 
+	// Add wrappers
+	wrap := wrapperspb.StringValue{}
+	fd4, _ := descriptor.MessageDescriptorProto(&wrap)
+
 	// Build other required dependencies
 	e := empty.Empty{}
 	fdp := dpb.DescriptorProto{}
 	fd2, _ := descriptor.MessageDescriptorProto(&e)
 	fd3, _ := descriptor.MessageDescriptorProto(&fdp)
-	dependencies = []*dpb.FileDescriptorProto{fd, fd2, fd3}
+	dependencies = []*dpb.FileDescriptorProto{fd, fd2, fd3, fd4}
 	return dependencies
 }
 

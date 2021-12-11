@@ -14,6 +14,34 @@ var protoBufScalarTypes = getProtobufTypes()
 // Gathers all messages that have been generated from symbolic references in recursive calls.
 var generatedMessages = make(map[string]string, 0)
 
+func wrapperType(t string) string {
+	switch t {
+	case "string":
+		return "google.protobuf.StringValue"
+	case "integer":
+		return "google.protobuf.Int64Value"
+	case "double":
+		return "google.protobuf.DoubleValue"
+	case "float":
+		return "google.protobuf.FloatValue"
+	case "uint64":
+		return "google.protobuf.UInt64Value"
+	case "int32":
+		return "google.protobuf.Int32Value"
+	case "uint32":
+		return "google.protobuf.UInt32Value"
+	case "boolean":
+		return "google.protobuf.BoolValue"
+	case "bytes":
+		return "google.protobuf.BytesValue"
+	case "arrayString":
+		return "ArrayString"
+
+	default:
+		return t
+	}
+}
+
 // buildAllMessageDescriptors builds protobuf messages from the surface model types. If the type is a RPC request parameter
 // the fields have to follow certain rules, and therefore have to be validated.
 func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.DescriptorProto, err error) {
@@ -23,6 +51,7 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 
 		for i, surfaceField := range surfaceType.Fields {
 			format := ""
+			prefix := true
 			if strings.Contains(surfaceField.NativeType, "map[string][]") {
 				// Not supported for now: https://github.com/LorenzHW/gnostic-grpc-deprecated/issues/3#issuecomment-509348357
 				continue
@@ -37,17 +66,27 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 				if surfaceField.Position == surface_v1.Position_QUERY {
 					for _, ts := range renderer.Model.Types {
 						if ts.TypeName == surfaceField.Type {
-							surfaceField.Name = ts.Fields[0].Name
-							surfaceField.FieldName = ts.Fields[0].Name
-
-							ts.Fields[0].FieldName = "value"
-							format = ts.Fields[0].Format
+							if ts.Fields[0].Type == "arrayString" {
+								format = surfaceField.Type
+								surfaceField.Type = "string"
+								surfaceField.NativeType = "string"
+								surfaceField.Kind = surface_v1.FieldKind_ARRAY
+								surfaceField.Name = ts.Fields[0].Name
+								surfaceField.FieldName = ts.Fields[0].Name
+								format = ts.Fields[0].Format
+							} else {
+								surfaceField.Name = ts.Fields[0].Name
+								surfaceField.FieldName = ts.Fields[0].Name
+								surfaceField.NativeType = wrapperType(ts.Fields[0].Type)
+								prefix = false
+								format = ts.Fields[0].Format
+							}
 						}
 					}
 				}
 			}
 
-			addFieldDescriptor(message, surfaceField, i, renderer.Package, format)
+			addFieldDescriptor(message, surfaceField, i, renderer.Package, format, prefix)
 			addEnumDescriptorIfNecessary(message, surfaceField)
 		}
 		messageDescriptors = append(messageDescriptors, message)
@@ -104,13 +143,13 @@ func validateQueryParameter(field *surface_v1.Field) bool {
 	return true
 }
 
-func addFieldDescriptor(message *dpb.DescriptorProto, surfaceField *surface_v1.Field, idx int, packageName, format string) {
+func addFieldDescriptor(message *dpb.DescriptorProto, surfaceField *surface_v1.Field, idx int, packageName, format string, prefix bool) {
 	//log.Println("sf: ", surfaceField)
 	count := int32(idx + 1)
 	fieldDescriptor := &dpb.FieldDescriptorProto{Number: &count, Name: &surfaceField.FieldName}
 	fieldDescriptor.Type = getFieldDescriptorType(surfaceField.NativeType, surfaceField.EnumValues)
 	fieldDescriptor.Label = getFieldDescriptorLabel(surfaceField)
-	fieldDescriptor.TypeName = getFieldDescriptorTypeName(*fieldDescriptor.Type, surfaceField, packageName)
+	fieldDescriptor.TypeName = getFieldDescriptorTypeName(*fieldDescriptor.Type, surfaceField, packageName, prefix)
 	if format != "" {
 		fieldDescriptor.Options = &dpb.FieldOptions{
 			UninterpretedOption: []*dpb.UninterpretedOption{
@@ -145,7 +184,7 @@ func getFieldDescriptorType(nativeType string, enumValues []string) *dpb.FieldDe
 // getFieldDescriptorTypeName returns the typeName of the descriptor. A TypeName has to be set if the field is a reference to another
 // descriptor or enum. Otherwise it is nil. Names are set according to the protocol buffer style guide for message names:
 // https://developers.google.com/protocol-buffers/docs/style#message-and-field-names
-func getFieldDescriptorTypeName(fieldDescriptorType descriptorpb.FieldDescriptorProto_Type, field *surface_v1.Field, packageName string) *string {
+func getFieldDescriptorTypeName(fieldDescriptorType descriptorpb.FieldDescriptorProto_Type, field *surface_v1.Field, packageName string, prefix bool) *string {
 	if fieldHasAReferenceToAMessageInAnotherDependency(field, fieldDescriptorType) {
 		t := generatedMessages[field.NativeType]
 		return &t
@@ -153,7 +192,11 @@ func getFieldDescriptorTypeName(fieldDescriptorType descriptorpb.FieldDescriptor
 
 	typeName := ""
 	if fieldDescriptorType == dpb.FieldDescriptorProto_TYPE_MESSAGE {
-		typeName = packageName + "." + field.NativeType
+		if prefix {
+			typeName = packageName + "." + field.NativeType
+		} else {
+			typeName = field.NativeType
+		}
 	}
 	if fieldDescriptorType == dpb.FieldDescriptorProto_TYPE_ENUM {
 		typeName = field.NativeType
