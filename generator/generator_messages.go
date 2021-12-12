@@ -57,13 +57,23 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 				continue
 			}
 			if isRequestParameter(surfaceType) {
-				if !validateRequestParameter(surfaceField) {
-					format = surfaceField.Type
-					surfaceField.Format = "string"
-					surfaceField.Type = "string"
-					surfaceField.NativeType = "string"
-				}
-				if surfaceField.Position == surface_v1.Position_QUERY {
+				switch surfaceField.Position {
+				case surface_v1.Position_PATH:
+					if surfaceField.Kind == surface_v1.FieldKind_REFERENCE {
+						for _, ts := range renderer.Model.Types {
+							if ts.TypeName == surfaceField.Type {
+								surfaceField.Name = ts.Fields[0].Name
+								surfaceField.FieldName = ts.Fields[0].Name
+								surfaceField.NativeType = "string"
+								format = ts.Fields[0].Format
+							}
+						}
+					} else {
+						surfaceField.Type = "string"
+						surfaceField.NativeType = "string"
+						format = surfaceField.Format
+					}
+				case surface_v1.Position_QUERY:
 					for _, ts := range renderer.Model.Types {
 						if ts.TypeName == surfaceField.Type {
 							if ts.Fields[0].Type == "arrayString" {
@@ -84,6 +94,8 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 						}
 					}
 				}
+			} else {
+				format = surfaceField.Format
 			}
 
 			addFieldDescriptor(message, surfaceField, i, renderer.Package, format, prefix)
@@ -153,11 +165,17 @@ func addFieldDescriptor(message *dpb.DescriptorProto, surfaceField *surface_v1.F
 	if format != "" {
 		fieldDescriptor.Options = &dpb.FieldOptions{
 			UninterpretedOption: []*dpb.UninterpretedOption{
+				//{
+				//	Name: []*dpb.UninterpretedOption_NamePart{
+				//		{NamePart: ptr("(validator.field)")},
+				//	},
+				//	AggregateValue: ptr("{int_gt: 0, int_lt: 100}"),
+				//},
 				{
 					Name: []*dpb.UninterpretedOption_NamePart{
 						{NamePart: ptr("json_name")},
 					},
-					AggregateValue: ptr(`"` + surfaceField.FieldName + `"]; // @gotags: valid:"` + format + `" `),
+					AggregateValue: ptr(`"` + surfaceField.FieldName + `"]; // @gotags: format:"` + format + `" `),
 				},
 			},
 		}
