@@ -310,7 +310,7 @@ func buildEnumDescriptorProto(f *surface_v1.Field) *dpb.EnumDescriptorProto {
 	enumDescriptor := &dpb.EnumDescriptorProto{Name: &f.NativeType}
 	for enumCtr, value := range f.EnumValues {
 		num := int32(enumCtr)
-		name := strings.ToUpper(value)
+		name := value
 		valueDescriptor := &dpb.EnumValueDescriptorProto{
 			Name:   &name,
 			Number: &num,
