@@ -14,6 +14,25 @@ var protoBufScalarTypes = getProtobufTypes()
 // Gathers all messages that have been generated from symbolic references in recursive calls.
 var generatedMessages = make(map[string]string, 0)
 
+// isScalarType find if the current type is a scalar type (one type and one field with format)
+func getType(types []*surface_v1.Type, name string) *surface_v1.Type {
+	for _, ts := range types {
+		if ts.TypeName == name {
+			return ts
+		}
+	}
+	return nil
+}
+func isScalarType(surfaceType *surface_v1.Type) bool {
+	return len(surfaceType.Fields) == 1 &&
+		surfaceType.Fields[0].Name == "value" &&
+		surfaceType.Fields[0].Position != surface_v1.Position_QUERY &&
+		surfaceType.Fields[0].Position != surface_v1.Position_PATH &&
+		!strings.Contains(strings.ToLower(surfaceType.Name), "nullable") &&
+		surfaceType.Fields[0].EnumValues == nil &&
+		surfaceType.Fields[0].Kind == surface_v1.FieldKind_SCALAR
+}
+
 func wrapperType(t string) string {
 	switch t {
 	case "string":
@@ -48,6 +67,11 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 	for _, surfaceType := range renderer.Model.Types {
 		message := &dpb.DescriptorProto{}
 		message.Name = &surfaceType.TypeName
+		if strings.Contains(surfaceType.TypeName, "ataDictionaryFormatPayload") {
+			//log.Println("======:", *surfaceType)
+		}
+
+		// handle scalar message
 
 		for i, surfaceField := range surfaceType.Fields {
 			format := ""
@@ -74,25 +98,27 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 						format = surfaceField.Format
 					}
 				case surface_v1.Position_QUERY:
-					for _, ts := range renderer.Model.Types {
-						if ts.TypeName == surfaceField.Type {
-							if ts.Fields[0].Type == "arrayString" {
-								format = surfaceField.Type
-								surfaceField.Type = "string"
-								surfaceField.NativeType = "string"
-								surfaceField.Kind = surface_v1.FieldKind_ARRAY
-								surfaceField.Name = ts.Fields[0].Name
-								surfaceField.FieldName = ts.Fields[0].Name
-								format = ts.Fields[0].Format
-							} else {
-								surfaceField.Name = ts.Fields[0].Name
-								surfaceField.FieldName = ts.Fields[0].Name
-								surfaceField.NativeType = wrapperType(ts.Fields[0].Type)
-								prefix = false
-								format = ts.Fields[0].Format
-							}
+					if ts := getType(renderer.Model.Types, surfaceField.Type); ts != nil {
+						if ts.Fields[0].Type == "arrayString" {
+							format = surfaceField.Type
+							surfaceField.Type = "string"
+							surfaceField.NativeType = "string"
+							surfaceField.Kind = surface_v1.FieldKind_ARRAY
+							surfaceField.Name = ts.Fields[0].Name
+							surfaceField.FieldName = ts.Fields[0].Name
+							format = ts.Fields[0].Format
+						} else {
+							surfaceField.Name = ts.Fields[0].Name
+							surfaceField.FieldName = ts.Fields[0].Name
+							surfaceField.NativeType = wrapperType(ts.Fields[0].Type)
+							prefix = false
+							format = ts.Fields[0].Format
 						}
 					}
+					//default:
+					//	if ts := getType(renderer.Model.Types, surfaceField.Type); ts != nil && isScalarType(ts) {
+					//		surfaceField.FieldName = ts.Fields[0].Name
+					//	}
 				}
 			} else {
 				format = surfaceField.Format
