@@ -188,23 +188,23 @@ func addFieldDescriptor(message *dpb.DescriptorProto, surfaceField *surface_v1.F
 	fieldDescriptor.Type = getFieldDescriptorType(surfaceField.NativeType, surfaceField.EnumValues)
 	fieldDescriptor.Label = getFieldDescriptorLabel(surfaceField)
 	fieldDescriptor.TypeName = getFieldDescriptorTypeName(*fieldDescriptor.Type, surfaceField, packageName, prefix)
-	if format != "" {
-		fieldDescriptor.Options = &dpb.FieldOptions{
-			UninterpretedOption: []*dpb.UninterpretedOption{
-				//{
-				//	Name: []*dpb.UninterpretedOption_NamePart{
-				//		{NamePart: ptr("(validator.field)")},
-				//	},
-				//	AggregateValue: ptr("{int_gt: 0, int_lt: 100}"),
-				//},
-				{
-					Name: []*dpb.UninterpretedOption_NamePart{
-						{NamePart: ptr("json_name")},
-					},
-					AggregateValue: ptr(`"` + surfaceField.FieldName + `"]; // @gotags: format:"` + format + `" `),
+	fieldDescriptor.Options = &dpb.FieldOptions{
+		UninterpretedOption: []*dpb.UninterpretedOption{
+			//{
+			//	Name: []*dpb.UninterpretedOption_NamePart{
+			//		{NamePart: ptr("(validator.field)")},
+			//	},
+			//	AggregateValue: ptr("{int_gt: 0, int_lt: 100}"),
+			//},
+			{
+				Name: []*dpb.UninterpretedOption_NamePart{
+					{NamePart: ptr("json_name")},
 				},
+				AggregateValue: ptr(`"` + surfaceField.Name + `"]; // @gotags: format:"` + format + `" `),
 			},
-		}
+		},
+	}
+	if format != "" {
 	}
 	addMapDescriptorIfNecessary(surfaceField, fieldDescriptor, message)
 
