@@ -15,9 +15,6 @@
 package generator
 
 import (
-	"encoding/json"
-	"log"
-
 	openapiv3 "github.com/google/gnostic/openapiv3"
 	plugins "github.com/google/gnostic/plugins"
 	surface "github.com/google/gnostic/surface"
@@ -257,26 +254,13 @@ func (c *GrpcChecker) analyzeSchema(identifier string, schemaOrReference *openap
 	surfaceType := getType(c.surface.Types, toCamelCase(identifier))
 
 	if schema := schemaOrReference.GetSchema(); schema != nil {
-		if isScalarType(surfaceType) {
-			b, err := json.Marshal(schema)
-			if err != nil {
-				log.Printf("cannot unmarshall schema: %v", err)
-			}
-			surfaceType.Fields[0].Format = string(b)
-		} else if surfaceType != nil {
-			for _, p := range schema.GetProperties().GetAdditionalProperties() {
-				for _, field := range surfaceType.Fields {
-					if field.FieldName == p.Name {
-						b, err := json.Marshal(p)
-						if err != nil {
-							log.Printf("cannot unmarshall schema: %v", err)
-						}
-
-						field.Format = string(b)
-					}
-				}
-			}
-		}
+		//if isScalarType(surfaceType) {
+		//	b, err := json.Marshal(schema)
+		//	if err != nil {
+		//		log.Printf("cannot unmarshall schema: %v", err)
+		//	}
+		//	surfaceType.Fields[0].Format = string(b)
+		//}
 
 		if schema.OneOf != nil {
 			oneOf(surfaceType, schema.OneOf, "ONE_OF")

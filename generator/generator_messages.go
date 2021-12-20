@@ -33,22 +33,27 @@ func isScalarType(surfaceType *surface_v1.Type) bool {
 		surfaceType.Fields[0].Kind == surface_v1.FieldKind_SCALAR
 }
 
-func wrapperType(t string) string {
+func wrapperType(t string, format string) string {
 	switch t {
 	case "string":
 		return "google.protobuf.StringValue"
 	case "integer":
-		return "google.protobuf.Int64Value"
+		switch format {
+		case "int32":
+			return "google.protobuf.Int32Value"
+		case "int64":
+			return "google.protobuf.Int64Value"
+		case "uint64":
+			return "google.protobuf.UInt64Value"
+		case "uint32":
+			return "google.protobuf.UInt32Value"
+		default:
+			return "google.protobuf.Int64Value"
+		}
 	case "double":
 		return "google.protobuf.DoubleValue"
 	case "float":
 		return "google.protobuf.FloatValue"
-	case "uint64":
-		return "google.protobuf.UInt64Value"
-	case "int32":
-		return "google.protobuf.Int32Value"
-	case "uint32":
-		return "google.protobuf.UInt32Value"
 	case "boolean":
 		return "google.protobuf.BoolValue"
 	case "bytes":
@@ -115,7 +120,7 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 						} else {
 							surfaceField.Name = ts.Fields[0].Name
 							surfaceField.FieldName = ts.Fields[0].Name
-							surfaceField.NativeType = wrapperType(ts.Fields[0].Type)
+							surfaceField.NativeType = wrapperType(ts.Fields[0].Type, ts.Fields[0].Format)
 							prefix = false
 							//format = ts.Fields[0].Format
 						}
@@ -124,7 +129,7 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 			} else {
 				if ts := getType(renderer.Model.Types, surfaceField.NativeType); ts != nil && isScalarType(ts) {
 					if strings.Contains(strings.ToLower(surfaceField.Type), "nullable") {
-						surfaceField.NativeType = wrapperType(ts.Fields[0].Type)
+						surfaceField.NativeType = wrapperType(ts.Fields[0].Type, ts.Fields[0].Format)
 						prefix = false
 					} else {
 						surfaceField.NativeType = ts.Fields[0].NativeType
