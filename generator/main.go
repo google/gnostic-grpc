@@ -33,38 +33,42 @@ func RunProtoGenerator(env *plugins.Environment) {
 	env.RespondAndExitIfError(err)
 	packageName = "api"
 
+	openAPIdocument := &openapiv3.Document{}
+	surfaceModel := &surface.Model{}
+
 	inputDocumentType := env.Request.Models[0].TypeUrl
 	for _, model := range env.Request.Models {
 		switch model.TypeUrl {
 		case "openapi.v3.Document":
-			openAPIdocument := &openapiv3.Document{}
 			err := proto.Unmarshal(model.Value, openAPIdocument)
 
-			if err == nil {
-				featureChecker := NewGrpcChecker(openAPIdocument)
-				env.Response.Messages = featureChecker.Run()
+			if err != nil {
+				panic(err)
 			}
 		case "surface.v1.Model":
-			surfaceModel := &surface.Model{}
 			err = proto.Unmarshal(model.Value, surfaceModel)
-			if err == nil {
-				// Customizes the surface model for a .proto output file
-				NewProtoLanguageModel().Prepare(surfaceModel, inputDocumentType)
-
-				// Create the renderer.
-				renderer := NewRenderer(surfaceModel)
-				renderer.Package = packageName
-
-				// Run the renderer to generate files and add them to the response object.
-				err = renderer.Render(env.Response, "apid.proto")
-				env.RespondAndExitIfError(err)
-				// Return with success.
-				env.RespondAndExit()
+			if err != nil {
+				panic(err)
 			}
 		}
 	}
-	err = errors.New("No generated code surface model is available.")
+
+	// Customizes the surface model for a .proto output file
+	NewProtoLanguageModel().Prepare(surfaceModel, inputDocumentType)
+
+	// Create the renderer.
+	renderer := NewRenderer(surfaceModel, openAPIdocument)
+	renderer.Package = packageName
+
+	featureChecker := NewGrpcChecker(surfaceModel, openAPIdocument)
+	env.Response.Messages = featureChecker.Run()
+
+	// Run the renderer to generate files and add them to the response object.
+	err = renderer.Render(env.Response, "apid.proto")
 	env.RespondAndExitIfError(err)
+	// Return with success.
+
+	env.RespondAndExit()
 }
 
 // resolvePackageName converts a path to a valid package name or

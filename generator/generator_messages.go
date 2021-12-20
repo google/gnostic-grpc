@@ -24,7 +24,8 @@ func getType(types []*surface_v1.Type, name string) *surface_v1.Type {
 	return nil
 }
 func isScalarType(surfaceType *surface_v1.Type) bool {
-	return len(surfaceType.Fields) == 1 &&
+	return surfaceType != nil &&
+		len(surfaceType.Fields) == 1 &&
 		surfaceType.Fields[0].Name == "value" &&
 		surfaceType.Fields[0].Position != surface_v1.Position_QUERY &&
 		surfaceType.Fields[0].Position != surface_v1.Position_PATH &&
@@ -67,13 +68,18 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 	for _, surfaceType := range renderer.Model.Types {
 		message := &dpb.DescriptorProto{}
 		message.Name = &surfaceType.TypeName
-		if strings.Contains(surfaceType.TypeName, "ataDictionaryFormatPayload") {
-			//log.Println("======:", *surfaceType)
+
+		if surfaceType.ContentType == "ANY_OF" || surfaceType.ContentType == "ONE_OF" {
+			message.OneofDecl = []*dpb.OneofDescriptorProto{
+				{Name: &surfaceType.Name},
+			}
 		}
-
-		// handle scalar message
-
 		for i, surfaceField := range surfaceType.Fields {
+			var oneOfIndex *int32
+			if surfaceType.ContentType == "ANY_OF" || surfaceType.ContentType == "ONE_OF" {
+				b32 := int32(0)
+				oneOfIndex = &b32
+			}
 			format := ""
 			prefix := true
 			if strings.Contains(surfaceField.NativeType, "map[string][]") {
@@ -89,13 +95,13 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 								surfaceField.Name = ts.Fields[0].Name
 								surfaceField.FieldName = ts.Fields[0].Name
 								surfaceField.NativeType = "string"
-								format = ts.Fields[0].Format
+								//format = ts.Fields[0].Format
 							}
 						}
 					} else {
 						surfaceField.Type = "string"
 						surfaceField.NativeType = "string"
-						format = surfaceField.Format
+						//format = surfaceField.Format
 					}
 				case surface_v1.Position_QUERY:
 					if ts := getType(renderer.Model.Types, surfaceField.Type); ts != nil {
@@ -106,27 +112,28 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 							surfaceField.Kind = surface_v1.FieldKind_ARRAY
 							surfaceField.Name = ts.Fields[0].Name
 							surfaceField.FieldName = ts.Fields[0].Name
-							format = ts.Fields[0].Format
+							//format = ts.Fields[0].Format
 						} else {
 							surfaceField.Name = ts.Fields[0].Name
 							surfaceField.FieldName = ts.Fields[0].Name
 							surfaceField.NativeType = wrapperType(ts.Fields[0].Type)
 							prefix = false
-							format = ts.Fields[0].Format
+							//format = ts.Fields[0].Format
 						}
 					}
-					//default:
-					//	if ts := getType(renderer.Model.Types, surfaceField.Type); ts != nil && isScalarType(ts) {
-					//		surfaceField.FieldName = ts.Fields[0].Name
-					//	}
 				}
 			} else {
+				if ts := getType(renderer.Model.Types, surfaceField.NativeType); ts != nil && isScalarType(ts) {
+					surfaceField.NativeType = ts.Fields[0].NativeType
+					surfaceField.Format = ts.Fields[0].Format
+				}
 				format = surfaceField.Format
 			}
 
-			addFieldDescriptor(message, surfaceField, i, renderer.Package, format, prefix)
+			addFieldDescriptor(message, surfaceField, i, renderer.Package, format, prefix, oneOfIndex)
 			addEnumDescriptorIfNecessary(message, surfaceField)
 		}
+
 		messageDescriptors = append(messageDescriptors, message)
 		generatedMessages[*message.Name] = renderer.Package + "." + *message.Name
 	}
@@ -181,12 +188,12 @@ func validateQueryParameter(field *surface_v1.Field) bool {
 	return true
 }
 
-func addFieldDescriptor(message *dpb.DescriptorProto, surfaceField *surface_v1.Field, idx int, packageName, format string, prefix bool) {
-	//log.Println("sf: ", surfaceField)
+func addFieldDescriptor(message *dpb.DescriptorProto, surfaceField *surface_v1.Field, idx int, packageName, format string, prefix bool, oneOfIndex *int32) {
 	count := int32(idx + 1)
 	fieldDescriptor := &dpb.FieldDescriptorProto{Number: &count, Name: &surfaceField.FieldName}
 	fieldDescriptor.Type = getFieldDescriptorType(surfaceField.NativeType, surfaceField.EnumValues)
 	fieldDescriptor.Label = getFieldDescriptorLabel(surfaceField)
+	fieldDescriptor.OneofIndex = oneOfIndex
 	fieldDescriptor.TypeName = getFieldDescriptorTypeName(*fieldDescriptor.Type, surfaceField, packageName, prefix)
 	fieldDescriptor.Options = &dpb.FieldOptions{
 		UninterpretedOption: []*dpb.UninterpretedOption{
@@ -223,6 +230,7 @@ func getFieldDescriptorType(nativeType string, enumValues []string) *dpb.FieldDe
 		return &protoType
 	}
 	return &protoType
+
 }
 
 // getFieldDescriptorTypeName returns the typeName of the descriptor. A TypeName has to be set if the field is a reference to another

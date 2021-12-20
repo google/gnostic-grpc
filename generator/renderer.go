@@ -17,6 +17,7 @@ package generator
 import (
 	"github.com/golang/protobuf/proto"
 	dpb "github.com/golang/protobuf/protoc-gen-go/descriptor"
+	openapiv3 "github.com/google/gnostic/openapiv3"
 	plugins "github.com/google/gnostic/plugins"
 	surface "github.com/google/gnostic/surface"
 	prDesc "github.com/jhump/protoreflect/desc"
@@ -27,6 +28,7 @@ import (
 type Renderer struct {
 	// The model holds the necessary information from the OpenAPI description.
 	Model *surface.Model
+	OAS3  *openapiv3.Document
 	// The FileDescriptorSet that will be printed with protoreflect
 	FdSet          *dpb.FileDescriptorSet
 	SymbolicFdSets []*dpb.FileDescriptorSet
@@ -34,9 +36,10 @@ type Renderer struct {
 }
 
 // NewRenderer creates a renderer.
-func NewRenderer(model *surface.Model) (renderer *Renderer) {
+func NewRenderer(model *surface.Model, OAS3 *openapiv3.Document) (renderer *Renderer) {
 	renderer = &Renderer{}
 	renderer.Model = model
+	renderer.OAS3 = OAS3
 	renderer.SymbolicFdSets = make([]*dpb.FileDescriptorSet, 0)
 	return renderer
 }

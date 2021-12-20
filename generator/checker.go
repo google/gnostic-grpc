@@ -15,11 +15,17 @@
 package generator
 
 import (
+	"encoding/json"
+	"log"
+
 	openapiv3 "github.com/google/gnostic/openapiv3"
 	plugins "github.com/google/gnostic/plugins"
+	surface "github.com/google/gnostic/surface"
 )
 
 type GrpcChecker struct {
+	// The surface to fill
+	surface *surface.Model
 	// The document to be analyzed
 	document *openapiv3.Document
 	// The messages that are displayed to the user with information of what is not being processed by the generator.
@@ -27,8 +33,8 @@ type GrpcChecker struct {
 }
 
 // Creates a new checker.
-func NewGrpcChecker(document *openapiv3.Document) *GrpcChecker {
-	return &GrpcChecker{document: document, messages: make([]*plugins.Message, 0)}
+func NewGrpcChecker(surface *surface.Model, document *openapiv3.Document) *GrpcChecker {
+	return &GrpcChecker{surface: surface, document: document, messages: make([]*plugins.Message, 0)}
 }
 
 // Runs the checker. It is a top-down approach.
@@ -228,11 +234,56 @@ func (c *GrpcChecker) analyzeContent(pair *openapiv3.NamedMediaType, parentKeys 
 	}
 }
 
+func oneOf(surfaceType *surface.Type, of []*openapiv3.SchemaOrReference, ofType string) {
+	surfaceType.ContentType = ofType
+	surfaceType.Fields = []*surface.Field{}
+
+	for _, o := range of {
+		ref := o.GetReference().XRef
+		name := toCamelCase(getRefName(ref))
+		surfaceType.Fields = append(surfaceType.Fields, &surface.Field{
+			Name:          name,
+			Type:          name,
+			NativeType:    name,
+			FieldName:     name,
+			ParameterName: name,
+		})
+	}
+}
+
 // Analyzes the schema.
 func (c *GrpcChecker) analyzeSchema(identifier string, schemaOrReference *openapiv3.SchemaOrReference, parentKeys []string) {
 	currentKeys := parentKeys
+	surfaceType := getType(c.surface.Types, toCamelCase(identifier))
 
 	if schema := schemaOrReference.GetSchema(); schema != nil {
+		if isScalarType(surfaceType) {
+			b, err := json.Marshal(schema)
+			if err != nil {
+				log.Printf("cannot unmarshall schema: %v", err)
+			}
+			surfaceType.Fields[0].Format = string(b)
+		} else if surfaceType != nil {
+			for _, p := range schema.GetProperties().GetAdditionalProperties() {
+				for _, field := range surfaceType.Fields {
+					if field.FieldName == p.Name {
+						b, err := json.Marshal(p)
+						if err != nil {
+							log.Printf("cannot unmarshall schema: %v", err)
+						}
+
+						field.Format = string(b)
+					}
+				}
+			}
+		}
+
+		if schema.OneOf != nil {
+			oneOf(surfaceType, schema.OneOf, "ONE_OF")
+		} else if schema.AnyOf != nil {
+			oneOf(surfaceType, schema.AnyOf, "ANY_OF")
+		}
+
 		//fields := getNotSupportedSchemaFields(schema)
 		//for _, f := range fields {
 		//	text := "Field: '" + f + "' is not supported for the schema: " + identifier

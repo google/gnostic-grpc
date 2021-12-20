@@ -327,3 +327,9 @@ func toSnakeCase(str string) string {
 	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
 	return strings.ToLower(snake)
 }
+
+func getRefName(str string) string {
+	arr := strings.Split(str, "/")
+	w := arr[len(arr)-1]
+	return w
+}

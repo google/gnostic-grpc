@@ -145,7 +145,7 @@ func buildSymbolicReferences(renderer *Renderer) (symbolicFileDescriptors []*dpb
 			NewProtoLanguageModel().Prepare(surfaceModel, inputDocumentType)
 
 			// Recursively call the generator.
-			recursiveRenderer := NewRenderer(surfaceModel)
+			recursiveRenderer := NewRenderer(surfaceModel, document)
 			fileName := path.Base(ref)
 			recursiveRenderer.Package = strings.TrimSuffix(fileName, filepath.Ext(fileName))
 			newFdSet, err := recursiveRenderer.runFileDescriptorSetGenerator()
