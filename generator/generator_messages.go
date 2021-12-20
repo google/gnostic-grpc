@@ -26,10 +26,8 @@ func getType(types []*surface_v1.Type, name string) *surface_v1.Type {
 func isScalarType(surfaceType *surface_v1.Type) bool {
 	return surfaceType != nil &&
 		len(surfaceType.Fields) == 1 &&
-		surfaceType.Fields[0].Name == "value" &&
 		surfaceType.Fields[0].Position != surface_v1.Position_QUERY &&
 		surfaceType.Fields[0].Position != surface_v1.Position_PATH &&
-		!strings.Contains(strings.ToLower(surfaceType.Name), "nullable") &&
 		surfaceType.Fields[0].EnumValues == nil &&
 		surfaceType.Fields[0].Kind == surface_v1.FieldKind_SCALAR
 }
@@ -124,10 +122,16 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 				}
 			} else {
 				if ts := getType(renderer.Model.Types, surfaceField.NativeType); ts != nil && isScalarType(ts) {
-					surfaceField.NativeType = ts.Fields[0].NativeType
+					if strings.Contains(strings.ToLower(surfaceField.Type), "nullable") {
+						surfaceField.NativeType = wrapperType(ts.Fields[0].Type)
+						prefix = false
+					} else {
+						surfaceField.NativeType = ts.Fields[0].NativeType
+					}
 					surfaceField.Format = ts.Fields[0].Format
 				}
 				format = surfaceField.Format
+
 			}
 
 			addFieldDescriptor(message, surfaceField, i, renderer.Package, format, prefix, oneOfIndex)
