@@ -24,7 +24,8 @@ func getType(types []*surface_v1.Type, name string) *surface_v1.Type {
 	return nil
 }
 func isScalarType(surfaceType *surface_v1.Type) bool {
-	return len(surfaceType.Fields) == 1 &&
+	return surfaceType != nil &&
+		len(surfaceType.Fields) == 1 &&
 		surfaceType.Fields[0].Name == "value" &&
 		surfaceType.Fields[0].Position != surface_v1.Position_QUERY &&
 		surfaceType.Fields[0].Position != surface_v1.Position_PATH &&
