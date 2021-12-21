@@ -141,12 +141,11 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 				for _, ts := range renderer.Model.Types {
 					for _, field := range ts.Fields {
 						if field.EnumValues != nil {
-							field.NativeType = "string"
+							field.NativeType = findNativeType(field.Type, field.Format)
 							field.EnumValues = nil
 						}
 					}
 				}
-
 			}
 
 			addFieldDescriptor(message, surfaceField, i, renderer.Package, format, prefix, oneOfIndex)
