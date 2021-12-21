@@ -138,10 +138,19 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 				}
 				format = surfaceField.Format
 
+				for _, ts := range renderer.Model.Types {
+					for _, field := range ts.Fields {
+						if field.EnumValues != nil {
+							field.NativeType = "string"
+							field.EnumValues = nil
+						}
+					}
+				}
+
 			}
 
 			addFieldDescriptor(message, surfaceField, i, renderer.Package, format, prefix, oneOfIndex)
-			addEnumDescriptorIfNecessary(message, surfaceField)
+			//addEnumDescriptorIfNecessary(message, surfaceField)
 		}
 
 		messageDescriptors = append(messageDescriptors, message)
