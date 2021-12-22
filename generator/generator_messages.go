@@ -141,11 +141,9 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 				for _, ts := range renderer.Model.Types {
 					if surfaceField.Type == ts.Name {
 						for _, field := range ts.Fields {
-							if field.Kind == surface_v1.FieldKind_MAP {
+							if field.Kind == surface_v1.FieldKind_MAP && field.Name == "additional_properties" {
 								surfaceField.NativeType = field.NativeType
 								surfaceField.Kind = surface_v1.FieldKind_MAP
-								//log.Println("field", field)
-								//log.Println("surface", surfaceField)
 							}
 						}
 					}
