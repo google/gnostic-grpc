@@ -139,7 +139,18 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 				format = surfaceField.Format
 
 				for _, ts := range renderer.Model.Types {
+					if surfaceField.Type == ts.Name {
+						for _, field := range ts.Fields {
+							if field.Kind == surface_v1.FieldKind_MAP {
+								surfaceField.NativeType = field.NativeType
+								surfaceField.Kind = surface_v1.FieldKind_MAP
+								//log.Println("field", field)
+								//log.Println("surface", surfaceField)
+							}
+						}
+					}
 					for _, field := range ts.Fields {
+
 						if field.EnumValues != nil {
 							field.NativeType = findNativeType(field.Type, field.Format)
 							field.EnumValues = nil
