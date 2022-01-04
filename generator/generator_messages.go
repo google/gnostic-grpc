@@ -130,15 +130,11 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 							surfaceField.NativeType = wrapperType(ts.Fields[0].Type, ts.Fields[0].Format)
 							prefix = false
 						}
-						//} else if strings.Contains(surfaceType.Name, "ProtectionConfigurationList") {
-						//	log.Println("----", surfaceType.Name, "----")
 					} else if querySchema := getType(renderer.Model.Types, toCamelCase(surfaceField.Type)); querySchema != nil {
 						wt := wrapperType(querySchema.Fields[0].NativeType, querySchema.Fields[0].Format)
 						surfaceField.NativeType = wt
 						surfaceField.Name = querySchema.Name
 						prefix = false
-						log.Println(surfaceField)
-						log.Println(querySchema)
 					}
 				}
 			} else {
