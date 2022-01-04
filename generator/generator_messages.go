@@ -91,6 +91,7 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 				continue
 			}
 			if isRequestParameter(surfaceType) {
+
 				switch surfaceField.Position {
 				case surface_v1.Position_PATH:
 					if surfaceField.Kind == surface_v1.FieldKind_REFERENCE {
@@ -109,9 +110,6 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 					}
 				case surface_v1.Position_QUERY:
 					if ts := getType(renderer.Model.Types, surfaceField.Type); ts != nil {
-						if ts.Fields[0].Kind == surface_v1.FieldKind_REFERENCE {
-							surfaceField.Type = ts.Fields[0].Type
-						}
 						if ts.Fields[0].Type == "arrayString" {
 							format = surfaceField.Type
 							surfaceField.Type = "string"
@@ -119,12 +117,28 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 							surfaceField.Kind = surface_v1.FieldKind_ARRAY
 							surfaceField.Name = ts.Fields[0].Name
 							surfaceField.FieldName = ts.Fields[0].Name
+						} else if ts.Fields[0].Kind == surface_v1.FieldKind_REFERENCE {
+							querySchema := getType(renderer.Model.Types, toCamelCase(ts.Fields[0].Type))
+							wt := wrapperType(querySchema.Fields[0].NativeType, querySchema.Fields[0].Format)
+							surfaceField.NativeType = wt
+							surfaceField.Name = ts.Fields[0].Name
+							surfaceField.FieldName = ts.Fields[0].FieldName
+							prefix = false
 						} else {
 							surfaceField.Name = ts.Fields[0].Name
 							surfaceField.FieldName = ts.Fields[0].Name
 							surfaceField.NativeType = wrapperType(ts.Fields[0].Type, ts.Fields[0].Format)
 							prefix = false
 						}
+						//} else if strings.Contains(surfaceType.Name, "ProtectionConfigurationList") {
+						//	log.Println("----", surfaceType.Name, "----")
+					} else if querySchema := getType(renderer.Model.Types, toCamelCase(surfaceField.Type)); querySchema != nil {
+						wt := wrapperType(querySchema.Fields[0].NativeType, querySchema.Fields[0].Format)
+						surfaceField.NativeType = wt
+						surfaceField.Name = querySchema.Name
+						prefix = false
+						log.Println(surfaceField)
+						log.Println(querySchema)
 					}
 				}
 			} else {
