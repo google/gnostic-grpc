@@ -109,6 +109,9 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 					}
 				case surface_v1.Position_QUERY:
 					if ts := getType(renderer.Model.Types, surfaceField.Type); ts != nil {
+						if ts.Fields[0].Kind == surface_v1.FieldKind_REFERENCE {
+							surfaceField.Type = ts.Fields[0].Type
+						}
 						if ts.Fields[0].Type == "arrayString" {
 							format = surfaceField.Type
 							surfaceField.Type = "string"
@@ -116,13 +119,11 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 							surfaceField.Kind = surface_v1.FieldKind_ARRAY
 							surfaceField.Name = ts.Fields[0].Name
 							surfaceField.FieldName = ts.Fields[0].Name
-							//format = ts.Fields[0].Format
 						} else {
 							surfaceField.Name = ts.Fields[0].Name
 							surfaceField.FieldName = ts.Fields[0].Name
 							surfaceField.NativeType = wrapperType(ts.Fields[0].Type, ts.Fields[0].Format)
 							prefix = false
-							//format = ts.Fields[0].Format
 						}
 					}
 				}
