@@ -252,6 +252,7 @@ func addEnumDescriptorIfNecessary(message *dpb.DescriptorProto, f *surface_v1.Fi
 
 func getEnumFieldName(value string) string {
 	name := strings.ToUpper(value)
+	name = strings.ReplaceAll(name, "-", "_")
 
 	firstChar := name[0]
 
