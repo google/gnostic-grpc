@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/protobuf v1.5.2
-	github.com/google/gnostic v0.6.8
+	github.com/google/gnostic v0.6.9
 	github.com/google/go-cmp v0.5.6
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
 	github.com/jhump/protoreflect v1.10.0
