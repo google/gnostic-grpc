@@ -97,6 +97,14 @@ paths:
       responses:
         200:
           description: success
+  /5testRouteWithNumber:
+    get:
+      operationId: 5testRouteWithNumber
+      parameters:
+        - $ref: '#/components/parameters/Parameter1'
+      responses:
+        200:
+          description: successful operation
 components:
   parameters:
     Parameter1:

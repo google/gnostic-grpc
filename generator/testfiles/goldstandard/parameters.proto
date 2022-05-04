@@ -68,6 +68,11 @@ message TestParameterReferenceParameters {
   Parameter1 parameter1 = 1;
 }
 
+//5testRouteWithNumberParameters holds parameters to 5testRouteWithNumber
+message _5testRouteWithNumberRequest {
+  Parameter1 parameter1 = 1;
+}
+
 service Parameters {
   rpc TestParameterQuery ( TestParameterQueryParameters ) returns ( google.protobuf.Empty ) {
     option (google.api.http) = { get:"/testParameterQuery"  };
@@ -91,6 +96,10 @@ service Parameters {
 
   rpc TestParameterReference ( TestParameterReferenceParameters ) returns ( google.protobuf.Empty ) {
     option (google.api.http) = { get:"/testParameterReference"  };
+  }
+
+  rpc _5testRouteWithNumber ( _5testRouteWithNumberRequest ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { get:"/5testRouteWithNumber"  };
   }
 }
 
