@@ -295,6 +295,7 @@ func CleanName(name string) string {
 	name = strings.Replace(name, "}", "", -1)
 	name = strings.Replace(name, "/", "_", -1)
 	name = strings.Replace(name, "$", "", -1)
+	name = strings.Replace(name, "+", "", -1)
 	return escapeNumericFirstChar(name)
 }
 
