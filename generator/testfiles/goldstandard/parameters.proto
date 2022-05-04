@@ -33,6 +33,10 @@ message TestParameterQueryEnumParameters {
     HUSKY = 1;
 
     RETRIEVER = 2;
+
+    _5CHIHUAHUA = 3;
+
+    SHARPEI_2 = 4;
   }
 }
 
