@@ -31,7 +31,7 @@ Install gnostic and the plugin before Go 1.17:
 with Go >= 1.17:
 
     go install github.com/google/gnostic@latest
-    go install github.com/google/gnostic-grpc@latest
+    go install github.com/googleapis/gnostic-grpc@latest
 
 Run gnostic with the plugin:
 
