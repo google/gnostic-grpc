@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"fmt"
 	"log"
 	"strings"
 
@@ -21,7 +22,7 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 		message := &dpb.DescriptorProto{}
 		message.Name = &surfaceType.TypeName
 
-		for i, surfaceField := range surfaceType.Fields {
+		for i, surfaceField := range surfaceTypeFields(surfaceType) {
 			if strings.Contains(surfaceField.NativeType, "map[string][]") {
 				// Not supported for now: https://github.com/LorenzHW/gnostic-grpc-deprecated/issues/3#issuecomment-509348357
 				continue
@@ -37,6 +38,49 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 		generatedMessages[*message.Name] = renderer.Package + "." + *message.Name
 	}
 	return messageDescriptors, nil
+}
+
+// surfaceTypeFields returns a copy of surfaceType.Fields after fixing any repeated property names.
+// Field names are repeated when oneOf/anyOf/allOf is used and one or more refs have properties with matching names.
+func surfaceTypeFields(surfaceType *surface_v1.Type) []*surface_v1.Field {
+	fieldNames := make(map[string]int, len(surfaceType.Fields))
+	for _, f := range surfaceType.Fields {
+		if _, ok := fieldNames[f.FieldName]; !ok {
+			fieldNames[f.FieldName] = 0
+		} else {
+			fieldNames[f.FieldName] += 1
+		}
+	}
+
+	fields := make([]*surface_v1.Field, len(surfaceType.Fields))
+	for i, f := range surfaceType.Fields {
+		fCopy := copyField(f)
+		if v := fieldNames[f.FieldName]; v > 0 {
+			// add an integer suffix as gnostic does not provide sufficient context to specify
+			// something more meaningful, e.g., original object name
+			fCopy.FieldName = fmt.Sprintf("%s%d", f.FieldName, v)
+			fieldNames[f.FieldName] -= 1
+		}
+		fields[i] = fCopy
+	}
+
+	return fields
+}
+
+func copyField(f *surface_v1.Field) *surface_v1.Field {
+	fCopy := &surface_v1.Field{
+		Name:          f.Name,
+		Type:          f.Type,
+		Kind:          f.Kind,
+		Format:        f.Format,
+		Position:      f.Position,
+		NativeType:    f.NativeType,
+		FieldName:     f.FieldName,
+		ParameterName: f.ParameterName,
+		Serialize:     f.Serialize,
+		EnumValues:    f.EnumValues,
+	}
+	return fCopy
 }
 
 // isRequestParameter checks whether 't' is a type that will be used as a request parameter for a RPC method.
