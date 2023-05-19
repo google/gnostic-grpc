@@ -42,7 +42,7 @@ func buildMethodDescriptor(method *surface_v1.Method, types []*surface_v1.Type) 
 	if err != nil {
 		return nil, err
 	}
-	inputType, outputType := buildInputTypeAndOutputType(method.ParametersTypeName, method.ResponsesTypeName)
+	inputType, outputType := buildInputTypeAndOutputType(method.ParametersTypeName, method.ResponsesTypeName, types)
 	methodDescriptor = &dpb.MethodDescriptorProto{
 		Name:       &method.HandlerName,
 		InputType:  &inputType,
@@ -120,7 +120,7 @@ func getRequestBodyForRequestParameter(name string, types []*surface_v1.Type) st
 	return ""
 }
 
-func buildInputTypeAndOutputType(parametersTypeName string, responseTypeName string) (inputType string, outputType string) {
+func buildInputTypeAndOutputType(parametersTypeName, responseTypeName string, types []*surface_v1.Type) (inputType, outputType string) {
 	inputType = parametersTypeName
 	outputType = responseTypeName
 	if parametersTypeName == "" {
@@ -128,6 +128,11 @@ func buildInputTypeAndOutputType(parametersTypeName string, responseTypeName str
 	}
 	if responseTypeName == "" {
 		outputType = "google.protobuf.Empty"
+	}
+	for _, t := range types {
+		if t.TypeName == inputType && t.Name != inputType {
+			inputType = t.Name
+		}
 	}
 	return inputType, outputType
 }
