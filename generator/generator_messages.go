@@ -29,6 +29,7 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 			}
 			if isRequestParameter(surfaceType) {
 				validateRequestParameter(surfaceField)
+				// convert base message to parameter message, e.g., GetPetRequest -> GetPetParameters
 				message.Name = &surfaceType.Name
 			}
 

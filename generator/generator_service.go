@@ -130,6 +130,7 @@ func buildInputTypeAndOutputType(parametersTypeName, responseTypeName string, ty
 		outputType = "google.protobuf.Empty"
 	}
 	for _, t := range types {
+		// convert base input type to parameter input type, e.g., GetPetRequest -> GetPetParameters
 		if t.TypeName == inputType && t.Name != inputType {
 			inputType = t.Name
 		}
