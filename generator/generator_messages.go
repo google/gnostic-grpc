@@ -29,6 +29,7 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 			}
 			if isRequestParameter(surfaceType) {
 				validateRequestParameter(surfaceField)
+				message.Name = &surfaceType.Name
 			}
 
 			addFieldDescriptor(message, surfaceField, i, renderer.Package)
@@ -84,11 +85,8 @@ func copyField(f *surface_v1.Field) *surface_v1.Field {
 }
 
 // isRequestParameter checks whether 't' is a type that will be used as a request parameter for a RPC method.
-func isRequestParameter(sufaceType *surface_v1.Type) bool {
-	if strings.Contains(sufaceType.Description, sufaceType.GetName()+" holds parameters to") {
-		return true
-	}
-	return false
+func isRequestParameter(surfaceType *surface_v1.Type) bool {
+	return strings.Contains(surfaceType.Description, surfaceType.GetName()+" holds parameters to")
 }
 
 func validateRequestParameter(field *surface_v1.Field) {
@@ -179,7 +177,7 @@ func fieldHasAReferenceToAMessageInAnotherDependency(field *surface_v1.Field, fi
 	return fieldDescriptorType == dpb.FieldDescriptorProto_TYPE_MESSAGE && messageExists
 }
 
-// getFieldDescriptorLabel returns the label for the descriptor based on the information in he surface field.
+// getFieldDescriptorLabel returns the label for the descriptor based on the information in the surface field.
 func getFieldDescriptorLabel(f *surface_v1.Field) *dpb.FieldDescriptorProto_Label {
 	label := dpb.FieldDescriptorProto_LABEL_OPTIONAL
 	if f.Kind == surface_v1.FieldKind_ARRAY || strings.Contains(f.NativeType, "map") {
