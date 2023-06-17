@@ -19,12 +19,12 @@ message Parameter2 {
 }
 
 //TestParameterQueryParameters holds parameters to TestParameterQuery
-message TestParameterQueryRequest {
+message TestParameterQueryParameters {
   int32 param1 = 1;
 }
 
 //TestParameterQueryEnumParameters holds parameters to TestParameterQueryEnum
-message TestParameterQueryEnumRequest {
+message TestParameterQueryEnumParameters {
   repeated Param2 param2 = 1;
 
   enum Param2 {
@@ -37,12 +37,12 @@ message TestParameterQueryEnumRequest {
 }
 
 //TestParameterPathParameters holds parameters to TestParameterPath
-message TestParameterPathRequest {
+message TestParameterPathParameters {
   string param3 = 1;
 }
 
 //TestParameterPathEnumParameters holds parameters to TestParameterPathEnum
-message TestParameterPathEnumRequest {
+message TestParameterPathEnumParameters {
   Param4 param4 = 1;
 
   enum Param4 {
@@ -53,39 +53,39 @@ message TestParameterPathEnumRequest {
 }
 
 //TestParameterMultiplePathParameters holds parameters to TestParameterMultiplePath
-message TestParameterMultiplePathRequest {
+message TestParameterMultiplePathParameters {
   string param5 = 1;
 
   string param6 = 2;
 }
 
 //TestParameterReferenceParameters holds parameters to TestParameterReference
-message TestParameterReferenceRequest {
+message TestParameterReferenceParameters {
   Parameter1 parameter1 = 1;
 }
 
 service Parameters {
-  rpc TestParameterQuery ( TestParameterQueryRequest ) returns ( google.protobuf.Empty ) {
+  rpc TestParameterQuery ( TestParameterQueryParameters ) returns ( google.protobuf.Empty ) {
     option (google.api.http) = { get:"/testParameterQuery"  };
   }
 
-  rpc TestParameterQueryEnum ( TestParameterQueryEnumRequest ) returns ( google.protobuf.Empty ) {
+  rpc TestParameterQueryEnum ( TestParameterQueryEnumParameters ) returns ( google.protobuf.Empty ) {
     option (google.api.http) = { get:"/testParameterQueryEnum"  };
   }
 
-  rpc TestParameterPath ( TestParameterPathRequest ) returns ( google.protobuf.Empty ) {
+  rpc TestParameterPath ( TestParameterPathParameters ) returns ( google.protobuf.Empty ) {
     option (google.api.http) = { get:"/testParameterPath/{param1}"  };
   }
 
-  rpc TestParameterPathEnum ( TestParameterPathEnumRequest ) returns ( google.protobuf.Empty ) {
+  rpc TestParameterPathEnum ( TestParameterPathEnumParameters ) returns ( google.protobuf.Empty ) {
     option (google.api.http) = { get:"/testParameterPathEnum/{param1}"  };
   }
 
-  rpc TestParameterMultiplePath ( TestParameterMultiplePathRequest ) returns ( google.protobuf.Empty ) {
+  rpc TestParameterMultiplePath ( TestParameterMultiplePathParameters ) returns ( google.protobuf.Empty ) {
     option (google.api.http) = { get:"/testParameterMultiplePath/{param1}/{param2}"  };
   }
 
-  rpc TestParameterReference ( TestParameterReferenceRequest ) returns ( google.protobuf.Empty ) {
+  rpc TestParameterReference ( TestParameterReferenceParameters ) returns ( google.protobuf.Empty ) {
     option (google.api.http) = { get:"/testParameterReference"  };
   }
 }
