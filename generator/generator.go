@@ -36,12 +36,12 @@ var generatedSymbolicReferences = make(map[string]bool, 0)
 // Uses the output of gnostic to return a dpb.FileDescriptorSet (in bytes). 'renderer' contains
 // the 'model' (surface model) which has all the relevant data to create the dpb.FileDescriptorSet.
 // There are four main steps:
-//		1. buildAllMessageDescriptors is called to create all messages which will be rendered in .proto
-//		2. buildAllServiceDescriptors is called to create a RPC service which will be rendered in .proto
-// 		3. buildSymbolicReferences 	recursively executes this plugin to generate all FileDescriptorSet based on symbolic
-// 									references. A symbolic reference is an URL to another OpenAPI description inside of
-//									current description.
-// 		4. buildDependencies to build all static FileDescriptorProto we need.
+//  1. buildSymbolicReferences 	recursively executes this plugin to generate all FileDescriptorSet based on symbolic
+//     references. A symbolic reference is a URL to another OpenAPI description inside the
+//     current description.
+//  2. buildDependencies to build all static FileDescriptorProto we need.
+//  3. buildAllMessageDescriptors is called to create all messages which will be rendered in .proto
+//  4. buildAllServiceDescriptors is called to create an RPC service which will be rendered in .proto
 func (renderer *Renderer) runFileDescriptorSetGenerator() (fdSet *dpb.FileDescriptorSet, err error) {
 	syntax := "proto3"
 	n := renderer.Package + ".proto"
@@ -51,6 +51,15 @@ func (renderer *Renderer) runFileDescriptorSetGenerator() (fdSet *dpb.FileDescri
 		Package: &renderer.Package,
 		Syntax:  &syntax,
 	}
+
+	symbolicReferenceDependencies, err := buildSymbolicReferences(renderer)
+	if err != nil {
+		return nil, err
+	}
+	dependencies := buildDependencies()
+	dependencies = append(dependencies, symbolicReferenceDependencies...)
+	dependencyNames := getNamesOfDependenciesThatWillBeImported(dependencies, renderer.Model.Methods)
+	protoToBeRendered.Dependency = dependencyNames
 
 	allMessages, err := buildAllMessageDescriptors(renderer)
 	if err != nil {
@@ -69,15 +78,6 @@ func (renderer *Renderer) runFileDescriptorSetGenerator() (fdSet *dpb.FileDescri
 		return nil, err
 	}
 	protoToBeRendered.SourceCodeInfo = sourceCodeInfo
-
-	symbolicReferenceDependencies, err := buildSymbolicReferences(renderer)
-	if err != nil {
-		return nil, err
-	}
-	dependencies := buildDependencies()
-	dependencies = append(dependencies, symbolicReferenceDependencies...)
-	dependencyNames := getNamesOfDependenciesThatWillBeImported(dependencies, renderer.Model.Methods)
-	protoToBeRendered.Dependency = dependencyNames
 
 	fileOptions := renderer.buildFileOptions()
 	protoToBeRendered.Options = fileOptions

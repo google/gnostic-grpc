@@ -153,7 +153,7 @@ func getFieldDescriptorType(nativeType string, enumValues []string) *dpb.FieldDe
 }
 
 // getFieldDescriptorTypeName returns the typeName of the descriptor. A TypeName has to be set if the field is a reference to another
-// descriptor or enum. Otherwise it is nil. Names are set according to the protocol buffer style guide for message names:
+// descriptor or enum. Otherwise, it is nil. Names are set according to the protocol buffer style guide for message names:
 // https://developers.google.com/protocol-buffers/docs/style#message-and-field-names
 func getFieldDescriptorTypeName(fieldDescriptorType descriptorpb.FieldDescriptorProto_Type, field *surface_v1.Field, packageName string) *string {
 	if fieldHasAReferenceToAMessageInAnotherDependency(field, fieldDescriptorType) {
@@ -171,7 +171,7 @@ func getFieldDescriptorTypeName(fieldDescriptorType descriptorpb.FieldDescriptor
 	return &typeName
 }
 
-// fieldHasAReferenceToAMessageInAnotherDependency check whether we generated this message already inside of another
+// fieldHasAReferenceToAMessageInAnotherDependency check whether we generated this message already inside another
 // dependency. If so we will use that name instead.
 func fieldHasAReferenceToAMessageInAnotherDependency(field *surface_v1.Field, fieldDescriptorType descriptorpb.FieldDescriptorProto_Type) bool {
 	_, messageExists := generatedMessages[field.NativeType]
