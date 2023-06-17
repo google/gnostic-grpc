@@ -53,7 +53,7 @@ message Order {
 }
 
 message TestOneOfApiResponse {
-  int64 id = 1;
+  int64 id1 = 1;
 
   int64 age = 2;
 
@@ -107,7 +107,7 @@ message TestAnyOfApiResponse {
 }
 
 //TestExernalReference2Parameters holds parameters to TestExernalReference2
-message TestExernalReference2Request {
+message TestExernalReference2Parameters {
   parameters.Parameter2 parameter2 = 1;
 }
 
@@ -137,7 +137,7 @@ service Other {
     option (google.api.http) = { get:"/testExternalReference"  };
   }
 
-  rpc TestExernalReference2 ( TestExernalReference2Request ) returns ( google.protobuf.Empty ) {
+  rpc TestExernalReference2 ( TestExernalReference2Parameters ) returns ( google.protobuf.Empty ) {
     option (google.api.http) = { get:"/testExternalReference2" body:"parameter2"  };
   }
 

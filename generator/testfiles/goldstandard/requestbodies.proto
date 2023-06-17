@@ -21,21 +21,21 @@ message Person {
 }
 
 //TestRequestBodyParameters holds parameters to TestRequestBody
-message TestRequestBodyRequest {
+message TestRequestBodyParameters {
   Person person = 1;
 }
 
 //TestRequestBodyReferenceParameters holds parameters to TestRequestBodyReference
-message TestRequestBodyReferenceRequest {
+message TestRequestBodyReferenceParameters {
   Person person = 1;
 }
 
 service Requestbodies {
-  rpc TestRequestBody ( TestRequestBodyRequest ) returns ( google.protobuf.Empty ) {
+  rpc TestRequestBody ( TestRequestBodyParameters ) returns ( google.protobuf.Empty ) {
     option (google.api.http) = { get:"/testRequestBody" body:"person"  };
   }
 
-  rpc TestRequestBodyReference ( TestRequestBodyReferenceRequest ) returns ( google.protobuf.Empty ) {
+  rpc TestRequestBodyReference ( TestRequestBodyReferenceParameters ) returns ( google.protobuf.Empty ) {
     option (google.api.http) = { get:"/testRequestBodyReference" body:"person"  };
   }
 }
