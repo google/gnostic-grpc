@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"fmt"
 	"log"
 	"strings"
 
@@ -21,13 +22,15 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 		message := &dpb.DescriptorProto{}
 		message.Name = &surfaceType.TypeName
 
-		for i, surfaceField := range surfaceType.Fields {
+		for i, surfaceField := range surfaceTypeFields(surfaceType) {
 			if strings.Contains(surfaceField.NativeType, "map[string][]") {
 				// Not supported for now: https://github.com/LorenzHW/gnostic-grpc-deprecated/issues/3#issuecomment-509348357
 				continue
 			}
 			if isRequestParameter(surfaceType) {
 				validateRequestParameter(surfaceField)
+				// convert base message to parameter message, e.g., GetPetRequest -> GetPetParameters
+				message.Name = &surfaceType.Name
 			}
 
 			addFieldDescriptor(message, surfaceField, i, renderer.Package)
@@ -39,12 +42,52 @@ func buildAllMessageDescriptors(renderer *Renderer) (messageDescriptors []*dpb.D
 	return messageDescriptors, nil
 }
 
-// isRequestParameter checks whether 't' is a type that will be used as a request parameter for a RPC method.
-func isRequestParameter(sufaceType *surface_v1.Type) bool {
-	if strings.Contains(sufaceType.Description, sufaceType.GetName()+" holds parameters to") {
-		return true
+// surfaceTypeFields returns a copy of surfaceType.Fields after fixing any repeated property names.
+// Field names are repeated when oneOf/anyOf/allOf is used and one or more refs have properties with matching names.
+func surfaceTypeFields(surfaceType *surface_v1.Type) []*surface_v1.Field {
+	fieldNames := make(map[string]int, len(surfaceType.Fields))
+	for _, f := range surfaceType.Fields {
+		if _, ok := fieldNames[f.FieldName]; !ok {
+			fieldNames[f.FieldName] = 0
+		} else {
+			fieldNames[f.FieldName] += 1
+		}
 	}
-	return false
+
+	fields := make([]*surface_v1.Field, len(surfaceType.Fields))
+	for i, f := range surfaceType.Fields {
+		fCopy := copyField(f)
+		if v := fieldNames[f.FieldName]; v > 0 {
+			// add an integer suffix as gnostic does not provide sufficient context to specify
+			// something more meaningful, e.g., original object name
+			fCopy.FieldName = fmt.Sprintf("%s%d", f.FieldName, v)
+			fieldNames[f.FieldName] -= 1
+		}
+		fields[i] = fCopy
+	}
+
+	return fields
+}
+
+func copyField(f *surface_v1.Field) *surface_v1.Field {
+	fCopy := &surface_v1.Field{
+		Name:          f.Name,
+		Type:          f.Type,
+		Kind:          f.Kind,
+		Format:        f.Format,
+		Position:      f.Position,
+		NativeType:    f.NativeType,
+		FieldName:     f.FieldName,
+		ParameterName: f.ParameterName,
+		Serialize:     f.Serialize,
+		EnumValues:    f.EnumValues,
+	}
+	return fCopy
+}
+
+// isRequestParameter checks whether 't' is a type that will be used as a request parameter for a RPC method.
+func isRequestParameter(surfaceType *surface_v1.Type) bool {
+	return strings.Contains(surfaceType.Description, surfaceType.GetName()+" holds parameters to")
 }
 
 func validateRequestParameter(field *surface_v1.Field) {
@@ -110,7 +153,7 @@ func getFieldDescriptorType(nativeType string, enumValues []string) *dpb.FieldDe
 }
 
 // getFieldDescriptorTypeName returns the typeName of the descriptor. A TypeName has to be set if the field is a reference to another
-// descriptor or enum. Otherwise it is nil. Names are set according to the protocol buffer style guide for message names:
+// descriptor or enum. Otherwise, it is nil. Names are set according to the protocol buffer style guide for message names:
 // https://developers.google.com/protocol-buffers/docs/style#message-and-field-names
 func getFieldDescriptorTypeName(fieldDescriptorType descriptorpb.FieldDescriptorProto_Type, field *surface_v1.Field, packageName string) *string {
 	if fieldHasAReferenceToAMessageInAnotherDependency(field, fieldDescriptorType) {
@@ -128,14 +171,14 @@ func getFieldDescriptorTypeName(fieldDescriptorType descriptorpb.FieldDescriptor
 	return &typeName
 }
 
-// fieldHasAReferenceToAMessageInAnotherDependency check whether we generated this message already inside of another
+// fieldHasAReferenceToAMessageInAnotherDependency check whether we generated this message already inside another
 // dependency. If so we will use that name instead.
 func fieldHasAReferenceToAMessageInAnotherDependency(field *surface_v1.Field, fieldDescriptorType descriptorpb.FieldDescriptorProto_Type) bool {
 	_, messageExists := generatedMessages[field.NativeType]
 	return fieldDescriptorType == dpb.FieldDescriptorProto_TYPE_MESSAGE && messageExists
 }
 
-// getFieldDescriptorLabel returns the label for the descriptor based on the information in he surface field.
+// getFieldDescriptorLabel returns the label for the descriptor based on the information in the surface field.
 func getFieldDescriptorLabel(f *surface_v1.Field) *dpb.FieldDescriptorProto_Label {
 	label := dpb.FieldDescriptorProto_LABEL_OPTIONAL
 	if f.Kind == surface_v1.FieldKind_ARRAY || strings.Contains(f.NativeType, "map") {
