@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//    http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -283,7 +283,7 @@ func protoTypeName(originalName string) (name string) {
 	return name
 }
 
-// Removes characters which are not allowed for message names or field names inside .proto files.
+// CleanName removes characters which are not allowed for message names or field names inside .proto files.
 func CleanName(name string) string {
 	name = strings.Replace(name, "application/json", "", -1)
 	name = strings.Replace(name, ".", "_", -1)
