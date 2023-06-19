@@ -25,7 +25,7 @@ paths:
       responses:
         200:
           description: success
-  /testParameterQueryEnum: #TODO: Generates invalid proto for integer enums
+  /testParameterQueryEnum:
     get:
       operationId: testParameterQueryEnum
       parameters:
@@ -40,6 +40,8 @@ paths:
                 - Dingo
                 - Husky
                 - Retriever
+                - 5Chihuahua
+                - Sharpei-2
               default: Husky
       responses:
         200:
@@ -95,6 +97,14 @@ paths:
       responses:
         200:
           description: success
+  /5testRouteWithNumber:
+    get:
+      operationId: 5testRouteWithNumber
+      parameters:
+        - $ref: '#/components/parameters/Parameter1'
+      responses:
+        200:
+          description: successful operation
 components:
   parameters:
     Parameter1:
@@ -103,9 +113,11 @@ components:
       schema:
         type: integer
         format: int64
+      required: false
     Parameter2:
       name: param8
       in: path
       schema:
         type: integer
         format: int64
+      required: true
