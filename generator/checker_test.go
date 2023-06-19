@@ -33,6 +33,7 @@ func TestNewFeatureCheckerParameters(t *testing.T) {
 	checker := NewGrpcChecker(documentv3)
 	messages := checker.Run()
 	expectedMessageKeys := [][]string{
+		{"components", "parameters", "required"},
 		{"paths", "/testParameterQueryEnum", "get", "parameters", "explode"},
 		{"paths", "/testParameterQueryEnum", "get", "parameters", "schema", "items", "default"},
 		{"paths", "/testParameterPathEnum/{param1}", "get", "parameters", "schema", "default"},
