@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package bookstore
+package main
 
 import (
 	"github.com/google/gnostic-grpc/examples/end-to-end-grpc-gateway/bookstore"
