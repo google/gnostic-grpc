@@ -5,9 +5,9 @@ import (
 	"log"
 	"strings"
 
-	dpb "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	surface_v1 "github.com/google/gnostic/surface"
 	"google.golang.org/protobuf/types/descriptorpb"
+	dpb "google.golang.org/protobuf/types/descriptorpb"
 )
 
 var protoBufScalarTypes = getProtobufTypes()

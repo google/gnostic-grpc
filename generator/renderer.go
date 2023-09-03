@@ -15,12 +15,13 @@
 package generator
 
 import (
-	"github.com/golang/protobuf/proto"
-	dpb "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	plugins "github.com/google/gnostic/plugins"
 	surface "github.com/google/gnostic/surface"
 	prDesc "github.com/jhump/protoreflect/desc"
 	prPrint "github.com/jhump/protoreflect/desc/protoprint"
+
+	"google.golang.org/protobuf/proto"
+	dpb "google.golang.org/protobuf/types/descriptorpb"
 )
 
 // Renderer generates a .proto file based on the information inside Model.
