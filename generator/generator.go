@@ -21,9 +21,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/google/gnostic-grpc/utils"
 	surface_v1 "github.com/google/gnostic/surface"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	"google.golang.org/genproto/googleapis/api/annotations"
 	"google.golang.org/protobuf/reflect/protodesc"
@@ -197,7 +197,7 @@ func buildDependencies() (dependencies []*dpb.FileDescriptorProto) {
 	fd.Dependency = append(fd.Dependency, "google/protobuf/descriptor.proto") //3.rd Problem
 
 	// Build other required dependencies
-	e := empty.Empty{}
+	e := emptypb.Empty{}
 	fdp := dpb.DescriptorProto{}
 	fd2 := protodesc.ToFileDescriptorProto(e.ProtoReflect().Descriptor().ParentFile())
 	fd3 := protodesc.ToFileDescriptorProto(fdp.ProtoReflect().Type().Descriptor().ParentFile())
