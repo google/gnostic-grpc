@@ -22,20 +22,20 @@ import (
 	"net"
 	"sync"
 
-	"github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 const (
 	port = ":50051"
 )
 
-//
 // The Service type implements a bookstore server.
 // All objects are managed in an in-memory non-persistent store.
 //
 // server is used to implement Bookstoreserver.
 type server struct {
+	UnimplementedBookstoreServer
 	// shelves are stored in a map keyed by shelf id
 	// books are stored in a two level map, keyed first by shelf id and then by book id
 	Shelves     map[int64]*Shelf
@@ -45,7 +45,7 @@ type server struct {
 	Mutex       sync.Mutex // global mutex to synchronize service access
 }
 
-func (s *server) ListShelves(context.Context, *empty.Empty) (*ListShelvesResponse, error) {
+func (s *server) ListShelves(context.Context, *emptypb.Empty) (*ListShelvesResponse, error) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 	// copy shelf ids from Shelves map keys
@@ -59,7 +59,7 @@ func (s *server) ListShelves(context.Context, *empty.Empty) (*ListShelvesRespons
 	return response, nil
 }
 
-func (s *server) CreateShelf(ctx context.Context, parameters *CreateShelfParameters) (*Shelf, error) {
+func (s *server) CreateShelf(ctx context.Context, parameters *CreateShelfRequest) (*Shelf, error) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 	// assign an id and name to a shelf and add it to the Shelves map.
@@ -72,7 +72,7 @@ func (s *server) CreateShelf(ctx context.Context, parameters *CreateShelfParamet
 
 }
 
-func (s *server) DeleteShelves(context.Context, *empty.Empty) (*empty.Empty, error) {
+func (s *server) DeleteShelves(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 	// delete everything by reinitializing the Shelves and Books maps.
@@ -83,7 +83,7 @@ func (s *server) DeleteShelves(context.Context, *empty.Empty) (*empty.Empty, err
 	return nil, nil
 }
 
-func (s *server) GetShelf(ctx context.Context, parameters *GetShelfParameters) (*Shelf, error) {
+func (s *server) GetShelf(ctx context.Context, parameters *GetShelfRequest) (*Shelf, error) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 	// look up a shelf from the Shelves map.
@@ -95,7 +95,7 @@ func (s *server) GetShelf(ctx context.Context, parameters *GetShelfParameters) (
 	return shelf, nil
 }
 
-func (s *server) DeleteShelf(ctx context.Context, parameters *DeleteShelfParameters) (*empty.Empty, error) {
+func (s *server) DeleteShelf(ctx context.Context, parameters *DeleteShelfRequest) (*emptypb.Empty, error) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 	// delete a shelf by removing the shelf from the Shelves map and the associated books from the Books map.
@@ -104,7 +104,7 @@ func (s *server) DeleteShelf(ctx context.Context, parameters *DeleteShelfParamet
 	return nil, nil
 }
 
-func (s *server) ListBooks(ctx context.Context, parameters *ListBooksParameters) (responses *ListBooksResponse, err error) {
+func (s *server) ListBooks(ctx context.Context, parameters *ListBooksRequest) (responses *ListBooksResponse, err error) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 	// list the books in a shelf
@@ -124,7 +124,7 @@ func (s *server) ListBooks(ctx context.Context, parameters *ListBooksParameters)
 	return response, nil
 }
 
-func (s *server) CreateBook(ctx context.Context, parameters *CreateBookParameters) (*Book, error) {
+func (s *server) CreateBook(ctx context.Context, parameters *CreateBookRequest) (*Book, error) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 	_, err := s.getShelf(parameters.Shelf)
@@ -143,7 +143,7 @@ func (s *server) CreateBook(ctx context.Context, parameters *CreateBookParameter
 	return book, nil
 }
 
-func (s *server) GetBook(ctx context.Context, parameters *GetBookParameters) (*Book, error) {
+func (s *server) GetBook(ctx context.Context, parameters *GetBookRequest) (*Book, error) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 	// get a book from the Books map
@@ -155,7 +155,7 @@ func (s *server) GetBook(ctx context.Context, parameters *GetBookParameters) (*B
 	return book, nil
 }
 
-func (s *server) DeleteBook(ctx context.Context, parameters *DeleteBookParameters) (*empty.Empty, error) {
+func (s *server) DeleteBook(ctx context.Context, parameters *DeleteBookRequest) (*emptypb.Empty, error) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 	// delete a book by removing the book from the Books map.

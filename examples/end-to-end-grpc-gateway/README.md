@@ -27,11 +27,11 @@ Install [gnostic](https://github.com/google/gnostic), [gnostic-grpc](https://git
 [go plugin for protoc](https://github.com/golang/protobuf/protoc-gen-go), [gRPC gateway plugin](https://github.com/grpc-ecosystem/grpc-gateway)
 and [gRPC](https://grpc.io/)
 
-    go get -u github.com/google/gnostic
+    go get -u github.com/google/gnostic@v0.6.9
     go get -u github.com/google/gnostic-grpc
-    go get -u github.com/golang/protobuf/protoc-gen-go
-    go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
-    go get -u google.golang.org/grpc
+    go get -u google.golang.org/protobuf/cmd/protoc-gen-go@v1.29.1
+    go get -u github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@v2.16.2
+    go get -u google.golang.org/grpc@v1.41.0
     
 For simplicity lets create a temporary environment variable inside your terminal:
     
@@ -49,7 +49,7 @@ description (`bookstore.proto`) in the current directory:
 #### 2. Step
 Generate the gRPC stubs:
     
-    protoc --proto_path=. --proto_path=${ANNOTATIONS} --go_out=plugins=grpc:bookstore bookstore.proto
+    protoc --proto_path=. --proto_path=${ANNOTATIONS} --go_out=paths=source_relative:bookstore --go-grpc_out=paths=source_relative:bookstore bookstore.proto
     
  This generates `bookstore/bookstore.pb.go`.
 
@@ -60,6 +60,8 @@ We added an example implementation of the server using the generated gRPC stubs 
 Generate the reverse proxy with the gRPC gateway plugin:
 
     protoc --proto_path=. --proto_path=${ANNOTATIONS} --grpc-gateway_out=bookstore bookstore.proto
+
+    protoc --proto_path=. --proto_path=${ANNOTATIONS}  --grpc-gateway_out=bookstore  bookstore.proto
 
 This generates `bookstore/bookstore.pb.gw.go`.
 
