@@ -22,15 +22,14 @@ import (
 	"net"
 	"sync"
 
-	"github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 const (
 	port = ":50051"
 )
 
-//
 // The Service type implements a bookstore server.
 // All objects are managed in an in-memory non-persistent store.
 //
@@ -45,7 +44,7 @@ type server struct {
 	Mutex       sync.Mutex // global mutex to synchronize service access
 }
 
-func (s *server) ListShelves(context.Context, *empty.Empty) (*ListShelvesResponse, error) {
+func (s *server) ListShelves(context.Context, *emptypb.Empty) (*ListShelvesResponse, error) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 	// copy shelf ids from Shelves map keys
@@ -72,7 +71,7 @@ func (s *server) CreateShelf(ctx context.Context, parameters *CreateShelfParamet
 
 }
 
-func (s *server) DeleteShelves(context.Context, *empty.Empty) (*empty.Empty, error) {
+func (s *server) DeleteShelves(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 	// delete everything by reinitializing the Shelves and Books maps.
@@ -95,7 +94,7 @@ func (s *server) GetShelf(ctx context.Context, parameters *GetShelfParameters) (
 	return shelf, nil
 }
 
-func (s *server) DeleteShelf(ctx context.Context, parameters *DeleteShelfParameters) (*empty.Empty, error) {
+func (s *server) DeleteShelf(ctx context.Context, parameters *DeleteShelfParameters) (*emptypb.Empty, error) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 	// delete a shelf by removing the shelf from the Shelves map and the associated books from the Books map.
@@ -155,7 +154,7 @@ func (s *server) GetBook(ctx context.Context, parameters *GetBookParameters) (*B
 	return book, nil
 }
 
-func (s *server) DeleteBook(ctx context.Context, parameters *DeleteBookParameters) (*empty.Empty, error) {
+func (s *server) DeleteBook(ctx context.Context, parameters *DeleteBookParameters) (*emptypb.Empty, error) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 	// delete a book by removing the book from the Books map.

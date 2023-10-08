@@ -4,10 +4,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
-	dpb "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	surface_v1 "github.com/google/gnostic/surface"
 	"google.golang.org/genproto/googleapis/api/annotations"
+	"google.golang.org/protobuf/proto"
+	dpb "google.golang.org/protobuf/types/descriptorpb"
 )
 
 // buildAllServiceDescriptors builds a protobuf RPC service. For every method the corresponding gRPC-HTTP transcoding options (https://github.com/googleapis/googleapis/blob/master/google/api/http.proto)
@@ -56,9 +56,7 @@ func buildMethodOptions(method *surface_v1.Method, types []*surface_v1.Type) (op
 	options = &dpb.MethodOptions{}
 	httpRule := getHttpRuleForMethod(method)
 	httpRule.Body = getRequestBodyForRequestParameter(method.ParametersTypeName, types)
-	if err := proto.SetExtension(options, annotations.E_Http, &httpRule); err != nil {
-		return nil, err
-	}
+	proto.SetExtension(options, annotations.E_Http, &httpRule)
 	return options, nil
 }
 

@@ -16,7 +16,7 @@ Install [gnostic](https://github.com/google/gnostic), [gnostic-grpc](https://git
 
     go get -u github.com/google/gnostic
     go get -u github.com/google/gnostic-grpc
-    go get -u github.com/golang/protobuf/protoc-gen-go
+    go get -u google.golang.org/protobuf/cmd/protoc-gen-go
     go get -u google.golang.org/grpc
     
 For simplicity lets create a temporary environment variable inside your terminal:

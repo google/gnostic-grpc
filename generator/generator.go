@@ -21,13 +21,13 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/golang/protobuf/descriptor"
-	dpb "github.com/golang/protobuf/protoc-gen-go/descriptor"
-	"github.com/golang/protobuf/ptypes/empty"
-	surface_v1 "github.com/google/gnostic/surface"
-	"google.golang.org/genproto/googleapis/api/annotations"
-
 	"github.com/google/gnostic-grpc/utils"
+	surface_v1 "github.com/google/gnostic/surface"
+	"google.golang.org/protobuf/types/known/emptypb"
+
+	"google.golang.org/genproto/googleapis/api/annotations"
+	"google.golang.org/protobuf/reflect/protodesc"
+	dpb "google.golang.org/protobuf/types/descriptorpb"
 )
 
 // Gathers all symbolic references we generated in recursive calls.
@@ -174,7 +174,7 @@ func buildDependencies() (dependencies []*dpb.FileDescriptorProto) {
 	// 2. Problem: 	The name is set wrong.
 	// 3. Problem: 	google/api/annotations.proto has a dependency to google/protobuf/descriptor.proto.
 	http := annotations.Http{}
-	fd, _ := descriptor.MessageDescriptorProto(&http)
+	fd := protodesc.ToFileDescriptorProto(http.ProtoReflect().Descriptor().ParentFile())
 
 	extensionName := "http"
 	n := "google/api/annotations.proto"
@@ -197,10 +197,11 @@ func buildDependencies() (dependencies []*dpb.FileDescriptorProto) {
 	fd.Dependency = append(fd.Dependency, "google/protobuf/descriptor.proto") //3.rd Problem
 
 	// Build other required dependencies
-	e := empty.Empty{}
+	e := emptypb.Empty{}
 	fdp := dpb.DescriptorProto{}
-	fd2, _ := descriptor.MessageDescriptorProto(&e)
-	fd3, _ := descriptor.MessageDescriptorProto(&fdp)
+	fd2 := protodesc.ToFileDescriptorProto(e.ProtoReflect().Descriptor().ParentFile())
+	fd3 := protodesc.ToFileDescriptorProto(fdp.ProtoReflect().Type().Descriptor().ParentFile())
+
 	dependencies = []*dpb.FileDescriptorProto{fd, fd2, fd3}
 	return dependencies
 }

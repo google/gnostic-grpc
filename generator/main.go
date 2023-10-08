@@ -20,10 +20,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
 	openapiv3 "github.com/google/gnostic/openapiv3"
 	plugins "github.com/google/gnostic/plugins"
 	surface "github.com/google/gnostic/surface"
+	"google.golang.org/protobuf/proto"
 )
 
 // RunProtoGenerator generates a FileDescriptorSet from a gnostic output file.

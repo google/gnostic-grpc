@@ -21,8 +21,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/google/gnostic-grpc/examples/end-to-end/bookstore"
 )
@@ -45,7 +45,7 @@ func main() {
 	client := bookstore.NewBookstoreClient(conn)
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
-	res, err := client.ListShelves(ctx, &empty.Empty{})
+	res, err := client.ListShelves(ctx, &emptypb.Empty{})
 	if res != nil {
 		fmt.Println("The themes of your shelves:")
 		for _, shelf := range res.Shelves {
